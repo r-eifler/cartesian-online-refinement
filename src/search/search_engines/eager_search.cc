@@ -30,7 +30,8 @@ EagerSearch::EagerSearch(const Options &opts)
                 create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
-      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")) {
+      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
+      num_nodes_with_improvable_h_value(0) {
 }
 
 void EagerSearch::initialize() {
@@ -98,6 +99,7 @@ void EagerSearch::print_statistics() const {
     statistics.print_detailed_statistics();
     search_space.print_statistics();
     pruning_method->print_statistics();
+    cout << "Nodes with improvable h values: " << num_nodes_with_improvable_h_value << endl;
 }
 
 SearchStatus EagerSearch::step() {
@@ -133,8 +135,11 @@ SearchStatus EagerSearch::step() {
                 succ_h == infinity ? infinity : succ_h + op->get_cost());
         }
     }
-    if (state_h != provable_h_value) {
-        cout << "h improvable: " << state_h << " -> " << provable_h_value << endl;
+    assert(provable_h_value >= state_h);
+    if (provable_h_value > state_h) {
+        cout << "g=" << node.get_g() << ", h improvable: "
+             << state_h << " -> " << provable_h_value << endl;
+        ++num_nodes_with_improvable_h_value;
     }
 
     /*
