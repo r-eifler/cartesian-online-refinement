@@ -4,6 +4,7 @@
 #include "../search_engine.h"
 
 #include "../open_lists/open_list.h"
+#include "../open_lists/open_list_factory.h"
 
 #include <memory>
 #include <vector>
@@ -21,6 +22,15 @@ namespace eager_search {
 class EagerSearch : public SearchEngine {
     const bool reopen_closed_nodes;
     const bool use_multi_path_dependence;
+	
+	//Online Refinement ops
+	bool refine_online;
+    bool use_min_h_value;
+	int refinement_threshold;
+    int refinement_selector;
+    
+    //create new openlists
+    std::shared_ptr<OpenListFactory> open_list_factory;
 
     std::unique_ptr<StateOpenList> open_list;
     ScalarEvaluator *f_evaluator;
@@ -31,6 +41,9 @@ class EagerSearch : public SearchEngine {
     std::shared_ptr<PruningMethod> pruning_method;
 
     int num_nodes_with_improvable_h_value;
+    int num_refined_nodes = 0;
+    int min_h_value = EvaluationResult::INFTY;
+	
 
     std::pair<SearchNode, bool> fetch_next_node();
     void start_f_value_statistics(EvaluationContext &eval_context);

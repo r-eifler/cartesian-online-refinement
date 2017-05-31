@@ -13,15 +13,24 @@ class CartesianHeuristicFunction;
   summing all of their values.
 */
 class AdditiveCartesianHeuristic : public Heuristic {
+	//Online Refinement parameter
+	int max_states_online;
+	int max_iter;
+	bool guid_hmax;
+	
+	int online_refined_states = 0;
+	
     const std::vector<CartesianHeuristicFunction> heuristic_functions;
 
     int compute_heuristic(const State &state);
 
 protected:
     virtual int compute_heuristic(const GlobalState &global_state) override;
+	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state) override;
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
+	virtual bool online_Refine(const GlobalState &global_state) override;
 };
 }
 

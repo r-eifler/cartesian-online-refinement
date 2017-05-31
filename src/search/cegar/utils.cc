@@ -5,6 +5,7 @@
 #include "../task_tools.h"
 
 #include "../heuristics/additive_heuristic.h"
+#include "../heuristics/max_heuristic.h"
 
 #include "../utils/memory.h"
 
@@ -21,6 +22,14 @@ unique_ptr<additive_heuristic::AdditiveHeuristic> create_additive_heuristic(
     opts.set<shared_ptr<AbstractTask>>("transform", task);
     opts.set<bool>("cache_estimates", false);
     return utils::make_unique_ptr<additive_heuristic::AdditiveHeuristic>(opts);
+}
+	
+unique_ptr<max_heuristic::HSPMaxHeuristic> create_max_heuristic(
+    const shared_ptr<AbstractTask> &task) {
+    Options opts;
+    opts.set<shared_ptr<AbstractTask>>("transform", task);
+    opts.set<bool>("cache_estimates", false);
+    return utils::make_unique_ptr<max_heuristic::HSPMaxHeuristic>(opts);
 }
 
 static bool operator_applicable(

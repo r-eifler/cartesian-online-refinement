@@ -15,6 +15,10 @@ namespace additive_heuristic {
 class AdditiveHeuristic;
 }
 
+namespace max_heuristic {
+class HSPMaxHeuristic;
+}
+
 namespace cegar {
 const int UNDEFINED_VALUE = -1;
 
@@ -23,6 +27,9 @@ const int INF = std::numeric_limits<int>::max();
 
 extern std::unique_ptr<additive_heuristic::AdditiveHeuristic>
 create_additive_heuristic(const std::shared_ptr<AbstractTask> &task);
+	
+extern std::unique_ptr<max_heuristic::HSPMaxHeuristic>
+create_max_heuristic(const std::shared_ptr<AbstractTask> &task);
 
 /*
   The set of relaxed-reachable facts is the possibly-before set of facts that

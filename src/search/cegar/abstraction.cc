@@ -3,6 +3,7 @@
 #include "abstract_state.h"
 #include "utils.h"
 
+#include "../heuristic.h"
 #include "../globals.h"
 #include "../task_tools.h"
 
@@ -66,6 +67,7 @@ struct Flaw {
     }
 };
 
+    
 Abstraction::Abstraction(
     const shared_ptr<AbstractTask> task,
     int max_states,
@@ -87,7 +89,8 @@ Abstraction::Abstraction(
       deviations(0),
       unmet_preconditions(0),
       unmet_goals(0),
-      debug(debug) {
+      debug(debug),
+      rng(rng){
     assert(max_states >= 1);
     g_log << "Start building abstraction." << endl;
     cout << "Maximum number of states: " << max_states << endl;
@@ -100,11 +103,13 @@ Abstraction::Abstraction(
     /* Even if we found a concrete solution, we might have refined in the
        last iteration, so we should update the distances. */
     update_h_and_g_values();
-
+          
     print_statistics();
 }
 
+
 Abstraction::~Abstraction() {
+    cout << "Abstruction deleted" << endl;
     for (AbstractState *state : states)
         delete state;
 }
@@ -173,7 +178,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
             cout << "Abstract problem is unsolvable!" << endl;
             break;
         }
-        unique_ptr<Flaw> flaw = find_flaw(abstract_search.get_solution());
+        unique_ptr<Flaw> flaw = find_flaw(abstract_search.get_solution(), init, task_proxy.get_initial_state());
         if (!flaw) {
             found_concrete_solution = true;
             break;
@@ -184,6 +189,67 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
         refine(abstract_state, split.var_id, split.values);
     }
     cout << "Concrete solution found: " << found_concrete_solution << endl;
+}
+    
+Node* Abstraction::get_node(const State &state) const {
+    return refinement_hierarchy.get_node(state);   
+}
+    
+const TaskProxy* Abstraction::get_Task() {
+    return &task_proxy;   
+}
+    
+int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_states_refine){
+    
+    int state_border = get_num_states() + max_states_refine < 0 ? max_states_refine : get_num_states() + max_states_refine;
+    if(!(utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0)){
+     //cout << "Do not refine state_border: " << state_border << endl;
+     return 0;   
+    }
+    int refined_states = 0;
+    int old_h = get_node(state)->get_h_value();
+    int current_h_value = old_h;
+    int iter_until_recompute = 0;
+	while((utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0) &&
+          current_h_value <= old_h){
+        
+        
+        AbstractState *start_state = get_node(state)->get_AbstractState(); 
+        bool found_abstract_solution = abstract_search.find_solution(start_state, goals);
+
+        if (!found_abstract_solution) {
+            cout << "Abstract problem is unsolvable!" << endl;
+            break;
+        }
+        
+        //Find flaw starting from the spesified state "start_state"
+        unique_ptr<Flaw> flaw = find_flaw(abstract_search.get_solution(), start_state, state);
+        if (!flaw) {
+            //TODO solution found
+            break;
+        }
+        AbstractState *abstract_state = flaw->current_abstract_state;
+        vector<Split> splits = flaw->get_possible_splits();
+        const Split &split = split_selector.pick_split(*abstract_state, splits, rng);
+        refine(abstract_state, split.var_id, split.values);  
+        
+        refined_states++;
+		num_of_Iter--;
+        iter_until_recompute++;
+        //recompute h and g values and check if the heuristic value increased
+        if(iter_until_recompute == 500){
+            iter_until_recompute = 0;
+            update_h_and_g_values();
+            current_h_value = get_node(state)->get_h_value();
+            if(debug){
+                if(current_h_value > old_h){
+                    cout << "h increased after " << (num_of_Iter) << " iterations" << endl;   
+                }
+            }
+        }      
+   }
+   update_h_and_g_values();
+   return refined_states;
 }
 
 void Abstraction::refine(AbstractState *state, int var, const vector<int> &wanted) {
@@ -202,15 +268,40 @@ void Abstraction::refine(AbstractState *state, int var, const vector<int> &wante
     /* Since the search is always started from the abstract initial state, v2
        is never the new initial state and v1 is never a goal state. */
     if (state == init) {
+        
+        /*
         assert(v1->includes(task_proxy.get_initial_state()));
         assert(!v2->includes(task_proxy.get_initial_state()));
         init = v1;
+        */
+        
+        //TODO why ?
+        assert(v1->includes(task_proxy.get_initial_state()) || v2->includes(task_proxy.get_initial_state()));
+        if(v1->includes(task_proxy.get_initial_state())){
+            init = v1;   
+        }
+        else{
+            init = v2;
+        }
+          
         if (debug)
             cout << "New init state: " << *init << endl;
     }
     if (is_goal(state)) {
+        /*
         goals.erase(state);
         goals.insert(v2);
+        */
+        //TODO why ?
+        
+        goals.erase(state);
+        if(is_goal(v1)){
+           goals.insert(v1);  
+        }
+        else{
+            goals.insert(v2);
+        }
+        
         if (debug)
             cout << "New/additional goal state: " << *v2 << endl;
     }
@@ -225,21 +316,29 @@ void Abstraction::refine(AbstractState *state, int var, const vector<int> &wante
     delete state;
 }
 
-unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution) {
+// TODO find flow start at specified state
+unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState *start_state, State concrete_start_state){
     if (debug)
         cout << "Check solution:" << endl;
 
-    AbstractState *abstract_state = init;
-    State concrete_state = task_proxy.get_initial_state();
+    //AbstractState *abstract_state = init;
+    //State concrete_state = task_proxy.get_initial_state();
+    AbstractState *abstract_state = start_state;
+    State concrete_state = concrete_start_state;
+    
     assert(abstract_state->includes(concrete_state));
 
-    if (debug)
+    if (debug){
         cout << "  Initial abstract state: " << *abstract_state << endl;
+        cout << "  Length of solution: " << solution.size() << endl;
+    }
 
+    //int length_correct_trace = 0;
     for (const Transition &step : solution) {
         if (!utils::extra_memory_padding_is_reserved())
             break;
         OperatorProxy op = task_proxy.get_operators()[step.op_id];
+        //cout << "operator " << op.get_name() << endl;       
         AbstractState *next_abstract_state = step.target;
         if (is_applicable(op, concrete_state)) {
             if (debug)
@@ -250,6 +349,7 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution) {
                 if (debug)
                     cout << "  Paths deviate." << endl;
                 ++deviations;
+                //cout << "path deviate: " << length_correct_trace << "/" << solution.size() << endl;
                 return utils::make_unique_ptr<Flaw>(
                     move(concrete_state),
                     abstract_state,
@@ -257,10 +357,12 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution) {
             }
             abstract_state = next_abstract_state;
             concrete_state = move(next_concrete_state);
+            //length_correct_trace++;
         } else {
             if (debug)
                 cout << "  Operator not applicable: " << op.get_name() << endl;
             ++unmet_preconditions;
+            //cout << "not app: " << length_correct_trace << "/" << solution.size() << endl;
             return utils::make_unique_ptr<Flaw>(
                 move(concrete_state),
                 abstract_state,
@@ -276,6 +378,7 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution) {
         if (debug)
             cout << "  Goal test failed." << endl;
         ++unmet_goals;
+        //cout << "goal: " << length_correct_trace << "/" << solution.size() << endl;
         return utils::make_unique_ptr<Flaw>(
             move(concrete_state),
             abstract_state,

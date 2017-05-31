@@ -66,6 +66,7 @@ protected:
 
     // TODO: Call with State directly once all heuristics support it.
     virtual int compute_heuristic(const GlobalState &state) = 0;
+	
 
     /*
       Usage note: Marking the same operator as preferred multiple times
@@ -105,6 +106,9 @@ public:
     bool is_h_dirty(GlobalState &state) {
         return heuristic_cache[state].dirty;
     }
+
+	virtual bool online_Refine(const GlobalState &global_state);
+	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state);
 };
 
 #endif

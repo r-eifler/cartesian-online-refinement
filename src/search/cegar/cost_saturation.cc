@@ -51,6 +51,7 @@ CostSaturation::CostSaturation(
       num_non_looping_transitions(0) {
 }
 
+//Builds heuristics functions
 vector<CartesianHeuristicFunction> CostSaturation::generate_heuristic_functions(
     const shared_ptr<AbstractTask> &task) {
     // For simplicity this is a member object. Make sure it is in a valid state.
@@ -83,8 +84,10 @@ vector<CartesianHeuristicFunction> CostSaturation::generate_heuristic_functions(
         if (should_abort())
             break;
     }
-    if (utils::extra_memory_padding_is_reserved())
-        utils::release_extra_memory_padding();
+    
+    //TODO memory padding
+    //if (utils::extra_memory_padding_is_reserved())
+    //    utils::release_extra_memory_padding();
     print_statistics();
 
     vector<CartesianHeuristicFunction> functions;
@@ -141,9 +144,8 @@ void CostSaturation::build_abstractions(
     int rem_subtasks = subtasks.size();
     for (shared_ptr<AbstractTask> subtask : subtasks) {
         subtask = get_remaining_costs_task(subtask);
-
         assert(num_states < max_states);
-        Abstraction abstraction(
+        Abstraction *abstraction = new Abstraction(
             subtask,
             max(1, (max_states - num_states) / rem_subtasks),
             max(1, (max_non_looping_transitions - num_non_looping_transitions) /
@@ -154,16 +156,27 @@ void CostSaturation::build_abstractions(
             rng);
 
         ++num_abstractions;
-        num_states += abstraction.get_num_states();
-        num_non_looping_transitions += abstraction.get_num_non_looping_transitions();
+        num_states += abstraction->get_num_states();
+        num_non_looping_transitions += abstraction->get_num_non_looping_transitions();
         assert(num_states <= max_states);
-        reduce_remaining_costs(abstraction.get_saturated_costs());
-        int init_h = abstraction.get_h_value_of_initial_state();
-
+        reduce_remaining_costs(abstraction->get_saturated_costs());
+        int init_h = abstraction->get_h_value_of_initial_state();
         if (init_h > 0) {
-            heuristic_functions.emplace_back(
+            /*CartesianHeuristicFunction carH (
+              subtask,
+              abstraction.extract_refinement_hierarchy()
+            );
+            heuristic_functions.push_back(carH);*/
+            /*heuristic_functions.emplace_back(
                 subtask,
-                abstraction.extract_refinement_hierarchy());
+                abstraction.extract_refinement_hierarchy());*/
+            /*heuristic_functions.emplace_back(
+                subtask,
+                abstraction);*/
+          /*heuristic_functions.emplace_back(
+                subtask,
+                abstraction);*/
+          heuristic_functions.emplace_back(subtask, abstraction);
         }
         if (should_abort())
             break;

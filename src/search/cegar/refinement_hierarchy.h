@@ -1,6 +1,8 @@
 #ifndef CEGAR_REFINEMENT_HIERARCHY_H
 #define CEGAR_REFINEMENT_HIERARCHY_H
 
+#include "abstract_state.h"  //new
+
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -60,6 +62,9 @@ class Node {
 
     // Estimated cost to nearest goal state from this node's state.
     int h;
+  
+    //Corresponding abstract state TODO
+    AbstractState *abstract_state;
 
 public:
     Node();
@@ -103,6 +108,16 @@ public:
 
     int get_h_value() const {
         return h;
+    }
+  
+  
+    //TODO
+    void set_AbstractState(AbstractState *state){
+      abstract_state = state; 
+    }
+  
+    AbstractState *get_AbstractState(){
+      return  abstract_state;
     }
 };
 }

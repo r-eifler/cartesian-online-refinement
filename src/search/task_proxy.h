@@ -566,6 +566,11 @@ public:
         }
         return *this;
     }
+  
+    //TODO test
+    std::vector<int>* get_values(){
+      return &values; 
+    }
 
     bool operator==(const State &other) const {
         assert(task == other.task);

@@ -1,7 +1,9 @@
 #ifndef CEGAR_CARTESIAN_HEURISTIC_FUNCTION_H
 #define CEGAR_CARTESIAN_HEURISTIC_FUNCTION_H
 
+#include "abstraction.h"
 #include "refinement_hierarchy.h"
+#include "../heuristics/max_heuristic.h"
 
 #include "../task_proxy.h"
 
@@ -17,22 +19,22 @@ namespace cegar {
 */
 class CartesianHeuristicFunction {
     const std::shared_ptr<AbstractTask> task;
-    TaskProxy task_proxy;
-    RefinementHierarchy refinement_hierarchy;
+    //TaskProxy task_proxy;
+	  Abstraction *abstraction;
+
+    std::unique_ptr<max_heuristic::HSPMaxHeuristic> max_heuristic;
 
 public:
-    CartesianHeuristicFunction(
-        const std::shared_ptr<AbstractTask> &task,
-        RefinementHierarchy &&hierarchy);
-
-    // Visual Studio 2013 needs an explicit implementation.
-    CartesianHeuristicFunction(CartesianHeuristicFunction &&other)
-        : task(std::move(other.task)),
-          task_proxy(std::move(other.task_proxy)),
-          refinement_hierarchy(std::move(other.refinement_hierarchy)) {
-    }
+	
+	CartesianHeuristicFunction(
+    const std::shared_ptr<AbstractTask> &task, Abstraction *abs);
+    //Abstraction *abs);
 
     int get_value(const State &parent_state) const;
+	  int online_Refine(const State &state, int max_iter, int max_states_refine) const;
+    int hmax_value(const GlobalState &global_state) const;
+	
+
 };
 }
 

@@ -34,6 +34,7 @@ EvaluationContext::EvaluationContext(
 const EvaluationResult &EvaluationContext::get_result(ScalarEvaluator *heur) {
     EvaluationResult &result = cache[heur];
     if (result.is_uninitialized()) {
+		//cout << "uninitialized" << endl;
         result = heur->compute_result(*this);
         if (statistics && dynamic_cast<const Heuristic *>(heur)) {
             /* Only count evaluations of actual Heuristics, not arbitrary

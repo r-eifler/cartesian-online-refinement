@@ -31,6 +31,8 @@ protected:
 public:
     HSPMaxHeuristic(const options::Options &options);
     ~HSPMaxHeuristic();
+	
+	int compute_heuristic_cegar(const GlobalState &global_state);
 };
 }
 

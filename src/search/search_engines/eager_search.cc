@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <memory>
 #include <set>
+#include <string>
 
 using namespace std;
 
@@ -26,6 +27,13 @@ EagerSearch::EagerSearch(const Options &opts)
     : SearchEngine(opts),
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
       use_multi_path_dependence(opts.get<bool>("mpd")),
+      //Online Refinement ops
+      refine_online(opts.get<bool>("refine_online")),
+      use_min_h_value(opts.get<bool>("use_min_h_value")),
+      refinement_threshold(opts.get<int>("refinement_threshold")),
+      refinement_selector(opts.get<int>("refinement_selector")),
+      //Store open list factory to create new open lists during search
+      open_list_factory(opts.get<shared_ptr<OpenListFactory>>("open")),  
       open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
                 create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
@@ -100,6 +108,7 @@ void EagerSearch::print_statistics() const {
     search_space.print_statistics();
     pruning_method->print_statistics();
     cout << "Nodes with improvable h values: " << num_nodes_with_improvable_h_value << endl;
+    cout << "Nodes which have been refined: " << num_refined_nodes << endl;
 }
 
 SearchStatus EagerSearch::step() {
@@ -116,32 +125,173 @@ SearchStatus EagerSearch::step() {
     vector<const GlobalOperator *> applicable_ops;
     g_successor_generator->generate_applicable_ops(s, applicable_ops);
 
-    // Check whether h(s) is too low by looking at all successors.
-    assert(heuristics.size() == 1);  // HACK
-    ScalarEvaluator *heuristic = heuristics[0];  // HACK
-    int infinity = EvaluationResult::INFTY;
-    EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
-    int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-    int provable_h_value = infinity;
-    if (state_h != infinity) {
-        for (const GlobalOperator *op : applicable_ops) {
-            GlobalState succ_state = state_registry.get_successor_state(s, *op);
-            int succ_g = node.get_g() + op->get_cost();
-            EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
-            int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
+    
+    
+    //------------------------- ONLINE REFINEMENT ----------------------------------------
+    
+    if(refine_online){
+        bool debug = false;
+        // Check whether h(s) is too low by looking at all successors.
+        assert(heuristics.size() == 1);  // HACK
+        ScalarEvaluator *heuristic = heuristics[0];  // HACK
+        int infinity = EvaluationResult::INFTY;
+        EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
+        int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
+        min_h_value = min(min_h_value, state_h);
+        if(debug)
+            cout << "h(s) = " << to_string(state_h) << endl;
 
-            provable_h_value = min(
-                provable_h_value,
-                succ_h == infinity ? infinity : succ_h + op->get_cost());
+        //compute provable_h_value
+        int provable_h_value = infinity;
+        if (state_h != infinity) {
+            string succ_states_values("Succ h values:");
+            for (const GlobalOperator *op : applicable_ops) {
+                GlobalState succ_state = state_registry.get_successor_state(s, *op);
+                int succ_g = node.get_g() + op->get_cost();
+                EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
+                int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
+                succ_states_values +=  " " + to_string(succ_h);
+                provable_h_value = min(
+                    provable_h_value,
+                    succ_h == infinity ? infinity : succ_h + op->get_cost());
+            }
+            if(debug){
+             cout << succ_states_values << endl;
+            }
+        }
+        assert(provable_h_value >= state_h);   
+
+        //Check if refinement possible
+        if (provable_h_value > state_h + refinement_threshold) {
+            ++num_nodes_with_improvable_h_value;
+            if(debug){
+                cout << "--------------------------" << endl;
+                cout << "g=" << node.get_g() << ", h improvable: " << state_h << " -> " << provable_h_value << endl;
+            }    
+
+			if(debug){
+				//Check which heuristics should be refined
+				vector<int> values = heuristics[0]->compute_individual_heuristics(s);
+				string h_s("h(s)= ");
+				for(uint i = 0; i < values.size(); i++){
+					   h_s += to_string(values[i]);
+					if(i < values.size() - 1){
+						h_s += " + ";   
+					}
+				}
+				if(debug){
+					cout << h_s << endl;
+				}
+				vector<int> provable_h_values;
+				//init
+				for(uint i = 0; i < values.size(); i++){
+					   provable_h_values.push_back(infinity);
+				}
+				for (const GlobalOperator *op : applicable_ops) {
+					string succ_h_values("succ h values: ");
+					GlobalState succ_state = state_registry.get_successor_state(s, *op);
+					vector<int> succ_values = heuristics[0]->compute_individual_heuristics(succ_state);
+					for(uint i = 0; i < provable_h_values.size(); i++){
+						succ_h_values += to_string(succ_values[i]) + " ";
+						provable_h_values[i] = min(
+							provable_h_values[i],
+							succ_values[i] == infinity ? infinity : succ_values[i] + op->get_cost());
+					}
+					if(debug)
+						cout << succ_h_values << endl;
+				}
+				bool conflict = true;
+				string provable_h_values_s("provable h values: ");
+				for(uint i = 0; i < provable_h_values.size(); i++){
+					provable_h_values_s += to_string(provable_h_values[i]) + " ";
+					if(provable_h_values[i] >= values[i]){
+						conflict = false;
+						provable_h_values_s += "r ";   
+					}
+				}
+
+				if(debug){
+					cout << provable_h_values_s << endl;
+					cout <<"refinement conflict: " << conflict << endl;
+				}
+			}
+
+            //cout << state_h << " <=> " << min_h_value << " " << endl;
+            bool refine_min_h_value = true;
+            if(use_min_h_value){
+                refine_min_h_value = state_h == min_h_value;
+            }
+            if(refine_min_h_value && num_nodes_with_improvable_h_value % refinement_selector == 0){
+                
+                if(debug)    
+                    cout << "old h value: "  << state_h << endl;
+
+                //ONLINE REFINEMENT    
+                Heuristic *h = heuristics[0]; 
+                bool refined = h->online_Refine(s);
+
+                
+                    //reevaluate cached values
+                    auto &cached_result = const_cast<HeuristicCache &>(state_eval_context.get_cache())[heuristic];
+                    if (!cached_result.is_uninitialized()){
+                        cached_result = EvaluationResult();
+                    }
+                    //cout << "refine from " << state_h << " to ";
+                    state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
+                    //cout << state_h << endl;
+                    min_h_value = state_h;
+                if(debug){
+                    cout << "new h value: " << state_h << endl;
+                }
+
+
+                if(refined){
+                    num_refined_nodes++;
+                    if(debug){
+                        //Checkagain
+                        int provable_h_value = infinity;
+                         if (state_h != infinity) {
+                            string succ_states_values("Succ h values:");
+                            for (const GlobalOperator *op : applicable_ops) {
+                                GlobalState succ_state = state_registry.get_successor_state(s, *op);
+                                int succ_g = node.get_g() + op->get_cost();
+                                EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
+                                int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
+                                succ_states_values += " " + to_string(succ_h) ;
+                                provable_h_value = min(
+                                    provable_h_value,
+                                    succ_h == infinity ? infinity : succ_h + op->get_cost());
+                            }
+                            cout << succ_states_values << endl;
+                        }
+                        assert(provable_h_value >= state_h);
+                        if (provable_h_value > state_h) {
+                            cout << "g=" << node.get_g() << ", h improvable: "
+                                 << state_h << " -> " << provable_h_value << endl;
+                        }
+                    }
+
+                    //Update optenlist
+                    std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
+                    while(!open_list->empty()){
+                        StateID id = open_list->remove_min(nullptr);
+                        GlobalState s = state_registry.lookup_state(id);
+                        SearchNode node = search_space.get_node(s);
+                        EvaluationContext eval_context(node.get_state(), node.get_g(), false, &statistics);
+                        new_open_list->insert(eval_context, node.get_state_id());       
+                    }
+
+                    open_list.reset(new_open_list.release()); //TODO unique_ptr 
+                }  
+                
+            }
+            if(debug)
+                cout << "+++++++++++++++++++++++++++++++" << endl;
         }
     }
-    assert(provable_h_value >= state_h);
-    if (provable_h_value > state_h) {
-        cout << "g=" << node.get_g() << ", h improvable: "
-             << state_h << " -> " << provable_h_value << endl;
-        ++num_nodes_with_improvable_h_value;
-    }
-
+    //------------------------- ONLINE REFINEMENT ----------------------------------------
+    
+    
     /*
       TODO: When preferred operators are in use, a preferred operator will be
       considered by the preferred operator queues even when it is pruned.
@@ -405,6 +555,26 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
     parser.add_option<ScalarEvaluator *>("eval", "evaluator for h-value");
     parser.add_option<bool>("mpd",
                             "use multi-path dependence (LM-A*)", "false");
+    
+    //Online Refinment options
+    parser.add_option<bool>(
+        "refine_online",
+        "use online refinement",
+        "false");
+    parser.add_option<bool>(
+        "use_min_h_value",
+        "only refine a variable if its h value is smaller or equal to the current minimum",
+        "false");
+    parser.add_option<int>(
+        "refinement_threshold",
+        "the threshold the provable minimum h value has to exceed to start online refinement",
+        "0",
+        Bounds("0", "infinity"));
+    parser.add_option<int>(
+        "refinement_selector",
+        "only every refinement_selector states is refined",
+        "1",
+        Bounds("1", "10000"));
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);

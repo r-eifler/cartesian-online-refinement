@@ -101,6 +101,10 @@ int HSPMaxHeuristic::compute_heuristic(const GlobalState &global_state) {
     return total_cost;
 }
 
+int HSPMaxHeuristic::compute_heuristic_cegar(const GlobalState &global_state){
+	return 	compute_heuristic(global_state);
+}
+	
 static Heuristic *_parse(OptionParser &parser) {
     parser.document_synopsis("Max heuristic", "");
     parser.document_language_support("action costs", "supported");

@@ -39,7 +39,11 @@ static vector<CartesianHeuristicFunction> generate_heuristic_functions(
 AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
     const options::Options &opts)
     : Heuristic(opts),
+      max_states_online(opts.get<int>("max_states_online")),
+      max_iter(opts.get<int>("max_iter")),
+      guid_hmax(opts.get<bool>("guid_hmax")),
       heuristic_functions(generate_heuristic_functions(opts)) {
+          cout << "Max states online: " << max_states_online << endl;
 }
 
 int AdditiveCartesianHeuristic::compute_heuristic(const GlobalState &global_state) {
@@ -48,16 +52,62 @@ int AdditiveCartesianHeuristic::compute_heuristic(const GlobalState &global_stat
 }
 
 int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
+    //cout << "compute_heuristic" << endl;
     int sum_h = 0;
     for (const CartesianHeuristicFunction &function : heuristic_functions) {
         int value = function.get_value(state);
+        //cout << value << " ";
         assert(value >= 0);
         if (value == INF)
             return DEAD_END;
         sum_h += value;
     }
+    //cout << endl;
     assert(sum_h >= 0);
     return sum_h;
+}
+    
+    
+/*
+    Return the heuristic value for each heuristic seperately
+*/
+vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics(const GlobalState &global_state){
+    State state = convert_global_state(global_state);
+    vector<int> values;
+    int sum_h = 0;
+    for (const CartesianHeuristicFunction &function : heuristic_functions) {
+        int value = function.get_value(state);
+        assert(value >= 0);
+        if (value == INF)
+            return values;
+        values.push_back(value);
+        sum_h += value;
+    }
+    assert(sum_h >= 0);
+    return values;
+}
+    
+bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state){
+   State state = convert_global_state(global_state);
+   bool refined = false;
+   //refine every heuristic
+   //TODO recompute cost partitioning
+   for (const CartesianHeuristicFunction &function : heuristic_functions) {
+       if(guid_hmax){
+           int h_max = function.hmax_value(global_state);
+           int h_value = function.get_value(state);
+           if(h_max < h_value){
+                return false;   
+           }
+       }
+       int refined_states = function.online_Refine(state, max_iter, max_states_online - online_refined_states);
+       if(refined_states > 0){
+            refined = true;    
+       }
+       online_refined_states += refined_states;
+       //cout << "online refined states: " << online_refined_states << "/" << max_states_online << endl;
+   }
+   return refined;
 }
 
 static Heuristic *_parse(OptionParser &parser) {
@@ -125,6 +175,23 @@ static Heuristic *_parse(OptionParser &parser) {
         "use_general_costs",
         "allow negative costs in cost partitioning",
         "true");
+    
+    //Online Refinement options
+    parser.add_option<int>(
+        "max_states_online",
+        "maximum sum of abstract states over all abstractions added during online refinement",
+        "infinity",
+        Bounds("1", "infinity"));
+    parser.add_option<int>(
+        "max_iter",
+        "maximum number of iterations until online refinement of one state is aborted",
+        "1000",
+        Bounds("1", "infinity"));
+    parser.add_option<bool>(
+        "guid_hmax",
+        "only refine a state if its h_max value is larger or equal to the cartesian value",
+        "false");
+    
     Heuristic::add_options_to_parser(parser);
     utils::add_rng_options(parser);
     Options opts = parser.parse();

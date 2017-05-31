@@ -23,7 +23,7 @@ void AbstractSearch::reset() {
     solution.clear();
 }
 
-bool AbstractSearch::find_solution(AbstractState *init, AbstractStates &goals) {
+bool AbstractSearch::find_solution(AbstractState *init, AbstractStates &goals) {   
     reset();
     init->get_search_info().decrease_g_value_to(0);
     open_queue.push(init->get_h_value(), init);
@@ -79,6 +79,9 @@ AbstractState *AbstractSearch::astar_search(
             int op_id = transition.op_id;
             AbstractState *successor = transition.target;
 
+            //cout << "op_id " << op_id << endl;
+            //cout << "size: " << operator_costs.size() << endl;
+            
             assert(utils::in_bounds(op_id, operator_costs));
             const int op_cost = operator_costs[op_id];
             assert(op_cost >= 0);

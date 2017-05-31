@@ -99,6 +99,11 @@ pair<AbstractState *, AbstractState *> AbstractState::split(
 
     AbstractState *v1 = new AbstractState(v1_domains, new_nodes.first);
     AbstractState *v2 = new AbstractState(v2_domains, new_nodes.second);
+    
+    //TODO
+    //add reference of the corresponding abstract state to the node such that it is accesable during online refinement
+    new_nodes.first->set_AbstractState(v1);
+    new_nodes.second->set_AbstractState(v2);
 
     assert(this->is_more_general_than(*v1));
     assert(this->is_more_general_than(*v2));

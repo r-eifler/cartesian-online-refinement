@@ -18,7 +18,8 @@ using namespace std;
 Heuristic::Heuristic(const Options &opts)
     : description(opts.get_unparsed_config()),
       heuristic_cache(HEntry(NO_VALUE, true)), //TODO: is true really a good idea here?
-      cache_h_values(opts.get<bool>("cache_estimates")),
+      //cache_h_values(opts.get<bool>("cache_estimates")),
+	  cache_h_values(false),
       task(opts.get<shared_ptr<AbstractTask>>("transform")),
       task_proxy(*task) {
 }
@@ -32,6 +33,17 @@ void Heuristic::set_preferred(const GlobalOperator *op) {
 
 void Heuristic::set_preferred(const OperatorProxy &op) {
     set_preferred(op.get_global_operator());
+}
+
+bool Heuristic::online_Refine(const GlobalState &global_state){
+	cout << "not implemented " << global_state.get_id()  << endl;	
+	return false;
+}
+
+std::vector<int> Heuristic::compute_individual_heuristics(const GlobalState &global_state){
+	cout << "not implemented " << global_state.get_id()  << endl;
+	vector<int> v;
+	return v;
 }
 
 bool Heuristic::notify_state_transition(
@@ -65,6 +77,7 @@ Options Heuristic::default_options() {
 }
 
 EvaluationResult Heuristic::compute_result(EvaluationContext &eval_context) {
+	//cout << "Heuristic::compute_result" << endl;
     EvaluationResult result;
 
     assert(preferred_operators.empty());
@@ -78,6 +91,7 @@ EvaluationResult Heuristic::compute_result(EvaluationContext &eval_context) {
         heuristic_cache[state].h != NO_VALUE && !heuristic_cache[state].dirty) {
         heuristic = heuristic_cache[state].h;
         result.set_count_evaluation(false);
+		cout << "use cached values" << endl;
     } else {
         heuristic = compute_heuristic(state);
         if (cache_h_values) {

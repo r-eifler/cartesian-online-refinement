@@ -6,6 +6,7 @@
 #include "split_selector.h"
 #include "transition_updater.h"
 
+
 #include "../task_proxy.h"
 
 #include "../utils/countdown_timer.h"
@@ -75,6 +76,9 @@ class Abstraction {
     RefinementHierarchy refinement_hierarchy;
 
     const bool debug;
+  
+    //RANDOM
+    utils::RandomNumberGenerator &rng;
 
     void create_trivial_abstraction();
 
@@ -93,7 +97,7 @@ class Abstraction {
     // Build abstraction.
     void build(utils::RandomNumberGenerator &rng);
 
-    bool is_goal(AbstractState *state) const;
+    bool is_goal(AbstractState *state) const;    
 
     // Split state into two child states.
     void refine(AbstractState *state, int var, const std::vector<int> &wanted);
@@ -102,7 +106,8 @@ class Abstraction {
 
     /* Try to convert the abstract solution into a concrete trace. Return the
        first encountered flaw or nullptr if there is no flaw. */
-    std::unique_ptr<Flaw> find_flaw(const Solution &solution);
+    //std::unique_ptr<Flaw> find_flaw(const Solution &solution);
+    std::unique_ptr<Flaw> find_flaw(const Solution &solution, AbstractState *start_state, State concrete_start_state);
 
     // Perform Dijkstra's algorithm from the goal states to update the h-values.
     void update_h_and_g_values();
@@ -122,6 +127,7 @@ public:
     ~Abstraction();
 
     Abstraction(const Abstraction &) = delete;
+
 
     RefinementHierarchy extract_refinement_hierarchy() {
         assert(refinement_hierarchy.get_root());
@@ -143,6 +149,12 @@ public:
     std::vector<int> get_saturated_costs();
 
     int get_h_value_of_initial_state() const;
+  
+      
+    //Onlie refinement
+    Node *get_node(const State &state) const;
+    const TaskProxy* get_Task();
+    int onlineRefine(const State &state, int num_of_iter, int max_states_refine);
 };
 }
 
