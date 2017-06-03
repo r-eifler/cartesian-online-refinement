@@ -109,6 +109,12 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state){
    }
    return refined;
 }
+	
+void AdditiveCartesianHeuristic::print_statistics(){
+		for (const CartesianHeuristicFunction &function : heuristic_functions) {
+			function.print_statistics();	
+		}
+}
 
 static Heuristic *_parse(OptionParser &parser) {
     parser.document_synopsis(

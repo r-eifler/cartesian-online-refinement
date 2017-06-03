@@ -109,6 +109,7 @@ public:
 
 	virtual bool online_Refine(const GlobalState &global_state);
 	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state);
+	virtual void print_statistics();
 };
 
 #endif

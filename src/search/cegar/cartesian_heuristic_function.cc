@@ -31,6 +31,10 @@ int CartesianHeuristicFunction::online_Refine(const State &parent_state, int max
 	int CartesianHeuristicFunction::hmax_value(const GlobalState &global_state) const{
 	return max_heuristic->compute_heuristic_cegar(global_state);
 }
+		
+	void CartesianHeuristicFunction::print_statistics() const{
+		abstraction->print_statistics();	
+	}
 	
 	
 }

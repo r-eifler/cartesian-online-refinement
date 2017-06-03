@@ -40,6 +40,10 @@ bool Heuristic::online_Refine(const GlobalState &global_state){
 	return false;
 }
 
+void Heuristic::print_statistics(){
+		cout << "not implemented " << endl;
+}
+
 std::vector<int> Heuristic::compute_individual_heuristics(const GlobalState &global_state){
 	cout << "not implemented " << global_state.get_id()  << endl;
 	vector<int> v;

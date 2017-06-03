@@ -4,6 +4,7 @@
 #include "abstraction.h"
 #include "refinement_hierarchy.h"
 #include "../heuristics/max_heuristic.h"
+#include "../utils/countdown_timer.h"
 
 #include "../task_proxy.h"
 
@@ -23,6 +24,9 @@ class CartesianHeuristicFunction {
 	  Abstraction *abstraction;
 
     std::unique_ptr<max_heuristic::HSPMaxHeuristic> max_heuristic;
+  
+    const utils::Timer update_timer;
+    const int update_counter = 5;
 
 public:
 	
@@ -33,6 +37,7 @@ public:
     int get_value(const State &parent_state) const;
 	  int online_Refine(const State &state, int max_iter, int max_states_refine) const;
     int hmax_value(const GlobalState &global_state) const;
+	void print_statistics() const; 
 	
 
 };

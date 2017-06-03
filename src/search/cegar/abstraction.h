@@ -48,6 +48,10 @@ class Abstraction {
 
     // Limit the time for building the abstraction.
     utils::CountdownTimer timer;
+  
+    utils::Timer refine_timer;
+    utils::Timer update_timer;
+    int refinement_calls = 0; 
 
     /*
       Set of all (as of yet unsplit) abstract states.
@@ -112,8 +116,6 @@ class Abstraction {
     // Perform Dijkstra's algorithm from the goal states to update the h-values.
     void update_h_and_g_values();
 
-    void print_statistics();
-
 public:
     Abstraction(
         const std::shared_ptr<AbstractTask> task,
@@ -150,11 +152,13 @@ public:
 
     int get_h_value_of_initial_state() const;
   
+	void print_statistics();
       
     //Onlie refinement
     Node *get_node(const State &state) const;
     const TaskProxy* get_Task();
     int onlineRefine(const State &state, int num_of_iter, int max_states_refine);
+    void update_h_values();
 };
 }
 

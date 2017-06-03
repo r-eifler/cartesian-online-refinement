@@ -5,6 +5,7 @@
 
 #include "../open_lists/open_list.h"
 #include "../open_lists/open_list_factory.h"
+#include "../utils/timer.h"
 
 #include <memory>
 #include <vector>
@@ -44,6 +45,8 @@ class EagerSearch : public SearchEngine {
     int num_refined_nodes = 0;
     int min_h_value = EvaluationResult::INFTY;
 	
+	utils::Timer open_list_timer;
+	utils::Timer refine_timer;
 
     std::pair<SearchNode, bool> fetch_next_node();
     void start_f_value_statistics(EvaluationContext &eval_context);

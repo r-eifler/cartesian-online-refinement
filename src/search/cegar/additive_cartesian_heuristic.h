@@ -31,6 +31,7 @@ protected:
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
 	virtual bool online_Refine(const GlobalState &global_state) override;
+	virtual void print_statistics() override;
 };
 }
 

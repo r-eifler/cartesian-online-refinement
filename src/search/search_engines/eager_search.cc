@@ -109,6 +109,11 @@ void EagerSearch::print_statistics() const {
     pruning_method->print_statistics();
     cout << "Nodes with improvable h values: " << num_nodes_with_improvable_h_value << endl;
     cout << "Nodes which have been refined: " << num_refined_nodes << endl;
+    
+    cout << endl;
+    Heuristic *h = heuristics[0]; 
+    h->print_statistics();
+    cout << "Timer OpenList: " << open_list_timer << endl;
 }
 
 SearchStatus EagerSearch::step() {
@@ -130,7 +135,7 @@ SearchStatus EagerSearch::step() {
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
     if(refine_online){
-        bool debug = false;
+        bool debug = true;
         // Check whether h(s) is too low by looking at all successors.
         assert(heuristics.size() == 1);  // HACK
         ScalarEvaluator *heuristic = heuristics[0];  // HACK
@@ -228,7 +233,11 @@ SearchStatus EagerSearch::step() {
 
                 //ONLINE REFINEMENT    
                 Heuristic *h = heuristics[0]; 
+                //refine_timer.resume();
                 bool refined = h->online_Refine(s);
+                //refine_timer.stop();
+                //cout << "Refine Timer: " << refine_timer << endl;
+                
 
                 
                     //reevaluate cached values
@@ -257,7 +266,7 @@ SearchStatus EagerSearch::step() {
                                 int succ_g = node.get_g() + op->get_cost();
                                 EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
                                 int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
-                                succ_states_values += " " + to_string(succ_h) ;
+                                succ_states_values += " " + to_string(succ_h) + " c(a)=" + to_string(op->get_cost()) + "|";
                                 provable_h_value = min(
                                     provable_h_value,
                                     succ_h == infinity ? infinity : succ_h + op->get_cost());
@@ -272,16 +281,21 @@ SearchStatus EagerSearch::step() {
                     }
 
                     //Update optenlist
-                    std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
-                    while(!open_list->empty()){
-                        StateID id = open_list->remove_min(nullptr);
-                        GlobalState s = state_registry.lookup_state(id);
-                        SearchNode node = search_space.get_node(s);
-                        EvaluationContext eval_context(node.get_state(), node.get_g(), false, &statistics);
-                        new_open_list->insert(eval_context, node.get_state_id());       
-                    }
+                    if(num_refined_nodes % 1 == 0){                       
+                        open_list_timer.resume();
+                        //cout << "Update openlist " << num_refined_nodes << endl;
+                        std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
+                        while(!open_list->empty()){
+                            StateID id = open_list->remove_min(nullptr);
+                            GlobalState s = state_registry.lookup_state(id);
+                            SearchNode node = search_space.get_node(s);
+                            EvaluationContext eval_context(node.get_state(), node.get_g(), false, &statistics);
+                            new_open_list->insert(eval_context, node.get_state_id());       
+                        }
 
-                    open_list.reset(new_open_list.release()); //TODO unique_ptr 
+                        open_list.reset(new_open_list.release()); //TODO unique_ptr 
+                        open_list_timer.stop();                   
+                    }
                 }  
                 
             }
