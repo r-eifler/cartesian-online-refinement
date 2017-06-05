@@ -256,14 +256,14 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_state
         }      
    }
     refine_timer.stop();
-    cout << "refinement calls: " <<  refinement_calls << endl;
+    //cout << "refinement calls: " <<  refinement_calls << endl;
     if(refinement_calls % 1 == 0){
-        cout << "Update h and g values" << endl;
+        //cout << "Update h and g values" << endl;
         update_timer.resume();
         update_h_and_g_values();
         update_timer.stop();
         //cout << "update h values: " << update_timer << endl;
-        current_h_value = get_node(state)->get_h_value();
+        //current_h_value = get_node(state)->get_h_value();
         //cout << "h increased from " << old_h << " to " << current_h_value << endl; 
     }
    return refined_states;

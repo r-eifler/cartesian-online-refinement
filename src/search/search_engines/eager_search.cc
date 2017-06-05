@@ -135,7 +135,7 @@ SearchStatus EagerSearch::step() {
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
     if(refine_online){
-        bool debug = true;
+        bool debug = false;
         // Check whether h(s) is too low by looking at all successors.
         assert(heuristics.size() == 1);  // HACK
         ScalarEvaluator *heuristic = heuristics[0];  // HACK
