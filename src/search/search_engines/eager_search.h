@@ -44,9 +44,11 @@ class EagerSearch : public SearchEngine {
     int num_nodes_with_improvable_h_value;
     int num_refined_nodes = 0;
     int min_h_value = EvaluationResult::INFTY;
+	int num_nodes_improved = 0;
 	
 	utils::Timer open_list_timer;
 	utils::Timer refine_timer;
+	utils::Timer print_timer;
 
     std::pair<SearchNode, bool> fetch_next_node();
     void start_f_value_statistics(EvaluationContext &eval_context);

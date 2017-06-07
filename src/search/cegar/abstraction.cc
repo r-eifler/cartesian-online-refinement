@@ -257,7 +257,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_state
    }
     refine_timer.stop();
     //cout << "refinement calls: " <<  refinement_calls << endl;
-    if(refinement_calls % 1 == 0){
+    if(refinement_calls % 5 == 0){
         //cout << "Update h and g values" << endl;
         update_timer.resume();
         update_h_and_g_values();
@@ -277,6 +277,14 @@ void Abstraction::refine(AbstractState *state, int var, const vector<int> &wante
     AbstractState *v2 = new_states.second;
 
     transition_updater.rewire(state, v1, v2, var);
+    
+    /*
+    cout << "-----------------------" << endl;
+    cout << "Split " << *state << " h = " << state->get_h_value() << " in " << endl;
+    cout << *v1 << " h = " << v1->get_h_value() << " and " << endl;
+    cout << *v2 << " h = " << v2->get_h_value() << endl;
+    cout << "-----------------------" << endl;
+    */
 
     states.erase(state);
     states.insert(v1);
@@ -328,8 +336,8 @@ void Abstraction::refine(AbstractState *state, int var, const vector<int> &wante
         g_log << num_states << "/" << max_states << " states, "
               << transition_updater.get_num_non_loops() << "/"
               << max_non_looping_transitions << " transitions"        
-                << " update: " << update_timer
-                << " refine: " << refine_timer << endl;
+                << " update Time: " << update_timer
+                << " refine Time: " << refine_timer << endl;
     }
 
     delete state;

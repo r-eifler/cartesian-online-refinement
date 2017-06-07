@@ -109,6 +109,7 @@ void EagerSearch::print_statistics() const {
     pruning_method->print_statistics();
     cout << "Nodes with improvable h values: " << num_nodes_with_improvable_h_value << endl;
     cout << "Nodes which have been refined: " << num_refined_nodes << endl;
+    cout << "Nodes which have been improved: " << num_nodes_improved << endl;
     
     cout << endl;
     Heuristic *h = heuristics[0]; 
@@ -135,7 +136,7 @@ SearchStatus EagerSearch::step() {
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
     if(refine_online){
-        bool debug = false;
+        bool debug = true;
         // Check whether h(s) is too low by looking at all successors.
         assert(heuristics.size() == 1);  // HACK
         ScalarEvaluator *heuristic = heuristics[0];  // HACK
@@ -245,8 +246,12 @@ SearchStatus EagerSearch::step() {
                     if (!cached_result.is_uninitialized()){
                         cached_result = EvaluationResult();
                     }
-                    //cout << "refine from " << state_h << " to ";
-                    state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
+                    //cout << "refine from " << state_h << " to "; 
+                    int new_h_value = state_eval_context.get_heuristic_value_or_infinity(heuristic);
+                    if(new_h_value > state_h){
+                        num_nodes_improved++;   
+                    }
+                    state_h = new_h_value;
                     //cout << state_h << endl;
                     min_h_value = state_h;
                 if(debug){
@@ -256,32 +261,9 @@ SearchStatus EagerSearch::step() {
 
                 if(refined){
                     num_refined_nodes++;
-                    if(debug){
-                        //Checkagain
-                        int provable_h_value = infinity;
-                         if (state_h != infinity) {
-                            string succ_states_values("Succ h values:");
-                            for (const GlobalOperator *op : applicable_ops) {
-                                GlobalState succ_state = state_registry.get_successor_state(s, *op);
-                                int succ_g = node.get_g() + op->get_cost();
-                                EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
-                                int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
-                                succ_states_values += " " + to_string(succ_h) + " c(a)=" + to_string(op->get_cost()) + "|";
-                                provable_h_value = min(
-                                    provable_h_value,
-                                    succ_h == infinity ? infinity : succ_h + op->get_cost());
-                            }
-                            cout << succ_states_values << endl;
-                        }
-                        assert(provable_h_value >= state_h);
-                        if (provable_h_value > state_h) {
-                            cout << "g=" << node.get_g() << ", h improvable: "
-                                 << state_h << " -> " << provable_h_value << endl;
-                        }
-                    }
-
+                   
                     //Update optenlist
-                    if(num_refined_nodes % 1 == 0){                       
+                    if(num_refined_nodes % 20 == 0){                       
                         open_list_timer.resume();
                         //cout << "Update openlist " << num_refined_nodes << endl;
                         std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
@@ -294,7 +276,11 @@ SearchStatus EagerSearch::step() {
                         }
 
                         open_list.reset(new_open_list.release()); //TODO unique_ptr 
-                        open_list_timer.stop();                   
+                        open_list_timer.stop();    
+                        if(print_timer() > 30){
+                            cout << "OpenList Timer: " << open_list_timer << endl;   
+                            print_timer.reset();
+                        }
                     }
                 }  
                 
