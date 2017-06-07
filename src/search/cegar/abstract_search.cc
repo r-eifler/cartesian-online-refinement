@@ -117,7 +117,10 @@ void AbstractSearch::extract_solution(
         assert(utils::in_bounds(prev.op_id, operator_costs));
         const int prev_op_cost = operator_costs[prev.op_id];
         assert(prev_op_cost != INF);
-        prev.target->set_h_value(current->get_h_value() + prev_op_cost);
+        
+        //Online Refinement consistency
+        //prev.target->set_h_value(current->get_h_value() + prev_op_cost);
+        
         assert(prev.target != current);
         current = prev.target;
     }

@@ -89,6 +89,11 @@ void EagerSearch::initialize() {
         SearchNode node = search_space.get_node(initial_state);
         node.open_initial();
 
+        
+        ScalarEvaluator *heuristic = heuristics[0];
+        int h = eval_context.get_heuristic_value_or_infinity(heuristic);
+        //cout << "h=" << h << endl;
+        node.set_h_value(h);
         open_list->insert(eval_context, initial_state.get_id());
     }
 
@@ -136,7 +141,7 @@ SearchStatus EagerSearch::step() {
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
     if(refine_online){
-        bool debug = true;
+        bool debug = false;
         // Check whether h(s) is too low by looking at all successors.
         assert(heuristics.size() == 1);  // HACK
         ScalarEvaluator *heuristic = heuristics[0];  // HACK
@@ -263,25 +268,28 @@ SearchStatus EagerSearch::step() {
                     num_refined_nodes++;
                    
                     //Update optenlist
-                    if(num_refined_nodes % 20 == 0){                       
+                    /*
+                    if(num_refined_nodes % 100 == 0){                       
                         open_list_timer.resume();
                         //cout << "Update openlist " << num_refined_nodes << endl;
                         std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
+                        int size_openList = 0;
                         while(!open_list->empty()){
                             StateID id = open_list->remove_min(nullptr);
                             GlobalState s = state_registry.lookup_state(id);
                             SearchNode node = search_space.get_node(s);
                             EvaluationContext eval_context(node.get_state(), node.get_g(), false, &statistics);
-                            new_open_list->insert(eval_context, node.get_state_id());       
+                            new_open_list->insert(eval_context, node.get_state_id());      
+                            size_openList++;
                         }
 
                         open_list.reset(new_open_list.release()); //TODO unique_ptr 
                         open_list_timer.stop();    
                         if(print_timer() > 30){
-                            cout << "OpenList Timer: " << open_list_timer << endl;   
+                            cout << "OpenList Timer: " << open_list_timer << " size: " << size_openList << endl;   
                             print_timer.reset();
                         }
-                    }
+                    }*/
                 }  
                 
             }
@@ -347,6 +355,13 @@ SearchStatus EagerSearch::step() {
                 continue;
             }
             succ_node.open(node, op);
+            
+            
+            //Store old h value
+            ScalarEvaluator *heuristic = heuristics[0];
+            int h = eval_context.get_heuristic_value_or_infinity(heuristic);
+            //cout << "h=" << h << endl;
+            succ_node.set_h_value(h);
 
             open_list->insert(eval_context, succ_state.get_id());
             if (search_progress.check_progress(eval_context)) {
@@ -410,6 +425,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
        search algorithm and adds the extra processing in the desired
        places. I think this would lead to much cleaner code. */
 
+    open_list_timer.resume();
     while (true) {
         if (open_list->empty()) {
             cout << "Completely explored state space -- no solution!" << endl;
@@ -427,7 +443,33 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         //      instead of StateIDs
         GlobalState s = state_registry.lookup_state(id);
         SearchNode node = search_space.get_node(s);
+        
+        //Check if state needs to be reevaluated        
+        if(true){
+            int old_h = node.get_h_value();
+            
+            EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
+            ScalarEvaluator *heuristic = heuristics[0];
+            int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
 
+            //cout << old_h << " " << new_h << endl;
+            if(old_h != new_h){
+                node.set_h_value(new_h);
+                open_list->insert(state_eval_context, node.get_state_id());  
+                num_reeval_states++;
+                //cout << "Num reeval states " << num_reeval_states << endl; 
+                continue;  
+            }
+            
+            open_list_timer.stop();
+            if(print_timer() > 30){
+                cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
+                print_timer.reset();
+                print_statistics();
+            }
+        }
+        
+        
         if (node.is_closed())
             continue;
 
@@ -453,6 +495,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
                 }
             }
         }
+        
 
         node.close();
         assert(!node.is_dead_end());

@@ -49,6 +49,8 @@ class EagerSearch : public SearchEngine {
 	utils::Timer open_list_timer;
 	utils::Timer refine_timer;
 	utils::Timer print_timer;
+	
+	int num_reeval_states = 0;
 
     std::pair<SearchNode, bool> fetch_next_node();
     void start_f_value_statistics(EvaluationContext &eval_context);

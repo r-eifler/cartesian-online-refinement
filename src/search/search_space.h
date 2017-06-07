@@ -17,6 +17,8 @@ class SearchNode {
     StateID state_id;
     SearchNodeInfo &info;
     OperatorCost cost_type;
+    
+    int h_value;
 public:
     SearchNode(const StateRegistry &state_registry,
                StateID state_id,
@@ -47,6 +49,9 @@ public:
     void mark_as_dead_end();
 
     void dump() const;
+    
+    void set_h_value(int h);
+    int get_h_value();
 };
 
 

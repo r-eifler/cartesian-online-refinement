@@ -222,7 +222,6 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_state
         
         AbstractState *start_state = get_node(state)->get_AbstractState(); 
         bool found_abstract_solution = abstract_search.find_solution(start_state, goals);
-
         if (!found_abstract_solution) {
             cout << "Abstract problem is unsolvable!" << endl;
             break;
@@ -243,7 +242,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_state
 		num_of_Iter--;
         iter_until_recompute++;
         //recompute h and g values and check if the heuristic value increased
-        if(iter_until_recompute == 10){
+        if(iter_until_recompute == 5){
             iter_until_recompute = 0;
             break;
             //update_h_and_g_values();
@@ -257,7 +256,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_state
    }
     refine_timer.stop();
     //cout << "refinement calls: " <<  refinement_calls << endl;
-    if(refinement_calls % 5 == 0){
+    if(refinement_calls % 20 == 0){
         //cout << "Update h and g values" << endl;
         update_timer.resume();
         update_h_and_g_values();

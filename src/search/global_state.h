@@ -26,6 +26,8 @@ class GlobalState {
     // registry isn't a reference because we want to support operator=
     const StateRegistry *registry;
     StateID id;
+	
+	int h_value;
 
     // Only used by the state registry.
     GlobalState(
@@ -51,6 +53,9 @@ public:
 
     void dump_pddl() const;
     void dump_fdr() const;
+	
+	void set_h_value(int h);
+    int get_h_value();
 };
 
 

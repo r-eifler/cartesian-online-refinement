@@ -115,6 +115,15 @@ void SearchNode::dump() const {
     }
 }
 
+
+void SearchNode::set_h_value(int h){
+	h_value = h;
+}
+
+int SearchNode::get_h_value(){
+	return h_value;
+}
+
 SearchSpace::SearchSpace(StateRegistry &state_registry, OperatorCost cost_type)
     : state_registry(state_registry),
       cost_type(cost_type) {
