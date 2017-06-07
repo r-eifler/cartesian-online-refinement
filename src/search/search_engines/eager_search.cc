@@ -462,10 +462,10 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             }
             
             open_list_timer.stop();
-            if(print_timer() > 30){
+            if(print_timer() > 60){
                 cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
                 print_timer.reset();
-                print_statistics();
+                //print_statistics();
             }
         }
         
