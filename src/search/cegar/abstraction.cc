@@ -257,7 +257,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_state
     refine_timer.stop();
     //cout << "refinement calls: " <<  refinement_calls << endl;
     if(refinement_calls % 20 == 0){
-        //cout << "Update h and g values" << endl;
+        //cout << "++++++++++++++++++Update h and g values" << endl;
         update_timer.resume();
         update_h_and_g_values();
         update_timer.stop();

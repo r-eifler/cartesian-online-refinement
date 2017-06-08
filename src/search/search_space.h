@@ -18,7 +18,6 @@ class SearchNode {
     SearchNodeInfo &info;
     OperatorCost cost_type;
     
-    int h_value;
 public:
     SearchNode(const StateRegistry &state_registry,
                StateID state_id,

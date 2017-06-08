@@ -27,7 +27,6 @@ class GlobalState {
     const StateRegistry *registry;
     StateID id;
 	
-	int h_value;
 
     // Only used by the state registry.
     GlobalState(
@@ -54,8 +53,6 @@ public:
     void dump_pddl() const;
     void dump_fdr() const;
 	
-	void set_h_value(int h);
-    int get_h_value();
 };
 
 

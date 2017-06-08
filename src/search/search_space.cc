@@ -117,11 +117,11 @@ void SearchNode::dump() const {
 
 
 void SearchNode::set_h_value(int h){
-	h_value = h;
+	info.h = h;
 }
 
 int SearchNode::get_h_value(){
-	return h_value;
+	return info.h;
 }
 
 SearchSpace::SearchSpace(StateRegistry &state_registry, OperatorCost cost_type)

@@ -115,6 +115,7 @@ void EagerSearch::print_statistics() const {
     cout << "Nodes with improvable h values: " << num_nodes_with_improvable_h_value << endl;
     cout << "Nodes which have been refined: " << num_refined_nodes << endl;
     cout << "Nodes which have been improved: " << num_nodes_improved << endl;
+    cout << "Num reeval states " << num_reeval_states << endl;
     
     cout << endl;
     Heuristic *h = heuristics[0]; 
@@ -161,7 +162,8 @@ SearchStatus EagerSearch::step() {
                 int succ_g = node.get_g() + op->get_cost();
                 EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
                 int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
-                succ_states_values +=  " " + to_string(succ_h);
+                succ_states_values +=  " |" + to_string(succ_h) + " c=" + to_string(op->get_cost());
+                assert(state_h <= succ_h + op->get_cost());
                 provable_h_value = min(
                     provable_h_value,
                     succ_h == infinity ? infinity : succ_h + op->get_cost());
@@ -180,7 +182,7 @@ SearchStatus EagerSearch::step() {
                 cout << "g=" << node.get_g() << ", h improvable: " << state_h << " -> " << provable_h_value << endl;
             }    
 
-			if(debug){
+			if(false){
 				//Check which heuristics should be refined
 				vector<int> values = heuristics[0]->compute_individual_heuristics(s);
 				string h_s("h(s)= ");
@@ -357,7 +359,7 @@ SearchStatus EagerSearch::step() {
             succ_node.open(node, op);
             
             
-            //Store old h value
+            //Store h value in node for online refinement
             ScalarEvaluator *heuristic = heuristics[0];
             int h = eval_context.get_heuristic_value_or_infinity(heuristic);
             //cout << "h=" << h << endl;
@@ -372,6 +374,7 @@ SearchStatus EagerSearch::step() {
             // We found a new cheapest path to an open or closed state.
             if (reopen_closed_nodes) {
                 if (succ_node.is_closed()) {
+                    cout << "Closed Node: old_g=" << succ_node.get_g() << " new_g=" << node.get_g() + get_adjusted_cost(*op) << endl;
                     /*
                       TODO: It would be nice if we had a way to test
                       that reopening is expected behaviour, i.e., exit
@@ -385,6 +388,16 @@ SearchStatus EagerSearch::step() {
 
                 EvaluationContext eval_context(
                     succ_state, succ_node.get_g(), is_preferred, &statistics);
+                
+                
+                //----------------
+                //Update h value in node for online refinement
+                ScalarEvaluator *heuristic = heuristics[0];
+                int h = eval_context.get_heuristic_value_or_infinity(heuristic);
+                //cout << "h=" << h << endl;
+                //cout << "old_h=" << succ_node.get_h_value() << " new_h=" << h << endl;
+                succ_node.set_h_value(h);               
+                //----------------
 
                 /*
                   Note: our old code used to retrieve the h value from
@@ -426,6 +439,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
        places. I think this would lead to much cleaner code. */
 
     open_list_timer.resume();
+    int eval = 0;
     while (true) {
         if (open_list->empty()) {
             cout << "Completely explored state space -- no solution!" << endl;
@@ -437,41 +451,97 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         vector<int> last_key_removed;
         StateID id = open_list->remove_min(
             use_multi_path_dependence ? &last_key_removed : nullptr);
+        //cout << "Check state: " << id << endl;
         // TODO is there a way we can avoid creating the state here and then
         //      recreate it outside of this function with node.get_state()?
         //      One way would be to store GlobalState objects inside SearchNodes
         //      instead of StateIDs
         GlobalState s = state_registry.lookup_state(id);
-        SearchNode node = search_space.get_node(s);
+        SearchNode node = search_space.get_node(s);       
+        
+        if (node.is_closed())
+            continue;
         
         //Check if state needs to be reevaluated        
         if(true){
             int old_h = node.get_h_value();
             
-            EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
+            EvaluationContext state_eval_context(s, node.get_g(), false, &statistics);
             ScalarEvaluator *heuristic = heuristics[0];
             int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
 
-            //cout << old_h << " " << new_h << endl;
+            //cout << "old: " << old_h << " new: " << new_h << endl;
+            assert(old_h <= new_h);
             if(old_h != new_h){
                 node.set_h_value(new_h);
                 open_list->insert(state_eval_context, node.get_state_id());  
                 num_reeval_states++;
                 //cout << "Num reeval states " << num_reeval_states << endl; 
+                //cout << "continue" << endl;
+                eval++;
                 continue;  
             }
-            
+            //int chosen_f = node.get_g() + new_h;
+            //cout << "chosen f=" << node.get_g() + new_h << endl;
             open_list_timer.stop();
-            if(print_timer() > 60){
+            
+            
+            //++++++++++++++++++++++++++++++++++++
+            /*if(false){                       
+                //open_list_timer.resume();
+                //cout << "Update openlist " << num_refined_nodes << endl;
+                std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
+                int size_openList = 0;
+                cout << "______________" << endl;
+                while(!open_list->empty()){
+                    StateID id = open_list->remove_min(nullptr);
+                    GlobalState s = state_registry.lookup_state(id);
+                    SearchNode node_update = search_space.get_node(s);
+                    
+                    EvaluationContext eval_context(node_update.get_state(), node_update.get_g(), false, &statistics);
+                    ScalarEvaluator *heuristic = heuristics[0];
+                    int new_h = eval_context.get_heuristic_value_or_infinity(heuristic);
+                    cout << "Node: f=" << node_update.get_g() + node_update.get_h_value() << " g=" << node_update.get_g() << " h=" << node_update.get_h_value() << " " << new_h << endl;
+                    //node_update.set_h_value(new_h);
+                    new_open_list->insert(eval_context, node_update.get_state_id());      
+                    size_openList++;
+                }
+                cout << "______________" << endl;
+                open_list.reset(new_open_list.release()); //TODO unique_ptr 
+                
+                
+                if(!open_list->empty()){
+                    StateID id = open_list->remove_min(nullptr);
+                    GlobalState s = state_registry.lookup_state(id);
+                    SearchNode node_check = search_space.get_node(s);
+                    int min_f = node_check.get_g() + node_check.get_h_value();
+                    if(chosen_f != min_f){
+                        cout << "Min    f=" << min_f << "=" << node_check.get_g() << "+" << node_check.get_h_value()  << endl;
+                        cout << "chosen f=" << chosen_f << "=" << node.get_g() << "+" << node.get_h_value()  << endl;
+                    }
+                    
+                    EvaluationContext eval_context(node_check.get_state(), node_check.get_g(), false, &statistics);
+                    open_list->insert(eval_context, node_check.get_state_id()); 
+                }
+                
+                
+                //open_list_timer.stop();    
+                if(print_timer() > 30){
+                    cout << "OpenList Timer: " << open_list_timer << " size: " << size_openList << endl;   
+                    print_timer.reset();
+                }
+            }*/
+            //++++++++++++++++++++++++++++++++++++
+            
+            
+            //cout << "------------------------expand State eval: " << eval << endl;
+            /*if(print_timer() > 60){
                 cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
                 print_timer.reset();
-                //print_statistics();
-            }
+                print_statistics();
+            }*/
         }
         
-        
-        if (node.is_closed())
-            continue;
 
         if (use_multi_path_dependence) {
             assert(last_key_removed.size() == 2);

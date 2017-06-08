@@ -43,10 +43,3 @@ void GlobalState::dump_fdr() const {
     state.dump_fdr();
 }
 
-void GlobalState::set_h_value(int h){
-	h_value = h;
-}
-
-int GlobalState::get_h_value(){
-	return h_value;
-}
