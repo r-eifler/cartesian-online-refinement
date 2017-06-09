@@ -29,7 +29,6 @@ EagerSearch::EagerSearch(const Options &opts)
       use_multi_path_dependence(opts.get<bool>("mpd")),
       //Online Refinement ops
       refine_online(opts.get<bool>("refine_online")),
-      use_min_h_value(opts.get<bool>("use_min_h_value")),
       refinement_threshold(opts.get<int>("refinement_threshold")),
       refinement_selector(opts.get<int>("refinement_selector")),
       //Store open list factory to create new open lists during search
@@ -112,15 +111,19 @@ void EagerSearch::print_statistics() const {
     statistics.print_detailed_statistics();
     search_space.print_statistics();
     pruning_method->print_statistics();
+    
+    cout << endl;
     cout << "Nodes with improvable h values: " << num_nodes_with_improvable_h_value << endl;
     cout << "Nodes which have been refined: " << num_refined_nodes << endl;
-    cout << "Nodes which have been improved: " << num_nodes_improved << endl;
-    cout << "Num reeval states " << num_reeval_states << endl;
+    //cout << "Nodes which have been improved: " << num_nodes_improved << endl;
+    cout << "Number of  reevaluated states: " << num_reeval_states << endl;
     
     cout << endl;
     Heuristic *h = heuristics[0]; 
     h->print_statistics();
-    cout << "Timer OpenList: " << open_list_timer << endl;
+    
+    cout << "openlist time: " << open_list_timer << endl;
+    cout << endl;
 }
 
 SearchStatus EagerSearch::step() {
@@ -149,40 +152,41 @@ SearchStatus EagerSearch::step() {
         int infinity = EvaluationResult::INFTY;
         EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
         int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-        min_h_value = min(min_h_value, state_h);
+        
         if(debug)
             cout << "h(s) = " << to_string(state_h) << endl;
 
         //compute provable_h_value
         int provable_h_value = infinity;
         if (state_h != infinity) {
-            string succ_states_values("Succ h values:");
+            //string succ_states_values("Succ h values:");
             for (const GlobalOperator *op : applicable_ops) {
                 GlobalState succ_state = state_registry.get_successor_state(s, *op);
                 int succ_g = node.get_g() + op->get_cost();
                 EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
                 int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
-                succ_states_values +=  " |" + to_string(succ_h) + " c=" + to_string(op->get_cost());
+                //succ_states_values +=  " |" + to_string(succ_h) + " c=" + to_string(op->get_cost());
                 assert(state_h <= succ_h + op->get_cost());
                 provable_h_value = min(
                     provable_h_value,
                     succ_h == infinity ? infinity : succ_h + op->get_cost());
             }
+            /*
             if(debug){
              cout << succ_states_values << endl;
             }
+            */
         }
         assert(provable_h_value >= state_h);   
 
         //Check if refinement possible
         if (provable_h_value > state_h + refinement_threshold) {
             ++num_nodes_with_improvable_h_value;
+            
             if(debug){
                 cout << "--------------------------" << endl;
                 cout << "g=" << node.get_g() << ", h improvable: " << state_h << " -> " << provable_h_value << endl;
-            }    
-
-			if(false){
+  
 				//Check which heuristics should be refined
 				vector<int> values = heuristics[0]->compute_individual_heuristics(s);
 				string h_s("h(s)= ");
@@ -192,9 +196,9 @@ SearchStatus EagerSearch::step() {
 						h_s += " + ";   
 					}
 				}
-				if(debug){
-					cout << h_s << endl;
-				}
+				
+				cout << h_s << endl;
+				
 				vector<int> provable_h_values;
 				//init
 				for(uint i = 0; i < values.size(); i++){
@@ -210,8 +214,8 @@ SearchStatus EagerSearch::step() {
 							provable_h_values[i],
 							succ_values[i] == infinity ? infinity : succ_values[i] + op->get_cost());
 					}
-					if(debug)
-						cout << succ_h_values << endl;
+					
+					cout << succ_h_values << endl;
 				}
 				bool conflict = true;
 				string provable_h_values_s("provable h values: ");
@@ -223,75 +227,39 @@ SearchStatus EagerSearch::step() {
 					}
 				}
 
-				if(debug){
-					cout << provable_h_values_s << endl;
-					cout <<"refinement conflict: " << conflict << endl;
-				}
+				
+				cout << provable_h_values_s << endl;
+				cout <<"refinement conflict: " << conflict << endl;
+				
 			}
 
-            //cout << state_h << " <=> " << min_h_value << " " << endl;
-            bool refine_min_h_value = true;
-            if(use_min_h_value){
-                refine_min_h_value = state_h == min_h_value;
-            }
-            if(refine_min_h_value && num_nodes_with_improvable_h_value % refinement_selector == 0){
+            if(num_nodes_with_improvable_h_value % refinement_selector == 0){
                 
                 if(debug)    
                     cout << "old h value: "  << state_h << endl;
 
                 //ONLINE REFINEMENT    
                 Heuristic *h = heuristics[0]; 
-                //refine_timer.resume();
                 bool refined = h->online_Refine(s);
-                //refine_timer.stop();
-                //cout << "Refine Timer: " << refine_timer << endl;
                 
 
-                
+                if(debug){
                     //reevaluate cached values
                     auto &cached_result = const_cast<HeuristicCache &>(state_eval_context.get_cache())[heuristic];
                     if (!cached_result.is_uninitialized()){
                         cached_result = EvaluationResult();
                     }
-                    //cout << "refine from " << state_h << " to "; 
                     int new_h_value = state_eval_context.get_heuristic_value_or_infinity(heuristic);
                     if(new_h_value > state_h){
                         num_nodes_improved++;   
                     }
-                    state_h = new_h_value;
-                    //cout << state_h << endl;
-                    min_h_value = state_h;
-                if(debug){
+                
                     cout << "new h value: " << state_h << endl;
                 }
 
 
                 if(refined){
-                    num_refined_nodes++;
-                   
-                    //Update optenlist
-                    /*
-                    if(num_refined_nodes % 100 == 0){                       
-                        open_list_timer.resume();
-                        //cout << "Update openlist " << num_refined_nodes << endl;
-                        std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
-                        int size_openList = 0;
-                        while(!open_list->empty()){
-                            StateID id = open_list->remove_min(nullptr);
-                            GlobalState s = state_registry.lookup_state(id);
-                            SearchNode node = search_space.get_node(s);
-                            EvaluationContext eval_context(node.get_state(), node.get_g(), false, &statistics);
-                            new_open_list->insert(eval_context, node.get_state_id());      
-                            size_openList++;
-                        }
-
-                        open_list.reset(new_open_list.release()); //TODO unique_ptr 
-                        open_list_timer.stop();    
-                        if(print_timer() > 30){
-                            cout << "OpenList Timer: " << open_list_timer << " size: " << size_openList << endl;   
-                            print_timer.reset();
-                        }
-                    }*/
+                    num_refined_nodes++;                 
                 }  
                 
             }
@@ -359,10 +327,9 @@ SearchStatus EagerSearch::step() {
             succ_node.open(node, op);
             
             
-            //Store h value in node for online refinement
+            //Store h value in node for online refinement openlist check
             ScalarEvaluator *heuristic = heuristics[0];
             int h = eval_context.get_heuristic_value_or_infinity(heuristic);
-            //cout << "h=" << h << endl;
             succ_node.set_h_value(h);
 
             open_list->insert(eval_context, succ_state.get_id());
@@ -373,8 +340,7 @@ SearchStatus EagerSearch::step() {
         } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
             // We found a new cheapest path to an open or closed state.
             if (reopen_closed_nodes) {
-                if (succ_node.is_closed()) {
-                    cout << "Closed Node: old_g=" << succ_node.get_g() << " new_g=" << node.get_g() + get_adjusted_cost(*op) << endl;
+                if (succ_node.is_closed()) {                    
                     /*
                       TODO: It would be nice if we had a way to test
                       that reopening is expected behaviour, i.e., exit
@@ -392,11 +358,9 @@ SearchStatus EagerSearch::step() {
                 
                 //----------------
                 //Update h value in node for online refinement
-                ScalarEvaluator *heuristic = heuristics[0];
-                int h = eval_context.get_heuristic_value_or_infinity(heuristic);
-                //cout << "h=" << h << endl;
-                //cout << "old_h=" << succ_node.get_h_value() << " new_h=" << h << endl;
-                succ_node.set_h_value(h);               
+                //ScalarEvaluator *heuristic = heuristics[0];
+                //int h = eval_context.get_heuristic_value_or_infinity(heuristic);
+                //succ_node.set_h_value(h);               
                 //----------------
 
                 /*
@@ -439,7 +403,6 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
        places. I think this would lead to much cleaner code. */
 
     open_list_timer.resume();
-    int eval = 0;
     while (true) {
         if (open_list->empty()) {
             cout << "Completely explored state space -- no solution!" << endl;
@@ -449,9 +412,9 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             return make_pair(dummy_node, false);
         }
         vector<int> last_key_removed;
-        StateID id = open_list->remove_min(
-            use_multi_path_dependence ? &last_key_removed : nullptr);
-        //cout << "Check state: " << id << endl;
+        //use the last_key_removed if the position in the openlist and the and h and g
+        //values of the state match
+        StateID id = open_list->remove_min(&last_key_removed);
         // TODO is there a way we can avoid creating the state here and then
         //      recreate it outside of this function with node.get_state()?
         //      One way would be to store GlobalState objects inside SearchNodes
@@ -462,86 +425,39 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         if (node.is_closed())
             continue;
         
-        //Check if state needs to be reevaluated        
-        if(true){
-            int old_h = node.get_h_value();
-            
-            EvaluationContext state_eval_context(s, node.get_g(), false, &statistics);
-            ScalarEvaluator *heuristic = heuristics[0];
-            int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
+        //------------Check if state needs to be reevaluated        
+        //h value of the last evaluation
+        int old_h = node.get_h_value();
 
-            //cout << "old: " << old_h << " new: " << new_h << endl;
-            assert(old_h <= new_h);
-            if(old_h != new_h){
-                node.set_h_value(new_h);
-                open_list->insert(state_eval_context, node.get_state_id());  
-                num_reeval_states++;
-                //cout << "Num reeval states " << num_reeval_states << endl; 
-                //cout << "continue" << endl;
-                eval++;
-                continue;  
-            }
-            //int chosen_f = node.get_g() + new_h;
-            //cout << "chosen f=" << node.get_g() + new_h << endl;
-            open_list_timer.stop();
-            
-            
-            //++++++++++++++++++++++++++++++++++++
-            /*if(false){                       
-                //open_list_timer.resume();
-                //cout << "Update openlist " << num_refined_nodes << endl;
-                std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
-                int size_openList = 0;
-                cout << "______________" << endl;
-                while(!open_list->empty()){
-                    StateID id = open_list->remove_min(nullptr);
-                    GlobalState s = state_registry.lookup_state(id);
-                    SearchNode node_update = search_space.get_node(s);
-                    
-                    EvaluationContext eval_context(node_update.get_state(), node_update.get_g(), false, &statistics);
-                    ScalarEvaluator *heuristic = heuristics[0];
-                    int new_h = eval_context.get_heuristic_value_or_infinity(heuristic);
-                    cout << "Node: f=" << node_update.get_g() + node_update.get_h_value() << " g=" << node_update.get_g() << " h=" << node_update.get_h_value() << " " << new_h << endl;
-                    //node_update.set_h_value(new_h);
-                    new_open_list->insert(eval_context, node_update.get_state_id());      
-                    size_openList++;
-                }
-                cout << "______________" << endl;
-                open_list.reset(new_open_list.release()); //TODO unique_ptr 
-                
-                
-                if(!open_list->empty()){
-                    StateID id = open_list->remove_min(nullptr);
-                    GlobalState s = state_registry.lookup_state(id);
-                    SearchNode node_check = search_space.get_node(s);
-                    int min_f = node_check.get_g() + node_check.get_h_value();
-                    if(chosen_f != min_f){
-                        cout << "Min    f=" << min_f << "=" << node_check.get_g() << "+" << node_check.get_h_value()  << endl;
-                        cout << "chosen f=" << chosen_f << "=" << node.get_g() << "+" << node.get_h_value()  << endl;
-                    }
-                    
-                    EvaluationContext eval_context(node_check.get_state(), node_check.get_g(), false, &statistics);
-                    open_list->insert(eval_context, node_check.get_state_id()); 
-                }
-                
-                
-                //open_list_timer.stop();    
-                if(print_timer() > 30){
-                    cout << "OpenList Timer: " << open_list_timer << " size: " << size_openList << endl;   
-                    print_timer.reset();
-                }
-            }*/
-            //++++++++++++++++++++++++++++++++++++
-            
-            
-            //cout << "------------------------expand State eval: " << eval << endl;
-            /*if(print_timer() > 60){
-                cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
-                print_timer.reset();
-                print_statistics();
-            }*/
+        /*
+        if(old_h + node.get_g() != last_key_removed[0]){
+            continue;   
+        }*/
+
+        EvaluationContext state_eval_context(s, node.get_g(), false, &statistics);
+        ScalarEvaluator *heuristic = heuristics[0];
+        int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
+
+        assert(old_h <= new_h);
+        //the state needs to be put back if the h value is not updated or the position does 
+        //not fit to the h and g value of the state
+        if(old_h < new_h || old_h + node.get_g() != last_key_removed[0]){
+            node.set_h_value(new_h);
+            open_list->insert(state_eval_context, node.get_state_id());  
+            num_reeval_states++;
+            continue;  
         }
+        open_list_timer.stop();
+
+        /*
+        if(print_timer() > 60){
+            cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
+            print_timer.reset();
+            print_statistics();
+        }
+        */
         
+        //------------------
 
         if (use_multi_path_dependence) {
             assert(last_key_removed.size() == 2);
@@ -559,7 +475,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
                     continue;
                 }
                 if (pushed_h < eval_context.get_result(heuristics[0]).get_h_value()) {
-                    assert(node.is_open());
+                    assert(node.is_open());                   
                     open_list->insert(eval_context, node.get_state_id());
                     continue;
                 }
@@ -673,11 +589,7 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
     parser.add_option<bool>(
         "refine_online",
         "use online refinement",
-        "false");
-    parser.add_option<bool>(
-        "use_min_h_value",
-        "only refine a variable if its h value is smaller or equal to the current minimum",
-        "false");
+        "true");
     parser.add_option<int>(
         "refinement_threshold",
         "the threshold the provable minimum h value has to exceed to start online refinement",

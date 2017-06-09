@@ -22,21 +22,16 @@ class CartesianHeuristicFunction {
     const std::shared_ptr<AbstractTask> task;
     //TaskProxy task_proxy;
 	  Abstraction *abstraction;
-
-    std::unique_ptr<max_heuristic::HSPMaxHeuristic> max_heuristic;
   
     const utils::Timer update_timer;
     const int update_counter = 5;
 
 public:
 	
-	CartesianHeuristicFunction(
-    const std::shared_ptr<AbstractTask> &task, Abstraction *abs);
-    //Abstraction *abs);
+	CartesianHeuristicFunction(Abstraction *abs);
 
     int get_value(const State &parent_state) const;
-	  int online_Refine(const State &state, int max_iter, int max_states_refine) const;
-    int hmax_value(const GlobalState &global_state) const;
+	int online_Refine(const State &state, int max_iter, int update_h_values, int max_states_refine) const;
 	void print_statistics() const; 
 	
 

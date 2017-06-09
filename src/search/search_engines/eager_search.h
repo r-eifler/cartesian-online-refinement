@@ -26,7 +26,6 @@ class EagerSearch : public SearchEngine {
 	
 	//Online Refinement ops
 	bool refine_online;
-    bool use_min_h_value;
 	int refinement_threshold;
     int refinement_selector;
     
@@ -43,11 +42,9 @@ class EagerSearch : public SearchEngine {
 
     int num_nodes_with_improvable_h_value;
     int num_refined_nodes = 0;
-    int min_h_value = EvaluationResult::INFTY;
 	int num_nodes_improved = 0;
 	
 	utils::Timer open_list_timer;
-	utils::Timer refine_timer;
 	utils::Timer print_timer;
 	
 	int num_reeval_states = 0;

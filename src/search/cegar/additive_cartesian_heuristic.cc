@@ -41,7 +41,7 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
     : Heuristic(opts),
       max_states_online(opts.get<int>("max_states_online")),
       max_iter(opts.get<int>("max_iter")),
-      guid_hmax(opts.get<bool>("guid_hmax")),
+	  update_h_values(opts.get<int>("update_h_values")),
       heuristic_functions(generate_heuristic_functions(opts)) {
           cout << "Max states online: " << max_states_online << endl;
 }
@@ -93,19 +93,11 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state){
    //refine every heuristic
    //TODO recompute cost partitioning
    for (const CartesianHeuristicFunction &function : heuristic_functions) {
-       if(guid_hmax){
-           int h_max = function.hmax_value(global_state);
-           int h_value = function.get_value(state);
-           if(h_max < h_value){
-                return false;   
-           }
-       }
-       int refined_states = function.online_Refine(state, max_iter, max_states_online - online_refined_states);
+       int refined_states = function.online_Refine(state, max_iter, update_h_values, max_states_online - online_refined_states);
        if(refined_states > 0){
             refined = true;    
        }
        online_refined_states += refined_states;
-       //cout << "online refined states: " << online_refined_states << "/" << max_states_online << endl;
    }
    return refined;
 }
@@ -190,13 +182,15 @@ static Heuristic *_parse(OptionParser &parser) {
         Bounds("1", "infinity"));
     parser.add_option<int>(
         "max_iter",
-        "maximum number of iterations until online refinement of one state is aborted",
-        "1000",
+        "maximum number of iterations of the refinement algorithm per state",
+        "1",
         Bounds("1", "infinity"));
-    parser.add_option<bool>(
-        "guid_hmax",
-        "only refine a state if its h_max value is larger or equal to the cartesian value",
-        "false");
+	parser.add_option<int>(
+        "update_h_values",
+        "number of refined states until the h values of the abstract states are updated",
+        "20",
+        Bounds("1", "infinity"));
+
     
     Heuristic::add_options_to_parser(parser);
     utils::add_rng_options(parser);

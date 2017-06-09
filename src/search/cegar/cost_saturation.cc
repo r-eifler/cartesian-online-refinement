@@ -162,21 +162,7 @@ void CostSaturation::build_abstractions(
         reduce_remaining_costs(abstraction->get_saturated_costs());
         int init_h = abstraction->get_h_value_of_initial_state();
         if (init_h > 0) {
-            /*CartesianHeuristicFunction carH (
-              subtask,
-              abstraction.extract_refinement_hierarchy()
-            );
-            heuristic_functions.push_back(carH);*/
-            /*heuristic_functions.emplace_back(
-                subtask,
-                abstraction.extract_refinement_hierarchy());*/
-            /*heuristic_functions.emplace_back(
-                subtask,
-                abstraction);*/
-          /*heuristic_functions.emplace_back(
-                subtask,
-                abstraction);*/
-          heuristic_functions.emplace_back(subtask, abstraction);
+          heuristic_functions.emplace_back(abstraction);
         }
         if (should_abort())
             break;

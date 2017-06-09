@@ -203,7 +203,7 @@ const TaskProxy* Abstraction::get_Task() {
         update_h_and_g_values();
     }
     
-int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_states_refine){
+int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_values, int max_states_refine){
     
     int state_border = get_num_states() + max_states_refine < 0 ? max_states_refine : get_num_states() + max_states_refine;
     if(!(utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0)){
@@ -212,12 +212,8 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_state
     }
     refinement_calls++;
     int refined_states = 0;
-    int old_h = get_node(state)->get_h_value();
-    int current_h_value = old_h;
-    int iter_until_recompute = 0;
     refine_timer.resume();
-	while((utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0) &&
-          current_h_value <= old_h){
+	while((utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0)){
         
         
         AbstractState *start_state = get_node(state)->get_AbstractState(); 
@@ -239,32 +235,17 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int max_state
         refine(abstract_state, split.var_id, split.values);  
         
         refined_states++;
-		num_of_Iter--;
-        iter_until_recompute++;
-        //recompute h and g values and check if the heuristic value increased
-        if(iter_until_recompute == 5){
-            iter_until_recompute = 0;
-            break;
-            //update_h_and_g_values();
-            //current_h_value = get_node(state)->get_h_value();
-            if(debug){
-                if(current_h_value > old_h){
-                    cout << "h increased after " << (num_of_Iter) << " iterations from " << old_h << " to " << current_h_value << endl;   
-                }
-            }
-        }      
+		num_of_Iter--;     
    }
     refine_timer.stop();
-    //cout << "refinement calls: " <<  refinement_calls << endl;
-    if(refinement_calls % 20 == 0){
-        //cout << "++++++++++++++++++Update h and g values" << endl;
+    
+    
+    if(refinement_calls % update_h_values == 0){
         update_timer.resume();
         update_h_and_g_values();
         update_timer.stop();
-        //cout << "update h values: " << update_timer << endl;
-        //current_h_value = get_node(state)->get_h_value();
-        //cout << "h increased from " << old_h << " to " << current_h_value << endl; 
     }
+    
    return refined_states;
 }
 
@@ -501,8 +482,18 @@ void Abstraction::print_statistics() {
     cout << "Deviations: " << deviations << endl;
     cout << "Unmet preconditions: " << unmet_preconditions << endl;
     cout << "Unmet goals: " << unmet_goals << endl;
+
+}
+    
+void Abstraction::print_end_statistics() {
+    cout << "Final States: " << get_num_states() << endl;
+    cout << "Final Init h: " << get_h_value_of_initial_state() << endl;
+
+    cout << "Final Deviations: " << deviations << endl;
+    cout << "Final Unmet preconditions: " << unmet_preconditions << endl;
+    cout << "Final Unmet goals: " << unmet_goals << endl;
     cout << endl;
-    cout << "Timer update h values: " << update_timer << endl;
-    cout << "Timer refine states: " << refine_timer << endl;
+    cout << "update time: " << update_timer << endl;
+    cout << "refinement time: " << refine_timer << endl;
 }
 }

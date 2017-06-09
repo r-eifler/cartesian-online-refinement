@@ -16,7 +16,7 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	//Online Refinement parameter
 	int max_states_online;
 	int max_iter;
-	bool guid_hmax;
+	int update_h_values;
 	
 	int online_refined_states = 0;
 	

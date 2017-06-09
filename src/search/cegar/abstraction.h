@@ -153,11 +153,12 @@ public:
     int get_h_value_of_initial_state() const;
   
 	void print_statistics();
+	void print_end_statistics();
       
     //Onlie refinement
     Node *get_node(const State &state) const;
     const TaskProxy* get_Task();
-    int onlineRefine(const State &state, int num_of_iter, int max_states_refine);
+    int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine);
     void update_h_values();
 };
 }
