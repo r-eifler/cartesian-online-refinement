@@ -36,7 +36,7 @@ void Heuristic::set_preferred(const OperatorProxy &op) {
 }
 
 bool Heuristic::online_Refine(const GlobalState &global_state){
-	cout << "not implemented " << global_state.get_id()  << endl;	
+	cout << "online refine not implemented " << global_state.get_id()  << endl;	
 	return false;
 }
 
