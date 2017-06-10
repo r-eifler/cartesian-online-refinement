@@ -116,32 +116,6 @@ SearchStatus EagerSearch::step() {
     vector<const GlobalOperator *> applicable_ops;
     g_successor_generator->generate_applicable_ops(s, applicable_ops);
 
-    // Check whether h(s) is too low by looking at all successors.
-    assert(heuristics.size() == 1);  // HACK
-    ScalarEvaluator *heuristic = heuristics[0];  // HACK
-    int infinity = EvaluationResult::INFTY;
-    EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
-    int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-    int provable_h_value = infinity;
-    if (state_h != infinity) {
-        for (const GlobalOperator *op : applicable_ops) {
-            GlobalState succ_state = state_registry.get_successor_state(s, *op);
-            int succ_g = node.get_g() + op->get_cost();
-            EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
-            int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
-
-            provable_h_value = min(
-                provable_h_value,
-                succ_h == infinity ? infinity : succ_h + op->get_cost());
-        }
-    }
-    assert(provable_h_value >= state_h);
-    if (provable_h_value > state_h) {
-        cout << "g=" << node.get_g() << ", h improvable: "
-             << state_h << " -> " << provable_h_value << endl;
-        ++num_nodes_with_improvable_h_value;
-    }
-
     /*
       TODO: When preferred operators are in use, a preferred operator will be
       considered by the preferred operator queues even when it is pruned.
