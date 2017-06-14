@@ -237,7 +237,8 @@ SearchStatus EagerSearch::step() {
 				
 			}
 
-            if(num_nodes_with_improvable_h_value % refinement_selector == 0){
+			if(statistics.get_expanded() % ((statistics.get_expanded() / 10000) * 10 + 10) == 0){
+            //if(num_nodes_with_improvable_h_value % refinement_selector == 0){
                 
                 if(debug)    
                     cout << "old h value: "  << state_h << endl;
