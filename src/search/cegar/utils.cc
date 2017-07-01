@@ -99,4 +99,5 @@ vector<int> get_domain_sizes(const TaskProxy &task) {
         domain_sizes.push_back(var.get_domain_size());
     return domain_sizes;
 }
+	
 }

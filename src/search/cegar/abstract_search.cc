@@ -23,6 +23,10 @@ void AbstractSearch::reset() {
     solution.clear();
 }
 
+void AbstractSearch::update_operator_costs(std::vector<int> costs){
+		operator_costs = costs;
+}
+
 bool AbstractSearch::find_solution(AbstractState *init, AbstractStates &goals) {   
     reset();
     init->get_search_info().decrease_g_value_to(0);

@@ -5,6 +5,7 @@
 #include "refinement_hierarchy.h"
 #include "split_selector.h"
 #include "transition_updater.h"
+#include "partition.h"
 
 
 #include "../task_proxy.h"
@@ -37,7 +38,8 @@ struct Flaw;
   RefinementHierarchy.
 */
 class Abstraction {
-    const TaskProxy task_proxy;
+	std::shared_ptr<AbstractTask> task;
+    TaskProxy task_proxy;
     const int max_states;
     const int max_non_looping_transitions;
     const bool use_general_costs;
@@ -51,7 +53,12 @@ class Abstraction {
   
     utils::Timer refine_timer;
     utils::Timer update_timer;
+	
     int refinement_calls = 0; 
+	
+	std::vector<int> costs_partitioning;
+	Partition partition;
+	std::vector<std::pair<int, int>> additional_goals;
 
     /*
       Set of all (as of yet unsplit) abstract states.
@@ -104,7 +111,7 @@ class Abstraction {
     bool is_goal(AbstractState *state) const;    
 
     // Split state into two child states.
-    void refine(AbstractState *state, int var, const std::vector<int> &wanted);
+    AbstractState* refine(AbstractState *state, int var, const std::vector<int> &wanted);
 
     AbstractState get_cartesian_set(const ConditionsProxy &conditions) const;
 
@@ -116,9 +123,10 @@ class Abstraction {
     // Perform Dijkstra's algorithm from the goal states to update the h-values.
     void update_h_and_g_values();
 
+	bool is_abstract_goal(AbstractState* state);
 public:
     Abstraction(
-        const std::shared_ptr<AbstractTask> task,
+        std::shared_ptr<AbstractTask> task,
         int max_states,
         int max_non_looping_transitions,
         double max_time,
@@ -127,6 +135,8 @@ public:
         utils::RandomNumberGenerator &rng,
         bool debug = false);
     ~Abstraction();
+	
+	bool refined = true;
 
     Abstraction(const Abstraction &) = delete;
 
@@ -149,8 +159,12 @@ public:
       preserve the abstract goal distances of all reachable states.
     */
     std::vector<int> get_saturated_costs();
+	std::vector<int> get_costs_partitioning();
 
     int get_h_value_of_initial_state() const;
+	
+	void update_Task(std::shared_ptr<AbstractTask> task);
+	std::shared_ptr<AbstractTask> get_AbsTask();
   
 	void print_statistics();
 	void print_end_statistics();
@@ -160,6 +174,7 @@ public:
     const TaskProxy* get_Task();
     int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine);
     void update_h_values();
+	bool merge(Abstraction* abs);
 };
 }
 

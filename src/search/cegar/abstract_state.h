@@ -115,6 +115,10 @@ public:
     */
     std::pair<AbstractState *, AbstractState *> split(
         int var, const std::vector<int> &wanted);
+	
+	const Domains getDomains() const{
+		return domains;	
+	}
 
     bool includes(const State &concrete_state) const;
 

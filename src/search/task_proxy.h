@@ -658,6 +658,10 @@ public:
     GoalsProxy get_goals() const {
         return GoalsProxy(*task);
     }
+	
+	void add_goals(GoalsProxy) const {
+        //TODO
+    }
 
     State get_initial_state() const {
         return State(*task, task->get_initial_state_values());

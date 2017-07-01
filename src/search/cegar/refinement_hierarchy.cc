@@ -58,4 +58,15 @@ Node *RefinementHierarchy::get_node(const State &state) const {
     }
     return current;
 }
+	
+std::vector<std::pair<int, int>> RefinementHierarchy::get_split_vars(AbstractState* state){
+	assert(root);
+	std::vector<std::pair<int, int>> split_vars;
+    Node *current = root.get();
+    current->get_split_vars(state, &split_vars);
+	//for(pair<int, int> p : split_vars){
+	//	cout << "var " << p.first << " = " << p.second << endl;	
+	//}
+	return split_vars;
+}
 }

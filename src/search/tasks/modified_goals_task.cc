@@ -1,4 +1,5 @@
 #include "modified_goals_task.h"
+#include <iostream>
 
 using namespace std;
 
@@ -17,4 +18,5 @@ int ModifiedGoalsTask::get_num_goals() const {
 FactPair ModifiedGoalsTask::get_goal_fact(int index) const {
     return goals[index];
 }
+	
 }

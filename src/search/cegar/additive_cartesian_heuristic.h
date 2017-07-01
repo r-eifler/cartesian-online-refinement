@@ -2,6 +2,7 @@
 #define CEGAR_ADDITIVE_CARTESIAN_HEURISTIC_H
 
 #include "../heuristic.h"
+#include "cost_saturation.h"
 
 #include <vector>
 
@@ -18,11 +19,24 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int max_iter;
 	int update_h_values;
 	
-	int online_refined_states = 0;
+	int online_refined_states = 0; 	
+	utils::Timer cost_timer;
+	utils::Timer refine_timer;
+	utils::Timer prove_timer;
+	utils::Timer merge_timer;
+	utils::Timer print_timer;
+    utils::Timer update_timer;
 	
-    const std::vector<CartesianHeuristicFunction> heuristic_functions;
+	int improved_order = 0;
+	int decreased_order = 0;
+	int improved_refine = 0;
+	
+	
+	CostSaturation* cost_saturation;
+    std::vector<CartesianHeuristicFunction*> heuristic_functions;
 
     int compute_heuristic(const State &state);
+	std::vector<CartesianHeuristicFunction*> generate_heuristic_functions(const options::Options &opts);
 
 protected:
     virtual int compute_heuristic(const GlobalState &global_state) override;
@@ -30,8 +44,9 @@ protected:
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
-	virtual bool online_Refine(const GlobalState &global_state) override;
+	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates) override;
 	virtual void print_statistics() override;
+	void print_order();
 };
 }
 

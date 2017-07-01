@@ -25,15 +25,18 @@ class CartesianHeuristicFunction {
   
     const utils::Timer update_timer;
     const int update_counter = 5;
+	
 
 public:
+	int id;
 	
-	CartesianHeuristicFunction(Abstraction *abs);
+	CartesianHeuristicFunction(Abstraction *abs, int id);
 
     int get_value(const State &parent_state) const;
 	int online_Refine(const State &state, int max_iter, int update_h_values, int max_states_refine) const;
 	void print_statistics() const; 
-	
+	void update_h_values();
+	void merge(CartesianHeuristicFunction *function);
 
 };
 }

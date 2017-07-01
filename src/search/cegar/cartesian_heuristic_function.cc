@@ -5,8 +5,8 @@ using namespace std;
 
 namespace cegar {
    
-CartesianHeuristicFunction::CartesianHeuristicFunction(Abstraction *abs)
-    :abstraction(abs){		  
+CartesianHeuristicFunction::CartesianHeuristicFunction(Abstraction *abs, int i)
+    :abstraction(abs), id(i){		  
 }
 
 int CartesianHeuristicFunction::get_value(const State &parent_state) const {
@@ -22,9 +22,16 @@ int CartesianHeuristicFunction::online_Refine(const State &parent_state, int max
 }
 	
 		
-	void CartesianHeuristicFunction::print_statistics() const{
-		abstraction->print_end_statistics();	
-	}
+void CartesianHeuristicFunction::print_statistics() const{
+	abstraction->print_end_statistics();	
+}
 	
+void CartesianHeuristicFunction::update_h_values() {
+	abstraction->update_h_values();
+}
+
+void CartesianHeuristicFunction::merge(CartesianHeuristicFunction *function) {
+	abstraction->merge(function->abstraction);
+}	
 	
 }

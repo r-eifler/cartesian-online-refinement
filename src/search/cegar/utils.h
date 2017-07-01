@@ -2,6 +2,7 @@
 #define CEGAR_UTILS_H
 
 #include "../task_proxy.h"
+#include "abstract_search.h"
 
 #include <limits>
 #include <memory>
@@ -40,6 +41,7 @@ extern std::unordered_set<FactProxy> get_relaxed_possible_before(
     const TaskProxy &task, const FactProxy &fact);
 
 extern std::vector<int> get_domain_sizes(const TaskProxy &task);
+	
 }
 
 /*

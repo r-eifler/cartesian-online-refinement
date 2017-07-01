@@ -42,8 +42,12 @@ EagerSearch::EagerSearch(const Options &opts)
 }
 
 void EagerSearch::initialize() {
+    
+    cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
     //Stop Timer
     open_list_timer.stop();
+    total_refine_timer.stop();
+    prove_time_timer.stop();
     
     
     cout << "Conducting best first search"
@@ -127,6 +131,8 @@ void EagerSearch::print_statistics() const {
     h->print_statistics();
     
     cout << "openlist time: " << open_list_timer << endl;
+    cout << "total refine time: " << total_refine_timer << endl;
+    cout << "prove time: " << prove_time_timer << endl;
     cout << endl;
 }
 
@@ -148,129 +154,34 @@ SearchStatus EagerSearch::step() {
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
-    if(refine_online){
-        bool debug = false;
+    if(refine_online && statistics.get_expanded() % refinement_selector == 0){
+        total_refine_timer.resume();
         // Check whether h(s) is too low by looking at all successors.
         assert(heuristics.size() == 1);  // HACK
         ScalarEvaluator *heuristic = heuristics[0];  // HACK
         int infinity = EvaluationResult::INFTY;
         EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
         int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-        
-        if(debug)
-            cout << "h(s) = " << to_string(state_h) << endl;
 
-        //compute provable_h_value
-        int provable_h_value = infinity;
         if (state_h != infinity) {
-            //string succ_states_values("Succ h values:");
+            vector<pair<GlobalState, int>> succStates;
             for (const GlobalOperator *op : applicable_ops) {
                 GlobalState succ_state = state_registry.get_successor_state(s, *op);
-                int succ_g = node.get_g() + op->get_cost();
-                EvaluationContext succ_eval_context(succ_state, succ_g, false, nullptr);
-                int succ_h = succ_eval_context.get_heuristic_value_or_infinity(heuristic);
-                //succ_states_values +=  " |" + to_string(succ_h) + " c=" + to_string(op->get_cost());
-                assert(state_h <= succ_h + op->get_cost());
-                provable_h_value = min(
-                    provable_h_value,
-                    succ_h == infinity ? infinity : succ_h + op->get_cost());
+                succStates.push_back(make_pair(succ_state, op->get_cost()));
             }
-            /*
-            if(debug){
-             cout << succ_states_values << endl;
-            }
-            */
-        }
-        assert(provable_h_value >= state_h);   
-
-        //Check if refinement possible
-        if (provable_h_value > state_h + refinement_threshold) {
-            ++num_nodes_with_improvable_h_value;
+                                     
+            //ONLINE REFINEMENT  
+            bool refined = false;
+            Heuristic* h = heuristics[0];
+            refined = h->online_Refine(s, succStates);
+                                     
+            if(refined){
+               num_refined_nodes++;                 
+            } 
             
-            if(debug){
-                cout << "--------------------------" << endl;
-                cout << "g=" << node.get_g() << ", h improvable: " << state_h << " -> " << provable_h_value << endl;
-  
-				//Check which heuristics should be refined
-				vector<int> values = heuristics[0]->compute_individual_heuristics(s);
-				string h_s("h(s)= ");
-				for(uint i = 0; i < values.size(); i++){
-					   h_s += to_string(values[i]);
-					if(i < values.size() - 1){
-						h_s += " + ";   
-					}
-				}
-				
-				cout << h_s << endl;
-				
-				vector<int> provable_h_values;
-				//init
-				for(uint i = 0; i < values.size(); i++){
-					   provable_h_values.push_back(infinity);
-				}
-				for (const GlobalOperator *op : applicable_ops) {
-					string succ_h_values("succ h values: ");
-					GlobalState succ_state = state_registry.get_successor_state(s, *op);
-					vector<int> succ_values = heuristics[0]->compute_individual_heuristics(succ_state);
-					for(uint i = 0; i < provable_h_values.size(); i++){
-						succ_h_values += to_string(succ_values[i]) + " ";
-						provable_h_values[i] = min(
-							provable_h_values[i],
-							succ_values[i] == infinity ? infinity : succ_values[i] + op->get_cost());
-					}
-					
-					cout << succ_h_values << endl;
-				}
-				bool conflict = true;
-				string provable_h_values_s("provable h values: ");
-				for(uint i = 0; i < provable_h_values.size(); i++){
-					provable_h_values_s += to_string(provable_h_values[i]) + " ";
-					if(provable_h_values[i] >= values[i]){
-						conflict = false;
-						provable_h_values_s += "r ";   
-					}
-				}
-
-				
-				cout << provable_h_values_s << endl;
-				cout <<"refinement conflict: " << conflict << endl;
-				
-			}
-
-			if(statistics.get_expanded() % ((statistics.get_expanded() / 10000) * 10 + 10) == 0){
-            //if(num_nodes_with_improvable_h_value % refinement_selector == 0){
-                
-                if(debug)    
-                    cout << "old h value: "  << state_h << endl;
-
-                //ONLINE REFINEMENT    
-                Heuristic *h = heuristics[0]; 
-                bool refined = h->online_Refine(s);
-                
-
-                if(debug){
-                    //reevaluate cached values
-                    auto &cached_result = const_cast<HeuristicCache &>(state_eval_context.get_cache())[heuristic];
-                    if (!cached_result.is_uninitialized()){
-                        cached_result = EvaluationResult();
-                    }
-                    int new_h_value = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-                    if(new_h_value > state_h){
-                        num_nodes_improved++;   
-                    }
-                
-                    cout << "new h value: " << state_h << endl;
-                }
-
-
-                if(refined){
-                    num_refined_nodes++;                 
-                }  
-                
-            }
-            if(debug)
-                cout << "+++++++++++++++++++++++++++++++" << endl;
         }
+
+        total_refine_timer.stop();
     }
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
@@ -430,20 +341,26 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         if (node.is_closed())
             continue;
         
+        
         //------------Check if state needs to be reevaluated        
         //h value of the last evaluation
         int old_h = node.get_h_value();
 
-        /*
-        if(old_h + node.get_g() != last_key_removed[0]){
-            continue;   
-        }*/
+        
+        //if(old_h + node.get_g() != last_key_removed[0]){
+         //   continue;   
+        
 
         EvaluationContext state_eval_context(s, node.get_g(), false, &statistics);
         ScalarEvaluator *heuristic = heuristics[0];
         int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-
-        assert(old_h <= new_h);
+        //std::cout << "Fetch next Node: old h: " << old_h << " new h: " << new_h << std::endl;
+        
+        //TODO !!!!!!!!
+        //assert(old_h <= new_h);
+        //if(old_h > new_h)
+        //    cout << "!!!!!!! Fetch next Node : " << old_h << " > " << new_h << endl;
+        
         //the state needs to be put back if the h value is not updated or the position does 
         //not fit to the h and g value of the state
         if(old_h < new_h || old_h + node.get_g() != last_key_removed[0]){
@@ -453,14 +370,14 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             continue;  
         }
         open_list_timer.stop();
-
-        /*
+        
+        
         if(print_timer() > 60){
             cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
             print_timer.reset();
             print_statistics();
         }
-        */
+        
         
         //------------------
 

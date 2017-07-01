@@ -20,7 +20,7 @@ using Solution = std::deque<Transition>;
   states.
 */
 class AbstractSearch {
-    const std::vector<int> operator_costs;
+    std::vector<int> operator_costs;
     AbstractStates &states;
 
     AdaptiveQueue<AbstractState *> open_queue;
@@ -44,6 +44,7 @@ public:
 
     void forward_dijkstra(AbstractState *init);
     void backwards_dijkstra(const AbstractStates goals);
+	void update_operator_costs(std::vector<int> operator_costs);
 
     const Solution &get_solution() {
         return solution;

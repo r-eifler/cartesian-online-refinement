@@ -65,7 +65,7 @@ class CausalGraph {
     IntRelation successors;
     IntRelation predecessors;
 
-    void dump(const TaskProxy &task_proxy) const;
+    
 public:
     /* Use the factory function get_causal_graph to create causal graphs
        to avoid creating more than one causal graph per AbstractTask. */
@@ -109,6 +109,8 @@ public:
     const std::vector<int> &get_predecessors(int var) const {
         return predecessors[var];
     }
+	
+	void dump(const TaskProxy &task_proxy) const;
 };
 
 /* Create or retrieve a causal graph from cache. If causal graphs are created

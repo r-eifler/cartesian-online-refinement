@@ -45,6 +45,8 @@ class EagerSearch : public SearchEngine {
 	int num_nodes_improved = 0;
 	
 	utils::Timer open_list_timer;
+	utils::Timer total_refine_timer;
+	utils::Timer prove_time_timer;
 	utils::Timer print_timer;
 	
 	int num_reeval_states = 0;

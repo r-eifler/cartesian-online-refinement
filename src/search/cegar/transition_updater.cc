@@ -89,6 +89,7 @@ void TransitionUpdater::add_loops_to_trivial_abstract_state(AbstractState *state
 
 void TransitionUpdater::add_transition(
     AbstractState *src, int op_id, AbstractState *target) {
+    //cout << "t " << op_id << " from " << *src << " to " << *target << endl;
     assert(src != target);
     src->add_outgoing_transition(op_id, target);
     target->add_incoming_transition(op_id, src);

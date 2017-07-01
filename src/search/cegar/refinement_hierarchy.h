@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 class State;
 
@@ -41,6 +42,8 @@ public:
     Node *get_root() const {
         return root.get();
     }
+	
+	std::vector<std::pair<int, int>> get_split_vars(AbstractState* state);
 };
 
 
@@ -102,7 +105,9 @@ public:
     Node *get_child(int value) const;
 
     void increase_h_value_to(int new_h) {
-        assert(new_h >= h);
+		//if(new_h < h)
+		//	std::cout << "NODE: old h: " << h << " new h: " << new_h << std::endl;
+        //assert(new_h >= h);  TODO
         h = new_h;
     }
 
@@ -119,6 +124,19 @@ public:
     AbstractState *get_AbstractState(){
       return  abstract_state;
     }
+	
+	void get_split_vars(AbstractState* state, std::vector<std::pair<int, int>>* splits){
+		if(! is_split()){
+			return;	
+		}
+		if(state->contains(var, value) && !(state->count(var) == 1)){
+			splits->push_back(std::make_pair(var, value));
+		}
+		
+		left_child->get_split_vars(state, splits);
+		right_child->get_split_vars(state, splits);
+	}
+	
 };
 }
 

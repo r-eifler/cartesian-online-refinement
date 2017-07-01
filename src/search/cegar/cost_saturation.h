@@ -2,6 +2,7 @@
 #define CEGAR_COST_SATURATION_H
 
 #include "split_selector.h"
+#include "abstraction.h"
 
 #include <memory>
 #include <vector>
@@ -36,17 +37,23 @@ class CostSaturation {
     int num_abstractions;
     int num_states;
     int num_non_looping_transitions;
+  
+    
+    std::vector<Abstraction*> abstractions;
+    std::shared_ptr<AbstractTask> abstask;
 
     void reset(const TaskProxy &task_proxy);
     void reduce_remaining_costs(const std::vector<int> &saturated_costs);
     std::shared_ptr<AbstractTask> get_remaining_costs_task(
         std::shared_ptr<AbstractTask> &parent) const;
+    std::shared_ptr<AbstractTask> get_remaining_costs_task(std::shared_ptr<AbstractTask> &parent,  std::vector<int> old_costs);
+    void add_cost_partitioning(std::vector<int>* cost1, std::vector<int>* cost2);
     bool state_is_dead_end(const State &state) const;
     void build_abstractions(
         const std::vector<std::shared_ptr<AbstractTask>> &subtasks,
         const utils::CountdownTimer &timer,
         std::function<bool()> should_abort);
-    void print_statistics() const;
+   
 
 public:
     CostSaturation(
@@ -58,8 +65,13 @@ public:
         PickSplit pick_split,
         utils::RandomNumberGenerator &rng);
 
-    std::vector<CartesianHeuristicFunction> generate_heuristic_functions(
+    std::vector<CartesianHeuristicFunction*> generate_heuristic_functions(
         const std::shared_ptr<AbstractTask> &task);
+  
+    void print_statistics() const;
+    void recompute_cost_partitioning();
+    void rise_heuristic(int pos);
+    void remove_abstraction(int pos);
 };
 }
 
