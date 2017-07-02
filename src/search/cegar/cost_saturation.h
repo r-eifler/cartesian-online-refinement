@@ -41,6 +41,7 @@ class CostSaturation {
     
     std::vector<Abstraction*> abstractions;
     std::shared_ptr<AbstractTask> abstask;
+    std::vector<std::vector<int>> scp_orders;
 
     void reset(const TaskProxy &task_proxy);
     void reduce_remaining_costs(const std::vector<int> &saturated_costs);
@@ -70,8 +71,15 @@ public:
   
     void print_statistics() const;
     void recompute_cost_partitioning();
+    void recompute_cost_partitioning(int order_id);
+    void recompute_cost_partitioning(std::vector<int> order);
     void rise_heuristic(int pos);
+    //void swap_heuristics(int pos1, int pos2, int order_id);
     void remove_abstraction(int pos);
+  
+    std::vector<int> get_order(int id);
+    void update_order(int id, std::vector<int> new_order);
+    int add_order(std::vector<int> order);
 };
 }
 

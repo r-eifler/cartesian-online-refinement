@@ -193,6 +193,7 @@ void CostSaturation::build_abstractions(
     const utils::CountdownTimer &timer,
     function<bool()> should_abort) {
     int rem_subtasks = subtasks.size();
+	vector<int> order;
     for (shared_ptr<AbstractTask> subtask : subtasks) {
 		
         subtask = get_remaining_costs_task(subtask);
@@ -232,7 +233,9 @@ void CostSaturation::build_abstractions(
         reduce_remaining_costs(sturated_cost);
         //int init_h = abstraction->get_h_value_of_initial_state();
         //if (init_h > 0) {
+			
 			abstractions.push_back(abstraction);
+			order.push_back(abstractions.size()-1);
           	heuristic_functions.emplace_back(abstraction, abstractions.size()-1);
 		  
         //}
@@ -241,6 +244,7 @@ void CostSaturation::build_abstractions(
 
         --rem_subtasks;
     }
+	scp_orders.push_back(order);
 }
 	
 void CostSaturation::recompute_cost_partitioning(){
@@ -306,6 +310,89 @@ void CostSaturation::recompute_cost_partitioning(){
 		//cout << "******************************************************************" << endl;
 	}
 }
+	
+	
+void CostSaturation::recompute_cost_partitioning(int order_id){
+	recompute_cost_partitioning(scp_orders[order_id]);
+}
+
+void CostSaturation::recompute_cost_partitioning(std::vector<int> order){
+	TaskProxy task_proxy(*abstask); 
+	
+	//reset ramaining cost;
+	remaining_costs = get_operator_costs(task_proxy);
+
+	for(int pos : order){
+		
+		Abstraction* abs = abstractions[pos];
+		//vector<int> sturated_cost_old = abs->get_costs_partitioning();
+		
+		/*
+		cout << "Remaining Cost: " << endl;
+		for(int i : remaining_costs){
+			cout << i << " ";	
+		}
+		cout << endl;
+		cout << "Old Saturated cost" << endl;
+		for(int i : sturated_cost_old){
+			cout << i << " ";	
+		}
+		cout << endl;
+		*/
+		
+		
+		//update the task in the abstraction
+		shared_ptr<AbstractTask> subtask = abs->get_AbsTask();
+		subtask = get_remaining_costs_task(subtask);
+		abs->update_Task(subtask);
+		
+		//Update the remaining cost of the states aber refinement
+		abs->update_h_values();
+		
+		vector<int> sturated_cost = abs->get_saturated_costs();
+		/*
+		cout << "Saturated cost" << endl;		
+		for(int i : sturated_cost){
+			cout << i << " ";	
+		}
+		cout << endl;*/
+		reduce_remaining_costs(sturated_cost);
+		/*
+		cout << "Remaining Cost: " << endl;
+		for(int i : remaining_costs){
+			cout << i << " ";	
+		}
+		cout << endl;
+		*/
+		//cout << "******************************************************************" << endl;
+	}	
+}
+	
+std::vector<int> CostSaturation::get_order(int id){
+	assert((uint) id < scp_orders.size());
+	return scp_orders[id];	
+}
+void CostSaturation::update_order(int id, std::vector<int> new_order){
+	assert((uint)id < scp_orders.size());
+	scp_orders[id] = new_order;
+}
+int CostSaturation::add_order(std::vector<int> order){
+	for(size_t i = 0; i < scp_orders.size(); i++){
+	 	vector<int> existing_order = scp_orders[i];
+		if(existing_order == order){
+			/*
+			cout << "order : ";
+			for(int o : order){
+				cout << o << " ";	
+			}
+			cout << " already exists" << endl;*/
+			return i;	
+		}
+	}
+	scp_orders.push_back(order);
+	return scp_orders.size() - 1;
+}
+	
 	
 void CostSaturation::rise_heuristic(int pos){	
 	assert(pos > 0);

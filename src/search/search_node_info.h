@@ -16,6 +16,7 @@ struct SearchNodeInfo {
     int real_g;
 	
 	int h;
+	int order;
 
     SearchNodeInfo()
         : status(NEW), g(-1), parent_state_id(StateID::no_state),

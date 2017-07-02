@@ -124,6 +124,13 @@ int SearchNode::get_h_value(){
 	return info.h;
 }
 
+void SearchNode::set_order(int id){
+	info.order = id;
+}
+int SearchNode::get_order(){
+	return info.order;
+}
+
 SearchSpace::SearchSpace(StateRegistry &state_registry, OperatorCost cost_type)
     : state_registry(state_registry),
       cost_type(cost_type) {

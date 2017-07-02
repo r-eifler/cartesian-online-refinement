@@ -31,6 +31,7 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int decreased_order = 0;
 	int improved_refine = 0;
 	
+	int current_order = 0;
 	
 	CostSaturation* cost_saturation;
     std::vector<CartesianHeuristicFunction*> heuristic_functions;
@@ -44,9 +45,10 @@ protected:
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
-	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates) override;
+	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, int* new_order) override;
 	virtual void print_statistics() override;
 	void print_order();
+	virtual void change_to_order(int id) override;
 };
 }
 

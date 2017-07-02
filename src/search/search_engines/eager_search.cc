@@ -95,12 +95,13 @@ void EagerSearch::initialize() {
         start_f_value_statistics(eval_context);
         SearchNode node = search_space.get_node(initial_state);
         node.open_initial();
-
+        
         
         ScalarEvaluator *heuristic = heuristics[0];
         int h = eval_context.get_heuristic_value_or_infinity(heuristic);
         //cout << "h=" << h << endl;
         node.set_h_value(h);
+        node.set_order(0);
         open_list->insert(eval_context, initial_state.get_id());
     }
 
@@ -142,6 +143,9 @@ SearchStatus EagerSearch::step() {
         return FAILED;
     }
     SearchNode node = n.first;
+    int parent_order = node.get_order();
+    //cout << "-------------------------------------" << endl;
+    //cout << "Parent order: " << parent_order << endl;
 
     GlobalState s = node.get_state();
     if (check_goal_and_set_plan(s))
@@ -154,6 +158,8 @@ SearchStatus EagerSearch::step() {
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
+    
+    Heuristic* h = heuristics[0];
     if(refine_online && statistics.get_expanded() % refinement_selector == 0){
         total_refine_timer.resume();
         // Check whether h(s) is too low by looking at all successors.
@@ -171,18 +177,21 @@ SearchStatus EagerSearch::step() {
             }
                                      
             //ONLINE REFINEMENT  
+            
             bool refined = false;
-            Heuristic* h = heuristics[0];
-            refined = h->online_Refine(s, succStates);
-                                     
+            int new_order = parent_order;
+            refined = h->online_Refine(s, succStates, &new_order);
+            parent_order = new_order;
+            //cout << "---> new order: " << new_order << endl;
             if(refined){
                num_refined_nodes++;                 
             } 
-            
+            //cout << "-------------------------------------" << endl;
         }
 
         total_refine_timer.stop();
     }
+    
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
     
@@ -206,6 +215,8 @@ SearchStatus EagerSearch::step() {
         bool is_preferred = preferred_operators.contains(op);
 
         SearchNode succ_node = search_space.get_node(succ_state);
+        //Update SCP order
+        succ_node.set_order(parent_order);
 
         // Previously encountered dead end. Don't re-evaluate.
         if (succ_node.is_dead_end())
@@ -342,7 +353,11 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             continue;
         
         
-        //------------Check if state needs to be reevaluated        
+        //------------Check if state needs to be reevaluated 
+        int parent_order = node.get_order();
+        Heuristic* h = heuristics[0];
+        h->change_to_order(parent_order);
+        
         //h value of the last evaluation
         int old_h = node.get_h_value();
 
@@ -354,7 +369,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         EvaluationContext state_eval_context(s, node.get_g(), false, &statistics);
         ScalarEvaluator *heuristic = heuristics[0];
         int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-        //std::cout << "Fetch next Node: old h: " << old_h << " new h: " << new_h << std::endl;
+        
         
         //TODO !!!!!!!!
         //assert(old_h <= new_h);
@@ -367,12 +382,15 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             node.set_h_value(new_h);
             open_list->insert(state_eval_context, node.get_state_id());  
             num_reeval_states++;
+            //std::cout << "Fetch next Node: " << id << " old h: " << old_h << " new h: " << new_h << std::endl;
             continue;  
         }
+        
         open_list_timer.stop();
         
         
         if(print_timer() > 60){
+            cout << "+++++++++++++++++++++++++++++++++++++" << endl;
             cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
             print_timer.reset();
             print_statistics();

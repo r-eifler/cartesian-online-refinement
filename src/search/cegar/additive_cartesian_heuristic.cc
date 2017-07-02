@@ -105,7 +105,7 @@ void AdditiveCartesianHeuristic::print_order(){
     cout << endl;
 }
     
-bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
+bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, int* scp_order){
     /*
     if(print_timer > 30){
         cout << "Order: ";
@@ -232,44 +232,71 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
             cout << "Heuristic not improved" << endl;
     }
     
+    
+   //CHANGE SCP ORDER
    //if(!refine_all){
        if(false){
            //cout << "++++++++++ Change Cost partitioning Order +++++++++++" << endl;
            cout << "Refine ALL: " << refine_all;
            cout << "Old order: ";      
-            print_order();
+           // print_order();
        }    
+    
+    assert(current_order == *scp_order);
+    vector<int> updated_order(cost_saturation->get_order(*scp_order));
+    /*
+    cout << "Old order: " << endl;
+    for(int o : updated_order){
+        cout << o << " ";   
+    }
+    cout << endl;
+    */
     int test_value = h_value;
         //for(size_t i = 1; i < toRefine.size(); i++){
-       for(size_t i = toRefine.size() - 1; i > 0; i--){
+       for(size_t i = toRefine.size() - 1; i > 0; i--){ //!!!!!!!!!! REVERSE 
             CartesianHeuristicFunction *function = *(heuristic_functions.begin() + i);
             //if(toRefine[i] && !toRefine[i-1]){
             if(toRefine[i]){
                if(debug)
                     cout << "******************** Rise h " << function->id << " ***************************" << endl;
                //cout << "Rise heuristic " << i << " in cost partitioning order" << endl;
-               cost_saturation->rise_heuristic(i);
-               iter_swap(heuristic_functions.begin() + i, heuristic_functions.begin() + i - 1);
-               iter_swap(toRefine.begin() + i, toRefine.begin() + i - 1);
+               iter_swap(updated_order.begin() + i, updated_order.begin() + i - 1);
+               cost_saturation->recompute_cost_partitioning(updated_order);
                if(false){
-                   cout << "New order: ";
-                   print_order();
+                    cout << "New order: " << endl;
+                    for(int o : updated_order){
+                        cout << o << " ";   
+                    }
+                    cout << endl;
                    //cout << "***********************************************" << endl;
                }
                int new_h_value = compute_heuristic(global_state);               
                if(test_value >  new_h_value){
-                  //cout << "!!!! Order decreased h_old(s) = " << test_value << " --> h_new(s) = " << new_h_value << endl;
-                  cost_saturation->rise_heuristic(i);
-                  iter_swap(heuristic_functions.begin() + i, heuristic_functions.begin() + i - 1);
-                  iter_swap(toRefine.begin() + i, toRefine.begin() + i - 1);
+                  cout << "!!!! Order decreased h_old(s) = " << test_value << " --> h_new(s) = " << new_h_value << endl;
+                  iter_swap(updated_order.begin() + i, updated_order.begin() + i - 1);
+                  cost_saturation->recompute_cost_partitioning(updated_order);
+                  
                   /*
+                   cout << "Reset to order: " << endl;
+                    for(int o : updated_order){
+                        cout << o << " ";   
+                    }
+                    cout << endl;
+                    
+                  
                   int new_h_value = compute_heuristic(global_state);
-                  cout << "Undone: ";
-                  print_order();
                   cout << "h(s)=" << new_h_value << endl;
                   */
                   break;
                }
+               /*
+               if(test_value <  new_h_value){
+                   cout << "Order increased h_old(s) = " << test_value << " --> h_new(s) = " << new_h_value << endl;
+               }
+               if(test_value ==  new_h_value){
+                   cout << "Order stayed h_old(s) = " << test_value << " --> h_new(s) = " << new_h_value << endl;
+               }
+               */
                test_value = new_h_value;
             } 
        }
@@ -279,15 +306,24 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
    //Check if heuristic has been improved
    int new_h_value = compute_heuristic(global_state);
    if(h_value <  new_h_value){
-       if(false)
+       if(true)
             cout << "Order Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
        improved_order++;
+       *scp_order =  cost_saturation->add_order(updated_order);       
        return true;
    }   
    if(h_value >  new_h_value){
       decreased_order++;
-      //cout << "!!!! Order Heuristic decreased h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
+      cout << "!!!! Order Heuristic decreased h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
    }
+   //If the order change has not increased the heuristic the old order is used
+   if(h_value == new_h_value){
+       cout << "Order Heuristic stayed h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
+       cost_saturation->recompute_cost_partitioning(*scp_order);
+       //cout << "reset to order: " << *scp_order << endl;;
+       
+   }
+    
    //Update current h value
    h_value = new_h_value;
    if(debug){
@@ -320,14 +356,15 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
             if(debug)
                 cout << "recompute cost partitioning" << endl;
             cost_timer.resume();
-            cost_saturation->recompute_cost_partitioning();
+            //cost_saturation->recompute_cost_partitioning(*scp_order);
+            cost_saturation->recompute_cost_partitioning(); //!!!! ONLY USER FREE REMAINING COST
             cost_timer.stop();
         }
 
         new_h_value = compute_heuristic(global_state);
        if(h_value <  new_h_value){
            improved_refine++;
-           if(false)    
+           if(true)    
                 cout << "Refine Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
            return true;
        }
@@ -357,7 +394,13 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
    return refined;  
 }
     
-    
+void AdditiveCartesianHeuristic::change_to_order(int id){
+    if(current_order == id){
+        return;   
+    }
+    current_order = id;
+    cost_saturation->recompute_cost_partitioning(id);
+}
     
 	
 void AdditiveCartesianHeuristic::print_statistics(){
