@@ -134,6 +134,7 @@ Abstraction::Abstraction(
     /* Even if we found a concrete solution, we might have refined in the
        last iteration, so we should update the distances. */
     update_h_and_g_values();
+    update_h_and_g_values(0, false);  
           
     print_statistics();
 }
@@ -147,6 +148,10 @@ Abstraction::~Abstraction() {
 
 bool Abstraction::is_goal(AbstractState *state) const {
     return goals.count(state) == 1;
+}
+    
+bool Abstraction::satisfies_goal(State state){
+    return is_goal_state(task_proxy, state);   
 }
     
 bool Abstraction::is_abstract_goal(AbstractState* state){
@@ -533,6 +538,26 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
                 task_proxy, task_proxy.get_goals()));
     }
 }
+  
+void Abstraction::update_h_and_g_values(int pos, bool new_order){
+    update_timer.resume();
+    abstract_search.backwards_dijkstra(goals);
+    if(new_order){
+        for (AbstractState *state : states) {
+            state->add_h_value(state->get_search_info().get_g_value());
+        }
+    }
+    else{
+        for (AbstractState *state : states) {
+            state->set_h_value(pos, state->get_search_info().get_g_value());
+        }
+    }
+    
+    // Update g values.
+    // TODO: updating h values overwrites g values. Find better solution.
+    abstract_search.forward_dijkstra(init);
+    update_timer.stop();   
+}
 
 void Abstraction::update_h_and_g_values() {
     update_timer.resume();
@@ -550,7 +575,8 @@ int Abstraction::get_h_value_of_initial_state() const {
     return init->get_h_value();
 }
 
-vector<int> Abstraction::get_saturated_costs() {
+vector<int> Abstraction::get_saturated_costs(int order) {
+
     const int num_ops = task_proxy.get_operators().size();
     // Use value greater than -INF to avoid arithmetic difficulties.
     const int min_cost = use_general_costs ? -INF : 0;
@@ -599,12 +625,28 @@ vector<int> Abstraction::get_saturated_costs() {
         }
     }
     */
-    costs_partitioning = saturated_costs;
+    if(order != -1){
+        //cout << "Update saturated cost of order: " << order << " actions: " << saturated_costs.size() << endl;
+        if((uint) order < costs_partitionings.size())
+            costs_partitionings[order] = saturated_costs;
+        else{
+            costs_partitionings.push_back(saturated_costs);
+        }
+    }
+    
+    current_saturation =    saturated_costs;
+    
     return saturated_costs;
 }
     
-vector<int> Abstraction::get_costs_partitioning(){
-    return costs_partitioning;
+vector<int> Abstraction::get_costs_partitioning(int order){
+    //cout << "Get costs partitionning of order: " << order << " of " << costs_partitionings.size() << " orders" << endl;
+    assert((uint) order < costs_partitionings.size());
+    return costs_partitionings[order];
+}
+    
+void Abstraction::add_cost_partitioning(){
+       costs_partitionings.push_back(current_saturation);
 }
 
 void Abstraction::print_statistics() {

@@ -112,6 +112,10 @@ pair<AbstractState *, AbstractState *> AbstractState::split(
     int h = node->get_h_value();
     v1->set_h_value(h);
     v2->set_h_value(h);
+	vector<int> c1(h_values);
+	v1->h_values = c1;
+	vector<int> c2(h_values);
+	v2->h_values = c2;
 
     return make_pair(v1, v2);
 }
@@ -154,11 +158,37 @@ int AbstractState::get_h_value() const {
     assert(node);
     return node->get_h_value();
 }
+	
+	
+//Order dependend h values
+void AbstractState::set_h_value(int pos, int value){
+	//cout << "pos: " << pos << " value: " << value << endl;
+	assert((uint) pos < h_values.size());
+	h_values[pos] = value;
+}
+
+int AbstractState::add_h_value(int value){
+	h_values.push_back(value);
+	return h_values.size() -1;
+}
+
+
+int AbstractState::get_h_value(int pos) const {
+	assert((uint) pos < h_values.size());
+	return h_values[pos];
+}
+
+std::vector<int> AbstractState::get_h_values() const {
+	return h_values;	
+}
+	
 
 AbstractState *AbstractState::get_trivial_abstract_state(
     const TaskProxy &task_proxy, Node *root_node) {
     AbstractState *abstract_state = new AbstractState(
         Domains(get_domain_sizes(task_proxy)), root_node);
+	vector<int> h(1,0);
+	abstract_state->h_values = h;
     return abstract_state;
 }
 

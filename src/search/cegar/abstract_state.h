@@ -68,6 +68,9 @@ class AbstractState {
 
     // This state's node in the refinement hierarchy.
     Node *node;
+	
+	//H values of the different scp orders
+	std::vector<int> h_values;
 
     // Transitions from and to other abstract states.
     Transitions incoming_transitions;
@@ -124,6 +127,11 @@ public:
 
     void set_h_value(int new_h);
     int get_h_value() const;
+	
+	void set_h_value(int pos, int new_h);
+	int add_h_value(int value);
+    int get_h_value(int pos) const;
+	std::vector<int> get_h_values() const;
 
     const Transitions &get_outgoing_transitions() const {
         return outgoing_transitions;

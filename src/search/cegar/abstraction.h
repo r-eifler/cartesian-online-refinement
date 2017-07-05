@@ -56,7 +56,8 @@ class Abstraction {
 	
     int refinement_calls = 0; 
 	
-	std::vector<int> costs_partitioning;
+	std::vector<int> current_saturation;
+	std::vector<std::vector<int>> costs_partitionings;
 	Partition partition;
 	std::vector<std::pair<int, int>> additional_goals;
 
@@ -158,8 +159,9 @@ public:
       For each operator calculate the mimimum cost that is needed to
       preserve the abstract goal distances of all reachable states.
     */
-    std::vector<int> get_saturated_costs();
-	std::vector<int> get_costs_partitioning();
+    std::vector<int> get_saturated_costs(int order);
+	std::vector<int> get_costs_partitioning(int order);
+	void add_cost_partitioning();
 
     int get_h_value_of_initial_state() const;
 	
@@ -175,6 +177,9 @@ public:
     int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine);
     void update_h_values();
 	bool merge(Abstraction* abs);
+	void update_h_and_g_values(int pos, bool new_order);
+	
+	bool satisfies_goal(State state);
 };
 }
 

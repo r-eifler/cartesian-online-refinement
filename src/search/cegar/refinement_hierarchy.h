@@ -65,6 +65,7 @@ class Node {
 
     // Estimated cost to nearest goal state from this node's state.
     int h;
+	
   
     //Corresponding abstract state TODO
     AbstractState *abstract_state;
@@ -114,6 +115,29 @@ public:
     int get_h_value() const {
         return h;
     }
+	
+	void update_h_value(int pos, int value){
+		//assert((uint) pos < h_values.size());
+		//h_values[pos] = value;
+		abstract_state->set_h_value(pos, value);
+	}
+	
+	int add_h_value(int value){
+		//h_values.push_back(value);
+		return abstract_state->add_h_value(value);
+	}
+	
+	
+	int get_h_value(int pos) const {
+		//assert((uint) pos < h_values.size());
+        //return h_values[pos];
+		return abstract_state->get_h_value(pos);
+    }
+	
+	std::vector<int> get_h_values() const {
+		//return h_values;	
+		return abstract_state->get_h_values();
+	}
   
   
     //TODO

@@ -39,6 +39,8 @@ EagerSearch::EagerSearch(const Options &opts)
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
       num_nodes_with_improvable_h_value(0) {
+          
+          open_list_timer.stop();
 }
 
 void EagerSearch::initialize() {
@@ -354,10 +356,12 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         
         
         //------------Check if state needs to be reevaluated 
+        if(refine_online){
+        /*
         int parent_order = node.get_order();
         Heuristic* h = heuristics[0];
-        h->change_to_order(parent_order);
-        
+        //h->change_to_order(parent_order);
+        */
         //h value of the last evaluation
         int old_h = node.get_h_value();
 
@@ -385,14 +389,15 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             //std::cout << "Fetch next Node: " << id << " old h: " << old_h << " new h: " << new_h << std::endl;
             continue;  
         }
-        
+        }
         open_list_timer.stop();
         
         
-        if(print_timer() > 60){
-            cout << "+++++++++++++++++++++++++++++++++++++" << endl;
-            cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
+        
+        if(print_timer() > 30){
+            cout << "+++++++++++++++++++++++++++++++++++++" << endl;            
             print_timer.reset();
+            cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
             print_statistics();
         }
         
@@ -539,7 +544,7 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "refinement_selector",
         "only every refinement_selector states is refined",
         "1",
-        Bounds("1", "10000"));
+        Bounds("1", "1000000"));
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);
