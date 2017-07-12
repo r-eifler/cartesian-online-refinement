@@ -145,9 +145,6 @@ SearchStatus EagerSearch::step() {
         return FAILED;
     }
     SearchNode node = n.first;
-    int parent_order = node.get_order();
-    //cout << "-------------------------------------" << endl;
-    //cout << "Parent order: " << parent_order << endl;
 
     GlobalState s = node.get_state();
     if (check_goal_and_set_plan(s))
@@ -160,9 +157,10 @@ SearchStatus EagerSearch::step() {
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
-    
-    Heuristic* h = heuristics[0];
-    if(refine_online && statistics.get_expanded() % refinement_selector == 0){
+    if(refine_online && refine_timer() > 0){     
+        //cout << "----------> REFINE" << endl;
+    //if(refine_online && statistics.get_expanded() % refinement_selector == 0){
+        Heuristic* h = heuristics[0];
         total_refine_timer.resume();
         // Check whether h(s) is too low by looking at all successors.
         assert(heuristics.size() == 1);  // HACK
@@ -177,13 +175,11 @@ SearchStatus EagerSearch::step() {
                 GlobalState succ_state = state_registry.get_successor_state(s, *op);
                 succStates.push_back(make_pair(succ_state, op->get_cost()));
             }
-                                     
+
             //ONLINE REFINEMENT  
-            
+
             bool refined = false;
-            int new_order = parent_order;
-            refined = h->online_Refine(s, succStates, &new_order);
-            parent_order = new_order;
+            refined = h->online_Refine(s, succStates);
             //cout << "---> new order: " << new_order << endl;
             if(refined){
                num_refined_nodes++;                 
@@ -191,9 +187,9 @@ SearchStatus EagerSearch::step() {
             //cout << "-------------------------------------" << endl;
         }
 
-        total_refine_timer.stop();
+        total_refine_timer.stop();    
+        refine_timer.reset();
     }
-    
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
     
@@ -217,8 +213,6 @@ SearchStatus EagerSearch::step() {
         bool is_preferred = preferred_operators.contains(op);
 
         SearchNode succ_node = search_space.get_node(succ_state);
-        //Update SCP order
-        succ_node.set_order(parent_order);
 
         // Previously encountered dead end. Don't re-evaluate.
         if (succ_node.is_dead_end())

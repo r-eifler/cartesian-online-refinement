@@ -56,4 +56,8 @@ void CartesianHeuristicFunction::set_refined(bool b){
 	abstraction->refined = b;
 }
 	
+int CartesianHeuristicFunction::size(){
+	return abstraction->get_num_states();	
+}	
+	
 }

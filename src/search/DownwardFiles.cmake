@@ -393,7 +393,9 @@ fast_downward_plugin(
         cegar/cartesian_heuristic_function
         cegar/cost_saturation
         cegar/domains
-	cegar/partition
+	cegar/order_selecter
+	cegar/online_refinement
+	cegar/merge
         cegar/refinement_hierarchy
         cegar/split_selector
         cegar/subtask_generators

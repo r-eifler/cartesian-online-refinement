@@ -48,6 +48,7 @@ class EagerSearch : public SearchEngine {
 	utils::Timer total_refine_timer;
 	utils::Timer prove_time_timer;
 	utils::Timer print_timer;
+	utils::Timer refine_timer;
 	
 	int num_reeval_states = 0;
 

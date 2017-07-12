@@ -73,15 +73,19 @@ vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
 	c_graph.dump(task_proxy);
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
-
+	*/
+	
 	cout << "Operators" << endl;
       for (OperatorProxy op : task_proxy.get_operators())
           cout << op.get_name() << endl;
+	
+	/*
 	cout << "Variables: " << endl;
 	VariablesProxy vars = task_proxy.get_variables();
 	for(uint i = 0; i < vars.size(); i++){
 		cout << vars[i].get_name() <<  " domain size: " << vars[i].get_domain_size() << endl;	
 	}
+	
 	
 	cout << "+++++++++++++++++++ Goals ++++++++++++++++++" << endl;
      GoalsProxy goals = task_proxy.get_goals();
@@ -281,7 +285,13 @@ void CostSaturation::build_abstractions(
         --rem_subtasks;
     }
 }
-	
+
+ void CostSaturation::recompute_cost_partitioning_unused_all(){
+	for(size_t o = 0; o < scp_orders.size(); o++){
+		//cout << "Recompute cost partitioning unused order: " << o << endl;
+		recompute_cost_partitioning_unused(o);
+	}
+ }
 	
 void CostSaturation::recompute_cost_partitioning_unused(int order_id){
 	
@@ -296,10 +306,17 @@ void CostSaturation::recompute_cost_partitioning_unused(int order_id){
 		cout << endl;
 	}
 	*/
+	/*
+	cout << "Order: ";
+	for(int p : scp_orders[order_id]){
+		cout << p << " ";	
+	}
+	cout << endl;
+	*/
 	
 	for(int pos : scp_orders[order_id]){
 		Abstraction* abs = abstractions[pos];
-		//cout << "-------------Refined: " << abs->refined  << " ---------------------" << endl;
+		//cout << "------------- Recompute unused cost abs: " << pos << " refined " << abs->refined  << " ---------------------" << endl;
 		
 		if(!abs->refined){
 			//cout << "not refined" << endl;
@@ -319,11 +336,13 @@ void CostSaturation::recompute_cost_partitioning_unused(int order_id){
 		/*
 		cout << "Remaining Cost: " << endl;
 		*/
+		/*
 		for(uint i = 0; i < remaining_costs_order[order_id].size(); i++){
 			//cout << remaining_costs_order[order_id][i] << " ";
-			assert(! (remaining_costs_order[order_id][i] == 1 && sturated_cost_old[i] == 1));
+			//assert(! (remaining_costs_order[order_id][i] == 1 && sturated_cost_old[i] == 1)); //only for unit cost
 				
 		}
+		*/
 		//cout << endl;
 		
 		
@@ -360,6 +379,9 @@ void CostSaturation::recompute_cost_partitioning_unused(int order_id){
 		//vector<int> sturated_cost = abs->get_saturated_costs();
 		//reduce_remaining_costs(sturated_cost);
 		//cout << "******************************************************************" << endl;
+		abs->update_h_and_g_values(order_id, false); //TOOD does not need to be performed elsewehere anymore
+		
+		//abs->print_cost();
 	}
 }
 	
@@ -436,6 +458,10 @@ void CostSaturation::recompute_cost_partitioning(std::vector<int> order){
 	
 }
 	
+int CostSaturation::number_of_orders(){
+	return 	scp_orders.size();
+}
+	
 std::vector<int> CostSaturation::get_order(int id){
 	assert((uint) id < scp_orders.size());
 	return scp_orders[id];	
@@ -472,13 +498,68 @@ void CostSaturation::delete_order(int order_id){
 	
 	
 void CostSaturation::remove_abstraction(int pos){
-	cout << "Not yet implemented: delete abstraction at pos: " << pos << endl; 
 	/*
-	Abstraction* abs = abstractions[pos];
-	vector<int> cost = abs->get_costs_partitioning();
-	add_cost_partitioning(&remaining_costs, &cost);
-	abstractions.erase(abstractions.begin() + pos);
+	cout << "---------------------------------------------------------" << endl;
+	cout << "Delete abstraction at pos: " << pos << endl; 
+	cout << "NUMBER OF ABSTRACTIONS: " << abstractions.size() << endl;
 	*/
+	Abstraction* abs = abstractions[pos];
+	abstractions.erase(abstractions.begin() + pos);
+	for(size_t o = 0; o < scp_orders.size(); o++){
+		//cout << "Order: " << o << endl;
+		/*
+		cout << "Old Remaining" << endl;
+		for(int c : remaining_costs_order[o]){
+			cout << c << " ";	
+		}
+		cout << endl;
+		*/
+		vector<int> cost = abs->get_costs_partitioning(o);
+		/*
+		cout << "Cost" << endl;
+		for(int c : cost){
+			cout << c << " ";	
+		}
+		cout << endl;
+		*/
+		add_cost_partitioning(&(remaining_costs_order[o]), &cost);
+		/*
+		cout << "New Remaining" << endl;
+		for(int c : remaining_costs_order[o]){
+			cout << c << " ";	
+		}
+		cout << endl;
+		cout << ".................................................." << endl;
+		*/
+	}
+	
+	//heuristic_functions.erase(heuristic_functions.begin() + pos); TODO !!!!!!!
+	
+	//erase abstraction from all costpartitionings
+	//cout << "erase abstraction from all costpartitionings" << endl;
+	for(size_t j = 0; j < scp_orders.size(); j++){		
+		for(size_t i = 0; i < scp_orders[j].size(); i++){
+			//cout << scp_orders[j][i] << " ";
+			if(scp_orders[j][i] == pos){
+				scp_orders[j].erase(scp_orders[j].begin() + i);
+				break;
+			}
+		}
+		for(size_t i = 0; i < scp_orders[j].size(); i++){
+			if(scp_orders[j][i] > pos){
+				scp_orders[j][i]--;
+			}
+		}
+		/*
+		cout << endl;
+		cout << "New Order: ";
+		for(int o : scp_orders[j]){
+			cout << o << " ";	
+		}
+		cout << endl;
+		*/
+	}
+	
 }
 
 void CostSaturation::print_statistics() const {

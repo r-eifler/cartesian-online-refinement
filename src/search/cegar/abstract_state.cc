@@ -35,6 +35,15 @@ int AbstractState::count(int var) const {
 bool AbstractState::contains(int var, int value) const {
     return domains.test(var, value);
 }
+	
+bool AbstractState::contains(int var, std::vector<int> values) const{
+	for(int v : values){
+		if(!contains(var, v)){
+		   	return false;
+		}
+	}
+		   return true;
+}
 
 void AbstractState::add_outgoing_transition(int op_id, AbstractState *target) {
     assert(target != this);

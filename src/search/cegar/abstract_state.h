@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 class ConditionsProxy;
 class OperatorProxy;
@@ -40,11 +41,13 @@ public:
     }
 
     void decrease_g_value_to(int new_g) {
+		//std::cout << "decrease_g_value: " << g << " --> " << new_g << std::endl;
         assert(new_g <= g);
         g = new_g;
     }
 
     int get_g_value() const {
+		//std::cout << "get_g_value: " << g  << std::endl;
         return g;
     }
 
@@ -107,6 +110,7 @@ public:
     int count(int var) const;
 
     bool contains(int var, int value) const;
+	bool contains(int var, std::vector<int> values) const;
 
     // Return the abstract state in which applying "op" leads to this state.
     AbstractState regress(OperatorProxy op) const;

@@ -35,8 +35,8 @@ void Heuristic::set_preferred(const OperatorProxy &op) {
     set_preferred(op.get_global_operator());
 }
 
-bool Heuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, int* new_order){
-	cout << "online refine not implemented " << global_state.get_id()  << "#succ States: " << succStates.size() << "new order: " << *new_order << endl;	
+bool Heuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
+	cout << "online refine not implemented " << global_state.get_id()  << "#succ States: " << succStates.size() << endl;	
 	return false;
 }
 
@@ -108,6 +108,10 @@ EvaluationResult Heuristic::compute_result(EvaluationContext &eval_context) {
         result.set_count_evaluation(true);
     }
 
+	//TODO why
+	if(!(heuristic == DEAD_END || heuristic >= 0)){
+		cout << "Heuristic value not valid: " << heuristic << endl;	
+	}
     assert(heuristic == DEAD_END || heuristic >= 0);
 
     if (heuristic == DEAD_END) {

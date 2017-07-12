@@ -5,7 +5,6 @@
 #include "refinement_hierarchy.h"
 #include "split_selector.h"
 #include "transition_updater.h"
-#include "partition.h"
 
 
 #include "../task_proxy.h"
@@ -58,7 +57,6 @@ class Abstraction {
 	
 	std::vector<int> current_saturation;
 	std::vector<std::vector<int>> costs_partitionings;
-	Partition partition;
 	std::vector<std::pair<int, int>> additional_goals;
 
     /*
@@ -112,7 +110,7 @@ class Abstraction {
     bool is_goal(AbstractState *state) const;    
 
     // Split state into two child states.
-    AbstractState* refine(AbstractState *state, int var, const std::vector<int> &wanted);
+    std::pair<AbstractState*, AbstractState*> refine(AbstractState *state, int var, const std::vector<int> &wanted);
 
     AbstractState get_cartesian_set(const ConditionsProxy &conditions) const;
 
@@ -180,6 +178,8 @@ public:
 	void update_h_and_g_values(int pos, bool new_order);
 	
 	bool satisfies_goal(State state);
+	void print_states();
+	void print_cost();
 };
 }
 

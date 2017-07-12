@@ -9,6 +9,7 @@
 #include <vector>
 #include <iostream>
 
+
 class State;
 
 namespace cegar {
@@ -43,7 +44,7 @@ public:
         return root.get();
     }
 	
-	std::vector<std::pair<int, int>> get_split_vars(AbstractState* state);
+	std::vector<std::pair<int, std::vector<int>>> get_split_vars(AbstractState* state);
 };
 
 
@@ -149,16 +150,97 @@ public:
       return  abstract_state;
     }
 	
-	void get_split_vars(AbstractState* state, std::vector<std::pair<int, int>>* splits){
+	void get_split_vars(AbstractState* state, std::vector<std::pair<int, std::vector<int>>>* splits){
+		//std::cout << "..................................." << std::endl;
 		if(! is_split()){
 			return;	
 		}
-		if(state->contains(var, value) && !(state->count(var) == 1)){
+		/*
+		if(state->contains(var, value) && state->count(var) > 1){
 			splits->push_back(std::make_pair(var, value));
+		}*/
+		std::vector<int> values;
+		//traverse all left nodes as long they have the same right child as the current node
+		Node* lc = left_child;
+
+		/*
+		while(lc->right_child == right_child){
+				assert(var == lc->var);
+				std::cout << lc->var << " ";
+				values.push_back(lc->value);
+				lc = lc->left_child;
+		}
+		*/
+		//std::cout << std::endl;
+		
+		if( !(state->contains(var, value) && state->count(var) > 1)){
+			//std::cout << "right" << std::endl;
+			right_child->get_split_vars(state, splits);			
+		}
+		else{
+			//std::cout << "left" << std::endl;
+			//std::cout << "var " << var << " = " << value << " " << std::endl;
+			values.push_back(value);
+			splits->push_back(make_pair(var, values));
+			lc->get_split_vars(state, splits);
+		}
+	}
+	
+	std::pair<int, std::vector<int>> get_wanted_vars(AbstractState* state, Node** lc, Node** rc){
+		/*std::pair<int, std::vector<int>> wanted;
+		if(! is_split()){
+			return wanted;	
+		}
+		//std::cout << "State: " << *state << std::endl;
+		//std::cout << "var " << var << " = " << value << std::endl;
+		if(state->contains(var, value) && state->count(var) > 1){
+			//std::cout << "---> OK" << std::endl;
+			std::vector<int> values;
+			values.push_back(value);
+			wanted = make_pair(var, values);		
+			*lc = left_child;
+			*rc = right_child;			
+		}
+		if(state->contains(var, value) && state->count(var) == 1){
+			return right_child->get_wanted_vars(state, lc, rc);			
+		}
+		if(!state->contains(var, value)){
+			return left_child->get_wanted_vars(state, lc, rc);			
+		}*/
+		std::pair<int, std::vector<int>> wanted;
+		if(! is_split()){
+			return wanted;	
+		}
+		//std::cout << "State: " << *state << std::endl;
+		//std::cout << "var " << var << " = " << value << std::endl;
+		if(state->contains(var, value) && state->count(var) > 1){
+			//std::cout << "---> OK" << std::endl;
+			std::vector<int> values;
+			values.push_back(value);
+			Node * cn = left_child;
+			while(cn->right_child == right_child){
+				values.push_back(cn->value);
+				cn = cn->left_child;
+			}
+			/*
+			std::cout << "Wanted: ";
+			for(int v : values){
+				std::cout << v << " ";	
+			}
+			std::cout << std::endl;
+			*/
+			wanted = make_pair(var, values);		
+			*lc = cn;
+			*rc = right_child;			
+		}
+		if(state->contains(var, value) && state->count(var) == 1){
+			return right_child->get_wanted_vars(state, lc, rc);			
+		}
+		if(!state->contains(var, value)){
+			return left_child->get_wanted_vars(state, lc, rc);			
 		}
 		
-		left_child->get_split_vars(state, splits);
-		right_child->get_split_vars(state, splits);
+		return wanted;
 	}
 	
 };

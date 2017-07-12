@@ -49,6 +49,7 @@ void AbstractSearch::forward_dijkstra(AbstractState *init) {
 void AbstractSearch::backwards_dijkstra(const AbstractStates goals) {
     reset();
     for (AbstractState *goal : goals) {
+		//cout << "Goals: " << *goal << endl;
         goal->get_search_info().decrease_g_value_to(0);
         open_queue.push(0, goal);
     }

@@ -2,7 +2,6 @@
 
 #include "abstract_state.h"
 #include "utils.h"
-#include "partition.h"
 
 #include "../heuristic.h"
 #include "../globals.h"
@@ -13,10 +12,14 @@
 #include "../utils/logging.h"
 #include "../utils/memory.h"
 
+#include "../tasks/domain_abstracted_task_factory.h"
+#include "../tasks/modified_goals_task.h"
+
 #include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -93,7 +96,6 @@ Abstraction::Abstraction(
       split_selector(task, pick),
       transition_updater(task_proxy.get_operators()),
       timer(max_time),
-      partition(get_domain_sizes(task_proxy)),
       init(nullptr),
       deviations(0),
       unmet_preconditions(0),
@@ -155,6 +157,7 @@ bool Abstraction::satisfies_goal(State state){
 }
     
 bool Abstraction::is_abstract_goal(AbstractState* state){
+    //cout << "Is Goals ?: " << *state << endl;
     GoalsProxy gp = task_proxy.get_goals();
     //cout << "goal vars: " << gp.size() << endl;
 	for(size_t i = 0; i < gp.size(); i++){
@@ -164,6 +167,7 @@ bool Abstraction::is_abstract_goal(AbstractState* state){
 			return false;	
 		}
 	}
+    /*
     for(size_t i = 0; i < additional_goals.size(); i++){
         //cout << "var " << additional_goals[i].first << " = " << additional_goals[i].second << endl;
 		bool contains = state->getDomains().test(additional_goals[i].first, additional_goals[i].second);
@@ -171,6 +175,7 @@ bool Abstraction::is_abstract_goal(AbstractState* state){
 			return false;	
 		}
 	}
+    */
 	return true;
 }
 
@@ -326,9 +331,8 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
 }
     
 bool Abstraction::merge(Abstraction* abs){
+
     refined = false;
-    //cout << "Partition 1: " << endl << partition << endl;
-    //cout << "Partition 2: " << endl << (*abs).partition << endl;
     //Check if goals allow merge
     GoalsProxy goalsAbs1 = task_proxy.get_goals();
     GoalsProxy goalsAbs2 = abs->get_Task()->get_goals();
@@ -336,68 +340,124 @@ bool Abstraction::merge(Abstraction* abs){
 	for(size_t i = 0; i < goalsAbs2.size(); i++){
         //cout << "var " << goalsAbs2[i].get_variable().get_id() << " = " << goalsAbs2[i].get_value() << endl;
         for(size_t j = 0; j < goalsAbs1.size(); j++){
-            if(goalsAbs2[i].get_variable().get_id() == goalsAbs1[i].get_variable().get_id() 
-               && goalsAbs2[i].get_value() != goalsAbs1[i].get_value()){
-                return false;   
-            }
-        }
-        for(size_t j = 0; j < additional_goals.size(); j++){
-            if(goalsAbs2[i].get_variable().get_id() == additional_goals[j].first 
-               && goalsAbs2[i].get_value() != additional_goals[j].second){
+            if(goalsAbs2[i].get_variable().get_id() == goalsAbs1[j].get_variable().get_id() 
+               && goalsAbs2[i].get_value() != goalsAbs1[j].get_value()){
                 return false;   
             }
         }
 	}
-    for(size_t i = 0; i < goalsAbs2.size(); i++){
-        additional_goals.push_back(make_pair(goalsAbs2[i].get_variable().get_id(), goalsAbs2[i].get_value()));
+    //Update task with new goals
+    
+    vector<FactPair> goal_facts_original = get_fact_pairs(task_proxy.get_goals());
+    /*
+    cout << "..............." << endl;
+    cout << "Original goal facts: " << endl;
+    for(FactPair fp : goal_facts_original){
+           cout << fp.var << " = " << fp.value << endl;
     }
-       
-    AbstractStates absStates(states);
-    for(AbstractState* state : absStates){
+    print_states();
+    print_cost();
+    */
+    
+    const TaskProxy *task_proxy_goals =  abs->get_Task();
+    vector<FactPair> goal_facts_add = get_fact_pairs(task_proxy_goals->get_goals());
+    /*
+     cout << "..............." << endl;
+        cout << "Additional goal facts: " << endl;
+    for(FactPair fp : goal_facts_add){
+           cout << fp.var << " = " << fp.value << endl;
+    }
+    abs->print_states();
+    abs->print_cost();
+    */
+    
+    goal_facts_original.insert(goal_facts_original.end(), goal_facts_add.begin(), goal_facts_add.end());
+    task = make_shared<extra_tasks::ModifiedGoalsTask>(task, move(goal_facts_original));
+    
+    task_proxy = TaskProxy(*task);
+
+    
+    //cout << "---------- Check existing goals ---------" << endl;
+    AbstractStates absGoals;
+    for(AbstractState* a : goals){
+        bool is_goal = is_abstract_goal(a);
+        if(is_goal){              
+            //cout << "Keep goal state: " << *a << endl;
+            absGoals.insert(a);
+        }
+        else{
+            //cout << "Removed goal state: " << *a << endl;
+        }   
+    }
+    goals = absGoals;
+    //cout << "---------- Check existing goals ---------" << endl;    
+    unordered_set<pair<AbstractState*, Node*>> states_to_split;
+    //init all original states with the root node of the refinement hierarchy
+    //cout << "--------- init states_to_split --------------" << endl;
+    for(AbstractState* state : states){  
+        //cout << *state << endl;
+        states_to_split.insert(make_pair(state, abs->refinement_hierarchy.get_root()));
+    }
+    //cout << "---------------------------------------------" << endl;
+    
+    while(states_to_split.size() > 0){
+        /*
+        cout << "States TODO: " << endl;
+        for(pair<AbstractState*, Node*> state : states_to_split){  
+            cout << *(state.first) << endl;        
+        }
+        cout << endl;
+        */
+        pair<AbstractState*, Node*> next = *(states_to_split.begin());
+        states_to_split.erase(states_to_split.begin());
+		//cout << "---------------------------------------------" << endl;
+        //cout << "Next state: " << *(next.first) << endl;
+
+        Node* lc = NULL;
+        Node* rc = NULL;
+        pair<int, vector<int>> split = next.second->get_wanted_vars(next.first, &lc, &rc);
+        if(rc != NULL){
+               //cout << "Split on: var " << split.first << " = " << split.second[0] << endl;
+               
+               pair<AbstractState*, AbstractState*> result = refine(next.first, split.first, split.second);
+               /*
+               cout << "Result state: " << endl;
+               cout << "    " << *(result.first) << endl;
+               cout << "    " << *(result.second) << endl;
+               */
+               states_to_split.insert(make_pair(result.first, lc));
+               states_to_split.insert(make_pair(result.second, rc));       
+               
+        }
         
-        vector<pair<int, int>> splits = abs->refinement_hierarchy.get_split_vars(state);
-        //cout << "-----------------------------------" << endl; 
-       
-        for(pair<int, int> p : splits){   
-            //cout << "STATE " << *state << endl;
-            //cout << "Split on var " << p.first << " = " << p.second << endl;
-            vector<int> wanted;
-            wanted.push_back(p.second);
-            state = refine(state, p.first, wanted);
-            //cout << "STATE " << *state << endl;
-            //cout << "--------" << endl;
-        }
+        //cout << "---------------------------------------------" << endl;
     }
+	/*
+    cout << "++++++++++++ RESULT MERGE +++++++++++++++++++++" << endl;
+    print_states();
+    print_cost();
+    */ 
     
-    
-    /*cout << "+++++++++++++++++++ All States +++++++++++++++++++++" << endl;
-    for(AbstractState* state : states){
-            
-            cout << "STATE G "<<  is_abstract_goal(state) << " " << *state <<  endl;   
-        }
-     */
-    
-    update_h_and_g_values();
+    //update_h_and_g_values();
     refined = true;
     return true;
 }
 
-AbstractState* Abstraction::refine(AbstractState *state, int var, const vector<int> &wanted) {
+std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *state, int var, const vector<int> &wanted) {
     if (debug)
         cout << "Refine " << *state << " for " << var << "=" << wanted << endl;
-    
-    partition.split(var, wanted);
     
     pair<AbstractState *, AbstractState *> new_states = state->split(var, wanted);
     AbstractState *v1 = new_states.first;
     AbstractState *v2 = new_states.second;
 
-    //cout << "-----------------------" << endl;
-    /*cout << "Split " << *state << " h = " << state->get_h_value() << " in " << endl;
+    /*
+    cout << "-----------------------" << endl;
+    cout << "Split " << *state << " h = " << state->get_h_value() << " in " << endl;
     cout << *v1 << " h = " << v1->get_h_value() << " and " << endl;
-    cout << *v2 << " h = " << v2->get_h_value() << endl;*/
-    //cout << "-----------------------" << endl;
-    
+    cout << *v2 << " h = " << v2->get_h_value() << endl;
+    cout << "-----------------------" << endl;
+    */
     transition_updater.rewire(state, v1, v2, var);
 
     states.erase(state);
@@ -428,23 +488,25 @@ AbstractState* Abstraction::refine(AbstractState *state, int var, const vector<i
         if (debug)
             cout << "New init state: " << *init << endl;
     }
-    if (is_goal(state)) {
+    //if (is_goal(state)) { //TODO why does not work ?
+	if(is_abstract_goal(state)){
         
         /*
         goals.erase(state);
         goals.insert(v2);
         */
         //TODO why !!!!!!!!!!!!!!!!!!1 does nothing !!
+        //does is_abstract_goals also works with the landmark setting ?
         
         goals.erase(state);
         if(is_abstract_goal(v1)){
            goals.insert(v1);  
         }
-        else{
+        if(is_abstract_goal(v2)){
             goals.insert(v2);
         }
         
-        if (debug)
+        if (false)
             cout << "New/additional goal state: " << *v2 << endl;
     }
 
@@ -458,10 +520,10 @@ AbstractState* Abstraction::refine(AbstractState *state, int var, const vector<i
     }
 
     delete state;
-    //cout << "STATE " << *v1 << endl;
-    //cout << "STATE " << *v2 << endl;
+    //cout << "RESULT STATE " << *v1 << endl;
+    //cout << "RESULT STATE " << *v2 << endl;
     
-    return v1;
+    return make_pair(v1,v2);
 }
 
 // TODO find flow start at specified state
@@ -540,21 +602,28 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
 }
   
 void Abstraction::update_h_and_g_values(int pos, bool new_order){
+    
     update_timer.resume();
+	//cout << "abstract_search.backwards_dijkstra" << endl;
     abstract_search.backwards_dijkstra(goals);
+	
+	
     if(new_order){
         for (AbstractState *state : states) {
             state->add_h_value(state->get_search_info().get_g_value());
         }
     }
     else{
-        for (AbstractState *state : states) {
+		//cout << "update_h_and_g_values: " << pos << endl;
+        for (AbstractState *state : states) {			
+			//cout << *state << ": " << state->get_search_info().get_g_value() << endl;
             state->set_h_value(pos, state->get_search_info().get_g_value());
         }
     }
     
     // Update g values.
     // TODO: updating h values overwrites g values. Find better solution.
+	//cout << "abstract_search.forward_dijkstra" << endl;
     abstract_search.forward_dijkstra(init);
     update_timer.stop();   
 }
@@ -681,6 +750,8 @@ void Abstraction::print_statistics() {
     cout << "Unmet preconditions: " << unmet_preconditions << endl;
     cout << "Unmet goals: " << unmet_goals << endl;
     
+    
+    
     //cout << "Partitioning: " << endl << partition << endl;
 
 }
@@ -693,6 +764,40 @@ void Abstraction::print_end_statistics() {
     cout << "Final Unmet goals: " << unmet_goals << endl;
     //cout << "update time: " << update_timer << endl;
     cout << "refinement time: " << refine_timer << endl;
+    
+    /*
+    for(vector<int> cp : costs_partitionings){
+    for(int c : cp){
+        cout << c << " ";   
+    }
+    cout << endl;
+    }
+    */
     cout << "-------------------------------------------------------" << endl;
 }
+    
+void Abstraction::print_states(){
+    cout << "+++++++++++++++++++ All States (" << states.size() << ") +++++++++++++++++++++" << endl;
+	cout << "Init: " << *init << endl;
+    for(AbstractState* state : states){            
+        cout << "STATE G "<<  is_abstract_goal(state) << " " << is_goal(state) << " " << *state <<  endl;  
+        /*
+        Transitions trans = state->get_outgoing_transitions();
+        for(Transition t : trans)
+            cout << "  --> " << t.op_id << " " << *(t.target) << endl; 
+        */
+        }
+        
+      
+   }
+ 
+    
+    void Abstraction::print_cost(){
+        for(vector<int> cp : costs_partitionings){
+            for(int c : cp){
+                cout << c << " ";   
+            }
+        cout << endl;
+        }   
+    }
 }

@@ -50,6 +50,7 @@ class CostSaturation {
     std::shared_ptr<AbstractTask> get_remaining_costs_task(
         std::shared_ptr<AbstractTask> &parent) const;
     std::shared_ptr<AbstractTask> get_remaining_costs_task(std::shared_ptr<AbstractTask> &parent,  std::vector<int> old_costs, int order);
+    std::shared_ptr<AbstractTask> get_remaining_costs_task(std::shared_ptr<AbstractTask> &parent,  std::vector<int> old_costs);
     void add_cost_partitioning(std::vector<int>* cost1, std::vector<int>* cost2);
     bool state_is_dead_end(const State &state) const;
     void build_abstractions(
@@ -73,12 +74,14 @@ public:
   
     void print_statistics() const;
     void recompute_cost_partitioning_unused(int order_id);
+    void recompute_cost_partitioning_unused_all();
     void recompute_cost_partitioning(int order_id);
     void recompute_cost_partitioning(std::vector<int> order);
     //void swap_heuristics(int pos1, int pos2, int order_id);
     void remove_abstraction(int pos);
   
     std::vector<int> get_order(int id);
+    int number_of_orders();
     void update_order(int id, std::vector<int> new_order);
     bool add_order(std::vector<int> order, int* order_id);
     void delete_order(int order_id);

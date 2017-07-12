@@ -23,6 +23,14 @@ Node::~Node() {
 }
 
 pair<Node *, Node *> Node::split(int var, const vector<int> &values) {
+	/*
+	cout << "Valus:";
+	for(int v : values){
+		cout << v << " ";	
+	}
+	cout << endl;
+	*/
+	//assert(values.size() == 1);
     Node *helper = this;
     right_child = new Node();
     for (int value : values) {
@@ -59,9 +67,9 @@ Node *RefinementHierarchy::get_node(const State &state) const {
     return current;
 }
 	
-std::vector<std::pair<int, int>> RefinementHierarchy::get_split_vars(AbstractState* state){
+std::vector<std::pair<int, std::vector<int>>> RefinementHierarchy::get_split_vars(AbstractState* state){
 	assert(root);
-	std::vector<std::pair<int, int>> split_vars;
+	std::vector<std::pair<int, std::vector<int>>> split_vars;
     Node *current = root.get();
     current->get_split_vars(state, &split_vars);
 	//for(pair<int, int> p : split_vars){

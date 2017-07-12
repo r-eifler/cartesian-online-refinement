@@ -45,6 +45,7 @@ public:
 	void update_h_and_g_values(int pos, bool new_order);
 	bool satisfies_goal(State state);
 	void set_refined(bool b);
+	int size();
 
 };
 }
