@@ -52,8 +52,6 @@ public:
     void set_h_value(int h);
     int get_h_value();
 	
-	void set_order(int id);
-	int get_order();
 };
 
 

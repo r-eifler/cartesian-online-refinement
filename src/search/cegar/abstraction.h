@@ -55,9 +55,10 @@ class Abstraction {
 	
     int refinement_calls = 0; 
 	
+	// stores the saturation which is only computed testwise to find a better order
 	std::vector<int> current_saturation;
+	// stores the sturations which belong to a stored order
 	std::vector<std::vector<int>> costs_partitionings;
-	std::vector<std::pair<int, int>> additional_goals;
 
     /*
       Set of all (as of yet unsplit) abstract states.
@@ -122,6 +123,8 @@ class Abstraction {
     // Perform Dijkstra's algorithm from the goal states to update the h-values.
     void update_h_and_g_values();
 
+	// Checks if the state is a abstract goal state by testing if all goal facts are satisfied 
+	// instead of testing if the state is contained in goals
 	bool is_abstract_goal(AbstractState* state);
 public:
     Abstraction(
@@ -135,6 +138,8 @@ public:
         bool debug = false);
     ~Abstraction();
 	
+	// indicates if the abstraction has been changed during the last refinement
+	// is used to know if the h values nedd to be updated
 	bool refined = true;
 
     Abstraction(const Abstraction &) = delete;
@@ -173,14 +178,17 @@ public:
     Node *get_node(const State &state) const;
     const TaskProxy* get_Task();
     int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine);
-    void update_h_values();
-	bool merge(Abstraction* abs);
-	void update_h_and_g_values(int pos, bool new_order);	
+	//checks if the state satisfis the abstraction (not equals to h(s) = 0)
 	bool satisfies_goal(State state);
-	void addGoals(GoalsProxy goals);
+	// checks if the solution of abs and this can be combined to achieve both goals
 	bool are_plans_compatible(Abstraction* abs);
+	//merges the abstratcion abs and this
+	bool merge(Abstraction* abs);
 	
-	
+	void update_h_values();
+	void update_h_and_g_values(int pos, bool new_order);	
+	void addGoals(GoalsProxy goals);
+		
 	void print_states();
 	void print_cost();
 	void print_cost(int order);

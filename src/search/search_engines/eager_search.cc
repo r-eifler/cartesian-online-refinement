@@ -29,7 +29,6 @@ EagerSearch::EagerSearch(const Options &opts)
       use_multi_path_dependence(opts.get<bool>("mpd")),
       //Online Refinement ops
       refine_online(opts.get<bool>("refine_online")),
-      refinement_threshold(opts.get<int>("refinement_threshold")),
       refinement_selector(opts.get<int>("refinement_selector")),
 	  refinement_time(opts.get<int>("refinement_time")),
       //Store open list factory to create new open lists during search
@@ -38,8 +37,7 @@ EagerSearch::EagerSearch(const Options &opts)
                 create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
-      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
-      num_nodes_with_improvable_h_value(0) {
+      pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")){
           
           open_list_timer.stop();
 }
@@ -50,7 +48,6 @@ void EagerSearch::initialize() {
     //Stop Timer
     open_list_timer.stop();
     total_refine_timer.stop();
-    prove_time_timer.stop();
     
     
     cout << "Conducting best first search"
@@ -99,12 +96,11 @@ void EagerSearch::initialize() {
         SearchNode node = search_space.get_node(initial_state);
         node.open_initial();
         
-        
+        //Initialize the heuristc value of the serach node such that it can be checked in the 
+		//fetch_next_node function
         ScalarEvaluator *heuristic = heuristics[0];
         int h = eval_context.get_heuristic_value_or_infinity(heuristic);
-        //cout << "h=" << h << endl;
         node.set_h_value(h);
-        node.set_order(0);
         open_list->insert(eval_context, initial_state.get_id());
     }
 
@@ -125,14 +121,11 @@ void EagerSearch::print_statistics() const {
     pruning_method->print_statistics();
     
     cout << endl;
-    cout << "Nodes with improvable h values: " << num_nodes_with_improvable_h_value << endl;
     cout << "Nodes which have been refined: " << num_refined_nodes << endl;
-    //cout << "Nodes which have been improved: " << num_nodes_improved << endl;
     cout << "Number of  reevaluated states: " << num_reeval_states << endl;
 	
 	cout << "openlist time: " << open_list_timer << endl;
     cout << "total refine time: " << total_refine_timer << endl;
-    //cout << "prove time: " << prove_time_timer << endl;
     cout << endl;	
     
     cout << endl;
@@ -162,7 +155,6 @@ SearchStatus EagerSearch::step() {
     
     if(refine_online && refine_timer() > refinement_time){  
 		total_refine_timer.resume();
-        //cout << "----------> REFINE" << endl;
     //if(refine_online && statistics.get_expanded() % refinement_selector == 0){
         Heuristic* h = heuristics[0];        
         // Check whether h(s) is too low by looking at all successors.
@@ -173,6 +165,7 @@ SearchStatus EagerSearch::step() {
         int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
 
         if (state_h != infinity) {
+			//Generate all succesor states 
             vector<pair<GlobalState, int>> succStates;
             for (const GlobalOperator *op : applicable_ops) {
                 GlobalState succ_state = state_registry.get_successor_state(s, *op);
@@ -181,9 +174,7 @@ SearchStatus EagerSearch::step() {
 
             //ONLINE REFINEMENT  
 
-            bool refined = false;
-            refined = h->online_Refine(s, succStates);
-            //cout << "---> new order: " << new_order << endl;
+            bool refined = h->online_Refine(s, succStates);
             if(refined){
                num_refined_nodes++;                 
             } 
@@ -352,7 +343,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             continue;
         
         
-        //------------Check if state needs to be reevaluated 
+        //------------ Check if state needs to be reevaluated ------------
         if(refine_online){
 			//h value of the last evaluation
 			int old_h = node.get_h_value();
@@ -366,11 +357,8 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 			ScalarEvaluator *heuristic = heuristics[0];
 			int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
 
-
-			//TODO !!!!!!!!
+			//TODO can h value also decrease ?
 			//assert(old_h <= new_h);
-			//if(old_h > new_h)
-			//    cout << "!!!!!!! Fetch next Node : " << old_h << " > " << new_h << endl;
 
 			//the state needs to be put back if the h value is not updated or the position does 
 			//not fit to the h and g value of the state
@@ -384,17 +372,14 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         }
         open_list_timer.stop();
         
-        
-        /*
         if(print_timer() > 30){
-            cout << "+++++++++++++++++++++++++++++++++++++" << endl;            
-            print_timer.reset();
-            cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
+            cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
+            cout << "Num reeval states " << num_reeval_states  << endl;
+			cout << "OpenList Timer: " << open_list_timer << endl << endl;   
             print_statistics();
+			print_timer.reset();
         }
-        */
-        
-        //------------------
+
 
         if (use_multi_path_dependence) {
             assert(last_key_removed.size() == 2);

@@ -23,9 +23,9 @@ void OnlineRefinement::set_heuristic_functions(std::vector<CartesianHeuristicFun
 bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 	timer.resume();
 	//cout << "ONLINE Refinement refine" << endl;
-    	if(max_states_online - online_refined_states <= 0){ 
+    if(max_states_online - online_refined_states <= 0){ 
 		//maximal number of online refined states reached ?
-		cout << "Max states reached" << endl;
+		//cout << "Max states reached" << endl;
 		return false;
 	}
         

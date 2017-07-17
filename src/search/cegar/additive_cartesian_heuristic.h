@@ -66,17 +66,20 @@ class AdditiveCartesianHeuristic : public Heuristic {
 
 protected:
     virtual int compute_heuristic(const GlobalState &global_state) override;
+	// returns a vector which contains the heuristic value of each abstraction for the given state
 	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state) override;
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
 	
+	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates) override;
+	
 	std::vector<int> compute_individual_heuristics_of_order(const GlobalState &global_state, int order);
 	std::vector<int> compute_individual_heuristics_of_order(const State state, int order);
-	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates) override;
+	
 	virtual void print_statistics() override;
 	void print_order();
-	virtual void change_to_order(int id) override;
+	//computes the heuristic based on the last scp order which has been used
 	int compute_current_order_heuristic(const State state);
 };
 }

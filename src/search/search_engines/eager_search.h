@@ -25,9 +25,11 @@ class EagerSearch : public SearchEngine {
     const bool use_multi_path_dependence;
 	
 	//Online Refinement ops
+	//flag use online refinement (default true)
 	bool refine_online;
-	int refinement_threshold;
+	// only every refinement_selector state is tried to be refined
     int refinement_selector;
+	// only every refinement_time seconds a state is tried to be refined
 	int refinement_time;
     
     //create new openlists
@@ -41,16 +43,17 @@ class EagerSearch : public SearchEngine {
 
     std::shared_ptr<PruningMethod> pruning_method;
 
-    int num_nodes_with_improvable_h_value;
+	//number of nodes which have have been refined 
     int num_refined_nodes = 0;
-	int num_nodes_improved = 0;
 	
+	//TIMER
 	utils::Timer open_list_timer;
 	utils::Timer total_refine_timer;
-	utils::Timer prove_time_timer;
 	utils::Timer print_timer;
 	utils::Timer refine_timer;
 	
+	// number of stets whose heuristic value increased since the last evaluation
+	// need to be put back into the open list
 	int num_reeval_states = 0;
 
     std::pair<SearchNode, bool> fetch_next_node();
