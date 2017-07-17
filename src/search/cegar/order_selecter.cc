@@ -24,7 +24,7 @@ std::vector<int> OrderSelecter::compute(State state, int maxOrderId, std::vector
 	
 	switch (orderType){
 		case CostOrder::SHUFFLE : 
-			compute_new_order_random(max_order);
+			return compute_new_order_random(max_order);
 		case CostOrder::SWAP_FIRST_SAT :
 			return compute_new_order(state, max_order);
 		case CostOrder::BUBBLE :
