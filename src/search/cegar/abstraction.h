@@ -175,11 +175,16 @@ public:
     int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine);
     void update_h_values();
 	bool merge(Abstraction* abs);
-	void update_h_and_g_values(int pos, bool new_order);
-	
+	void update_h_and_g_values(int pos, bool new_order);	
 	bool satisfies_goal(State state);
+	void addGoals(GoalsProxy goals);
+	bool are_plans_compatible(Abstraction* abs);
+	
+	
 	void print_states();
 	void print_cost();
+	void print_cost(int order);
+	void print_current_cost();
 };
 }
 

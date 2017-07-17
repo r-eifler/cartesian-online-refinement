@@ -31,6 +31,7 @@ EagerSearch::EagerSearch(const Options &opts)
       refine_online(opts.get<bool>("refine_online")),
       refinement_threshold(opts.get<int>("refinement_threshold")),
       refinement_selector(opts.get<int>("refinement_selector")),
+	  refinement_time(opts.get<int>("refinement_time")),
       //Store open list factory to create new open lists during search
       open_list_factory(opts.get<shared_ptr<OpenListFactory>>("open")),  
       open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
@@ -128,15 +129,17 @@ void EagerSearch::print_statistics() const {
     cout << "Nodes which have been refined: " << num_refined_nodes << endl;
     //cout << "Nodes which have been improved: " << num_nodes_improved << endl;
     cout << "Number of  reevaluated states: " << num_reeval_states << endl;
+	
+	cout << "openlist time: " << open_list_timer << endl;
+    cout << "total refine time: " << total_refine_timer << endl;
+    //cout << "prove time: " << prove_time_timer << endl;
+    cout << endl;	
     
     cout << endl;
     Heuristic *h = heuristics[0]; 
     h->print_statistics();
     
-    cout << "openlist time: " << open_list_timer << endl;
-    cout << "total refine time: " << total_refine_timer << endl;
-    cout << "prove time: " << prove_time_timer << endl;
-    cout << endl;
+    
 }
 
 SearchStatus EagerSearch::step() {
@@ -157,11 +160,11 @@ SearchStatus EagerSearch::step() {
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
-    if(refine_online && refine_timer() > 0){     
+    if(refine_online && refine_timer() > refinement_time){  
+		total_refine_timer.resume();
         //cout << "----------> REFINE" << endl;
     //if(refine_online && statistics.get_expanded() % refinement_selector == 0){
-        Heuristic* h = heuristics[0];
-        total_refine_timer.resume();
+        Heuristic* h = heuristics[0];        
         // Check whether h(s) is too low by looking at all successors.
         assert(heuristics.size() == 1);  // HACK
         ScalarEvaluator *heuristic = heuristics[0];  // HACK
@@ -351,50 +354,45 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         
         //------------Check if state needs to be reevaluated 
         if(refine_online){
-        /*
-        int parent_order = node.get_order();
-        Heuristic* h = heuristics[0];
-        //h->change_to_order(parent_order);
-        */
-        //h value of the last evaluation
-        int old_h = node.get_h_value();
+			//h value of the last evaluation
+			int old_h = node.get_h_value();
 
-        
-        //if(old_h + node.get_g() != last_key_removed[0]){
-         //   continue;   
-        
 
-        EvaluationContext state_eval_context(s, node.get_g(), false, &statistics);
-        ScalarEvaluator *heuristic = heuristics[0];
-        int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-        
-        
-        //TODO !!!!!!!!
-        //assert(old_h <= new_h);
-        //if(old_h > new_h)
-        //    cout << "!!!!!!! Fetch next Node : " << old_h << " > " << new_h << endl;
-        
-        //the state needs to be put back if the h value is not updated or the position does 
-        //not fit to the h and g value of the state
-        if(old_h < new_h || old_h + node.get_g() != last_key_removed[0]){
-            node.set_h_value(new_h);
-            open_list->insert(state_eval_context, node.get_state_id());  
-            num_reeval_states++;
-            //std::cout << "Fetch next Node: " << id << " old h: " << old_h << " new h: " << new_h << std::endl;
-            continue;  
-        }
+			//if(old_h + node.get_g() != last_key_removed[0]){
+			 //   continue;   
+
+
+			EvaluationContext state_eval_context(s, node.get_g(), false, &statistics);
+			ScalarEvaluator *heuristic = heuristics[0];
+			int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
+
+
+			//TODO !!!!!!!!
+			//assert(old_h <= new_h);
+			//if(old_h > new_h)
+			//    cout << "!!!!!!! Fetch next Node : " << old_h << " > " << new_h << endl;
+
+			//the state needs to be put back if the h value is not updated or the position does 
+			//not fit to the h and g value of the state
+			if(old_h < new_h || old_h + node.get_g() != last_key_removed[0]){
+				node.set_h_value(new_h);
+				open_list->insert(state_eval_context, node.get_state_id());  
+				num_reeval_states++;
+				//std::cout << "Fetch next Node: " << id << " old h: " << old_h << " new h: " << new_h << std::endl;
+				continue;  
+			}
         }
         open_list_timer.stop();
         
         
-        
+        /*
         if(print_timer() > 30){
             cout << "+++++++++++++++++++++++++++++++++++++" << endl;            
             print_timer.reset();
             cout << "Num reeval states " << num_reeval_states  << " OpenList Timer: " << open_list_timer << endl;   
             print_statistics();
         }
-        
+        */
         
         //------------------
 
@@ -539,6 +537,11 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "only every refinement_selector states is refined",
         "1",
         Bounds("1", "1000000"));
+	parser.add_option<int>(
+        "refinement_time",
+        "only every refinement_times secondes a state is refined",
+        "1",
+        Bounds("0", "60"));
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);

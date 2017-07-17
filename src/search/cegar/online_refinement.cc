@@ -13,7 +13,7 @@ OnlineRefinement::OnlineRefinement(CostSaturation* cs, utils::RandomNumberGenera
 	max_states_online(mso){
 
 
-	refine_timer.stop();
+	timer.stop();
 }
 
 void OnlineRefinement::set_heuristic_functions(std::vector<CartesianHeuristicFunction*> *fv){
@@ -21,6 +21,7 @@ void OnlineRefinement::set_heuristic_functions(std::vector<CartesianHeuristicFun
 }
 
 bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
+	timer.resume();
 	//cout << "ONLINE Refinement refine" << endl;
     	if(max_states_online - online_refined_states <= 0){ 
 		//maximal number of online refined states reached ?
@@ -34,7 +35,7 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
             if(false)
                 cout << "------------Refine " << i << " ----------------------" << endl;
             if(toRefine[i]){              
-               int refined_states = (*heuristic_functions)[i]->online_Refine(state, 1, false, max_states_online - online_refined_states);
+               int refined_states = (*heuristic_functions)[i]->online_Refine(state, 5, false, max_states_online - online_refined_states);
                if(refined_states > 0){
                     refined = true;  
                     if(false)
@@ -45,6 +46,7 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
         }
 
 	if(!refined){
+		timer.stop();
 		return false;
 	}
 	
@@ -66,11 +68,14 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
         for (CartesianHeuristicFunction *function : (*heuristic_functions)) {
              function->set_refined(false);
         }
+	timer.stop();
 	return true;
 }
 
 void OnlineRefinement::print_statistics(){
+	cout << "--------- ONLINE REFINEMENT ---------" << endl;
 	cout << "Online refined states: " << online_refined_states << "/" << max_states_online << endl;
+	cout << "Refine time: " << timer << endl;
 }
 
 }

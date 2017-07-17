@@ -60,4 +60,8 @@ int CartesianHeuristicFunction::size(){
 	return abstraction->get_num_states();	
 }	
 	
+Abstraction* CartesianHeuristicFunction::get_abstraction(){
+	return abstraction;	
+}
+	
 }

@@ -46,6 +46,7 @@ public:
 	bool satisfies_goal(State state);
 	void set_refined(bool b);
 	int size();
+	Abstraction* get_abstraction();
 
 };
 }

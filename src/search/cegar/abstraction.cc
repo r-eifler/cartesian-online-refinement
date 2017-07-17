@@ -329,6 +329,21 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
     refined = refined_states > 0;
    return refined_states;
 }
+	
+void Abstraction::addGoals(GoalsProxy goalsProxy){
+	vector<FactPair> goal_facts = get_fact_pairs(goalsProxy);
+	
+	task = make_shared<extra_tasks::ModifiedGoalsTask>(task, move(goal_facts));    
+    task_proxy = TaskProxy(*task);
+	
+	AbstractStates newGoals;
+	for(AbstractState* state: goals){
+		if(is_abstract_goal(state)){
+			newGoals.insert(state);	
+		}
+	}
+	goals = newGoals;
+}
     
 bool Abstraction::merge(Abstraction* abs){
 
@@ -436,11 +451,120 @@ bool Abstraction::merge(Abstraction* abs){
     cout << "++++++++++++ RESULT MERGE +++++++++++++++++++++" << endl;
     print_states();
     print_cost();
-    */ 
+    */
     
     //update_h_and_g_values();
     refined = true;
     return true;
+}
+	
+bool Abstraction::are_plans_compatible(Abstraction* abs){
+	//current solution
+	bool found_abstract_solution = abstract_search.find_solution(init, goals);
+	if(!found_abstract_solution){
+		return false;	
+	}
+	//to check solution
+	bool found_abstract_solution_check = abs->abstract_search.find_solution(abs->init, abs->goals);
+	if(!found_abstract_solution_check){
+		return false;	
+	}
+	
+	//check if the two solution are compatible
+	Solution solution1 = abstract_search.get_solution();
+	Solution solution2 = abs->abstract_search.get_solution();
+	/*
+	cout << "Solutions: " << endl;
+	for(Transition step : solution1){
+		cout << step.op_id << " ";	
+	}
+	cout << endl;
+	for(Transition step : solution2){
+		cout << step.op_id << " ";	
+	}
+	cout << endl;
+	*/
+	
+	AbstractState *current_state1 = init;
+	AbstractState *current_state2 = abs->init;
+	
+	Solution::iterator sol1_it = solution1.begin();
+	Solution::iterator sol2_it = solution2.begin();
+	
+	bool error = false;
+	while(sol2_it != solution2.end()) {
+		if(false){
+			cout << "---------------------------------------" << endl;
+			cout << "Current States: " << endl;
+			cout << "STATE 1: " << *current_state1 << endl;
+			cout << "STATE 2: " << *current_state2 << endl;
+		}
+		//if the action in plan2 is a self loop in abstraction 1 the action can be skipt
+		// as it does not influence the solution of abstraction 1
+		vector<int> loops = current_state1->get_loops();
+		if(find(loops.begin(), loops.end(), sol2_it->op_id) != loops.end()){
+			//cout << "---> self loop: " << sol2_it->op_id << endl;
+			current_state2 = sol2_it->target;
+			sol2_it++;
+			continue;
+		}
+		
+		//TODO right position?
+		if(sol1_it == solution1.end()){
+			//cout << "error" << endl;
+			error = true;
+			break;
+		}
+		
+		//check if the actions in sol1 and sol2 are the same
+		if(sol1_it->op_id == sol2_it->op_id){
+			//cout << "---> op: " << sol2_it->op_id << " in both" << endl;
+			//if they are the same execute both
+			current_state1 = sol1_it->target;
+			current_state2 = sol2_it->target;
+			sol1_it++;
+			sol2_it++;
+			continue;
+		}
+		else{
+			//actions are not the same
+			//Check if their is an alternative action in abs1 (same action and same target as in plan2)
+			bool alternative_found = false;
+			//cout << "Alternative Actions: " << endl;
+			for(Transition trans : current_state1->get_outgoing_transitions()){
+				if(trans.target == sol1_it->target && trans.op_id == sol2_it->op_id){
+					//cout << "--> alternative op: " << trans.op_id << " to " << sol1_it->op_id << endl;
+					alternative_found = true;
+					break;
+				}
+			}
+			//if alternative has been found execute them 
+			if(alternative_found){
+				current_state1 = sol1_it->target;
+				current_state2 = sol2_it->target;
+				sol1_it++;
+				sol2_it++;
+				continue;	
+			}
+			else{
+				//if there is no alternative execute the action in plan 1 only
+				if(sol1_it == solution1.end()){
+					//cout << "error" << endl;
+					error = true;
+					break;
+				}
+				//cout << "---> next action in plan1 op: " << sol1_it->op_id << endl;
+				current_state1 = sol1_it->target;
+				sol1_it++;
+			}
+		}
+		
+	}
+	/*
+	cout << "---------------------------------------" << endl;
+	cout << "plans compatible: " << !error << endl;
+	*/
+	return !error;
 }
 
 std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *state, int var, const vector<int> &wanted) {
@@ -703,7 +827,10 @@ vector<int> Abstraction::get_saturated_costs(int order) {
         }
     }
     
-    current_saturation =    saturated_costs;
+	current_saturation.clear();
+	for(size_t i = 0; i < saturated_costs.size(); i++){
+			current_saturation.push_back(saturated_costs[i]);
+	}
     
     return saturated_costs;
 }
@@ -780,24 +907,42 @@ void Abstraction::print_states(){
     cout << "+++++++++++++++++++ All States (" << states.size() << ") +++++++++++++++++++++" << endl;
 	cout << "Init: " << *init << endl;
     for(AbstractState* state : states){            
-        cout << "STATE G "<<  is_abstract_goal(state) << " " << is_goal(state) << " " << *state <<  endl;  
-        /*
-        Transitions trans = state->get_outgoing_transitions();
-        for(Transition t : trans)
-            cout << "  --> " << t.op_id << " " << *(t.target) << endl; 
-        */
-        }
+        //cout << "STATE G "<<  is_abstract_goal(state) << " " << is_goal(state) << " " << *state <<  endl;
+		cout << "STATE G "<<  is_abstract_goal(state) << " " << *state <<  endl;
         
-      
-   }
+        Transitions trans = state->get_outgoing_transitions();
+        for(Transition t : trans){
+            cout << "	--> " << t.op_id << " " << *(t.target) << endl; 
+		}
+		cout << "	--> ";
+		for(int i : state->get_loops()){
+			cout << i << " ";		
+		}
+        cout << endl;
+    }     
+}
  
     
-    void Abstraction::print_cost(){
-        for(vector<int> cp : costs_partitionings){
-            for(int c : cp){
-                cout << c << " ";   
-            }
-        cout << endl;
-        }   
-    }
+void Abstraction::print_cost(){
+	for(vector<int> cp : costs_partitionings){
+		for(int c : cp){
+			cout << c << " ";   
+		}
+	cout << endl;
+	}   
+}
+	
+void Abstraction::print_cost(int order){
+	for(int c : costs_partitionings[order]){
+		cout << c << " ";   
+	}
+	cout << endl;
+}
+	
+void Abstraction::print_current_cost(){
+	for(int c : current_saturation){
+		cout << c << " ";   
+	}
+	cout << endl;
+}
 }

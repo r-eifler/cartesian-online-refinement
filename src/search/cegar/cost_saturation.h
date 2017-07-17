@@ -29,6 +29,7 @@ class CostSaturation {
     const int max_non_looping_transitions;
     const double max_time;
     const bool use_general_costs;
+	const bool use_all_goals;
     const PickSplit pick_split;
     utils::RandomNumberGenerator &rng;
 
@@ -66,6 +67,7 @@ public:
         int max_non_looping_transitions,
         double max_time,
         bool use_general_costs,
+		bool use_all_goals,
         PickSplit pick_split,
         utils::RandomNumberGenerator &rng);
 
@@ -73,12 +75,13 @@ public:
         const std::shared_ptr<AbstractTask> &task);
   
     void print_statistics() const;
+	void print_statistics_end() const;
     void recompute_cost_partitioning_unused(int order_id);
     void recompute_cost_partitioning_unused_all();
     void recompute_cost_partitioning(int order_id);
-    void recompute_cost_partitioning(std::vector<int> order);
-    //void swap_heuristics(int pos1, int pos2, int order_id);
+    void recompute_cost_partitioning(std::vector<int> order);    
     void remove_abstraction(int pos);
+	std::vector<int> get_original_cost_partitioning(Abstraction* abs);
   
     std::vector<int> get_order(int id);
     int number_of_orders();

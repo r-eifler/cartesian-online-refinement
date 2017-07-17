@@ -25,6 +25,7 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int max_states_online;
 	int max_iter;
 	int update_h_values;
+	bool use_all_goals;
 	
 	int online_refined_states = 0; 	
 	utils::Timer cost_timer;
@@ -41,6 +42,7 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int improved_order = 0;
 	int decreased_order = 0;
 	int improved_refine = 0;
+	int improved_merge = 0;
 	int refinement_pathology = 0;
 	int merged_abstractions = 0;
 	
@@ -65,12 +67,12 @@ class AdditiveCartesianHeuristic : public Heuristic {
 protected:
     virtual int compute_heuristic(const GlobalState &global_state) override;
 	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state) override;
-	
-	std::vector<int> compute_individual_heuristics_of_order(const GlobalState &global_state, int order);
-	
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
+	
+	std::vector<int> compute_individual_heuristics_of_order(const GlobalState &global_state, int order);
+	std::vector<int> compute_individual_heuristics_of_order(const State state, int order);
 	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates) override;
 	virtual void print_statistics() override;
 	void print_order();

@@ -28,6 +28,7 @@ class EagerSearch : public SearchEngine {
 	bool refine_online;
 	int refinement_threshold;
     int refinement_selector;
+	int refinement_time;
     
     //create new openlists
     std::shared_ptr<OpenListFactory> open_list_factory;

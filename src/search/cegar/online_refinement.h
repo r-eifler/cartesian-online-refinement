@@ -20,7 +20,7 @@ class OnlineRefinement {
 	int max_states_online;
 	int online_refined_states = 0;
 
-	utils::Timer refine_timer;
+	utils::Timer timer;
 
 public:
     explicit OnlineRefinement(CostSaturation* cs, utils::RandomNumberGenerator* rng, int mso);

@@ -36,6 +36,7 @@ vector<CartesianHeuristicFunction*> AdditiveCartesianHeuristic::generate_heurist
         opts.get<int>("max_transitions"),
         opts.get<double>("max_time"),
         opts.get<bool>("use_general_costs"),
+		opts.get<bool>("use_all_goals"),
         static_cast<PickSplit>(opts.get<int>("pick")),
         *rng);
     rng_order = &(*rng);
@@ -49,10 +50,11 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
       max_states_online(opts.get<int>("max_states_online")),
       max_iter(opts.get<int>("max_iter")),
 	  update_h_values(opts.get<int>("update_h_values")),
+	  use_all_goals(opts.get<bool>("use_all_goals")),
       heuristic_functions(generate_heuristic_functions(opts)),
       onlineRefinement(cost_saturation, rng_order, max_states_online),
       merge(cost_saturation, rng_order){
-          orderSelecter = new OrderSelecter(cost_saturation, rng_order);
+          orderSelecter = new OrderSelecter(static_cast<CostOrder>(opts.get<int>("order")), cost_saturation, rng_order);
           orderSelecter->set_heuristic_functions(&heuristic_functions);
           onlineRefinement.set_heuristic_functions(&heuristic_functions);
           merge.set_heuristic_functions(&heuristic_functions);
@@ -152,10 +154,14 @@ int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
     update_timer.stop();
     return max;
 }
-    
+	
 std::vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics_of_order(const GlobalState &global_state, int order){
+	State state = convert_global_state(global_state);
+	return compute_individual_heuristics_of_order(state, order);
+}
     
-    State state = convert_global_state(global_state);
+std::vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics_of_order(const State state, int order){
+        
     vector<int> values;
     int sum_h = 0;
     for (const CartesianHeuristicFunction *function : heuristic_functions) {
@@ -233,13 +239,14 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
         cout << "----------- Check Refine --------- " << endl;  
         
         cout << "Refine State: " << global_state.get_id() << endl;
+		/*
         int i = 0;
         for(int n : global_state.get_values()){
             cout << i << "=" << n << " " ;
             i++;
         }
         cout << endl;
-        
+        */
     }
     
     prove_timer.resume();
@@ -296,7 +303,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
     }
     //cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
     online_refined_states++;
-    if(true)
+    if(false)
         cout << "---> h(s) = " << h_value << " improvable to " << provable_h_value << endl;
     
     //Check which heuristic could be refined
@@ -327,17 +334,16 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
     State state = convert_global_state(global_state);
     
     //Refinement pathology   
-    if(heuristic_functions.size() > 1 && (conflict)){
+    if(heuristic_functions.size() > 1 && (conflict) && !use_all_goals){
         refinement_pathology++;
-        int merged = merge.merge();
+        int merged = merge.merge(toRefine);
       
        //Check if merge improved the heuristic
        if(merged){
            int new_h_value = compute_heuristic(state);
-           cout << "Merge Heuristic changed h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
-           if(h_value <  new_h_value){
-               if(true)    
-                    cout << "Merge Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
+           //cout << "Merge Heuristic changed h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
+           if(h_value <  new_h_value){   
+                   // cout << "Merge Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
            }
            assert(new_h_value >= h_value); //TODO
        }
@@ -360,12 +366,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
     }    
     
     
-    
-    //vector<int> new_order = orderSelecter->compute_new_order_random(updated_order);
-    //vector<int> new_order = orderSelecter->compute_new_order(state, updated_order);    
-    //vector<int> new_order = orderSelecter->compute_new_order_bubble(state, updated_order, h_value, this);
-    vector<int> new_order = orderSelecter->compute_new_order_random_check(state, updated_order, h_value, this);
-    //vector<int> new_order = orderSelecter->compute_new_order_swap(state, updated_order, h_value, toRefine, this);
+	vector<int> new_order = orderSelecter->compute(state, current_order, updated_order, h_value, toRefine, this);
     cost_saturation->recompute_cost_partitioning(new_order);
     
     if(false){
@@ -380,85 +381,67 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
     
    //Check if heuristic has been improved
    int new_h_value = compute_current_order_heuristic(state);
-   if(h_value <  new_h_value){
-       if(true)
-            cout << "Order " << current_order << " Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
-       improved_order++;
-       
+   if(h_value <  new_h_value){    
        //Update h_values 
        int new_scp_order = current_order;
        bool exists = cost_saturation->add_order(new_order, &new_scp_order);
-       //cout << "new order id: " << new_scp_order << " old order id: " << current_order << endl;
        if(!exists){
-            //cout << "New order added" << endl;
+		   	//cout << "Order " << current_order << " Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl; 
+		   	improved_order++;
             number_of_orders++;
             usefullnes_of_order.push_back(0);
             lifetime_of_order.push_back(0);
             for (CartesianHeuristicFunction *function : heuristic_functions) {
                 function->update_h_and_g_values(new_scp_order, true);
             }
+			//cout << "---> New order added " << endl;
+		   	cost_timer.stop();
+       		return true;
        }
-       cost_timer.stop();
-       return true;
+       
+	   //TODO if order already exists but cost partitioning computed from beginning is better for a state 
+		// what should be done ?
    }   
     
     cost_timer.stop();
-   /*
-   if(h_value >  new_h_value){
-      decreased_order++;
-      cout << "!!!! Order Heuristic decreased h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
-   }
-   if(h_value == new_h_value){
-       cout << "Order Heuristic stayed h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
-       //cost_saturation->recompute_cost_partitioning(*scp_order);
-       //cout << "reset to order: " << *scp_order << endl;;
-       
-   }
-   */
+
     
-   if(false){
-        cout << "Heuristic not improved" << endl;    
-        cout << "++++++++++ Refine all Heuristics +++++++++++" << endl;
-   }  
-    //refine every heuristic  
+    //REFINE
     refine_timer.resume();
+	//int save_current_order = current_order;
     bool refined = onlineRefinement.refine(state, toRefine);
  
     if(refined){
        new_h_value = compute_heuristic(state);
+		/*
+		if(current_order != save_current_order){
+			cout << " -----> MAX ORDER CHANGED from " << save_current_order << " to " <<  current_order << endl;	
+		}
+		*/
        if(h_value <  new_h_value){
-           improved_refine++;
-           if(true)    
-                cout << "Refine Heuristic with order " << current_order << " has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
+           improved_refine++;    
+           //cout << "Refine Heuristic with order " << current_order << " has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
            refine_timer.stop();
            return true;
        }
-       /*
-       if(h_value ==  new_h_value){       
-          cout << "!!!! Refine Heuristic stayed h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
-       }
-       */
-        if(false)
-            cout << "REFINE heuristic not improved" << endl;
     }
     refine_timer.stop();
        
-   //TODO decide which abstraction should be merged
    
-   if(heuristic_functions.size() > 1){
+	//MERGE
+   if(heuristic_functions.size() > 1 && !use_all_goals){
               
-       int merged = merge.merge();
+       int merged = merge.merge(toRefine);
       
        refined = refined || merged;
        //Check if merge improved the heuristic
        if(merged){
            int new_h_value = compute_heuristic(state);
-           cout << "Merge Heuristic changed h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
            if(h_value <  new_h_value){
-               if(true)    
-                    cout << "Merge Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
+			   improved_merge++;    
+               //cout << "Merge Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
            }
-           assert(new_h_value >= h_value); //TODO
+           assert(new_h_value >= h_value);
        }
    }
    
@@ -480,27 +463,36 @@ void AdditiveCartesianHeuristic::print_statistics(){
         cout << "Order: ";
         print_order();
 		for (const CartesianHeuristicFunction *function : heuristic_functions) {
-            cout << "-------------- func: " << function->id << "--------------------" << endl; 
+            cout << "-------------- Heuristic: " << function->id << "--------------------" << endl; 
 			function->print_statistics();	
 		}
         cout << endl;
-        cout << "Refined States: " << online_refined_states << endl;
-        cout << "Improved States order: " << improved_order << endl;
-        cout << "Decreased States order: " << decreased_order << endl;
-        cout << "Improved States refine: " << improved_refine << endl;
+        cout << "Total refined states: " << online_refined_states << endl;              
         cout << "Refinement Pathology: " << refinement_pathology << endl;
-        cout << "Merged abstractions: " << merged_abstractions << endl;
     
         cout << endl << "Times: " << endl;
         cout << "cost time: " << cost_timer << endl;
         cout << "refine time: " << refine_timer << endl;
         cout << "prove time: " << prove_timer << endl;
+		cout << endl;
         cout << "Heuristic evaluation time: " << update_timer << endl;
-        cout << "Get values timer: " << values_timer << endl;
-    
+        cout << "Get values time: " << values_timer << endl;
+    	cout << endl;
+	
+		orderSelecter->print_statistics();
+		cout << "Improved States order: " << improved_order << endl;
+		cout << endl;
+	
+		onlineRefinement.print_statistics();
+		cout << "Improved States refine: " << improved_refine << endl;
+		cout << endl;
+	
         merge.print_statistics();
+		cout << "Improved States merge: " << improved_merge << endl;
+		cout << endl;
     
         cout << endl;
+		cout << "---------------- USEFULNES ----------------- " << endl;
         cout << "Usefulnes of order: ";
         for(int n : usefullnes_of_order){
             cout << n << " ";   
@@ -511,18 +503,22 @@ void AdditiveCartesianHeuristic::print_statistics(){
             cout << n << " ";   
         }
         cout << endl;
+		cout << "Ratio: ";
         for(uint i = 0; i < usefullnes_of_order.size(); i++){
             cout << (float)usefullnes_of_order[i] / lifetime_of_order[i] << " ";    
         }
         cout << endl;
-    
-        cout << "usefullnes of abstraction: " << endl;
+    	cout << endl;
+		cout << "----- ABSTRACTIONS -----" << endl;
+        cout << "usefullnes: " ;
         for(int u : usefullnes_of_abstraction){
             cout << u << " ";   
         }
-    
+		cout << endl;
+    	
         cout << endl;
-        cost_saturation->print_statistics();
+        cost_saturation->print_statistics_end();
+		
 }
 
 static Heuristic *_parse(OptionParser &parser) {
@@ -607,6 +603,23 @@ static Heuristic *_parse(OptionParser &parser) {
         "number of refined states until the h values of the abstract states are updated",
         "20",
         Bounds("1", "infinity"));
+	parser.add_option<bool>(
+        "use_all_goals",
+        "only use the diversification oon goal facts during the offline phase",
+        "false");
+	
+	//Different Order selection strategies
+	vector<string> order_strategies;
+    order_strategies.push_back("SHUFFLE");
+    order_strategies.push_back("SWAP_FIRST_SAT");
+    order_strategies.push_back("BUBBLE");
+    order_strategies.push_back("SWAP_ALL_CHECK");
+    order_strategies.push_back("SHUFFLE_CHECK");
+    order_strategies.push_back("ORDER_ASC");
+    order_strategies.push_back("ORDER_DESC");
+    parser.add_enum_option(
+        "order", order_strategies, "scp order strategy", "SHUFFLE_CHECK");
+	
 
     
     Heuristic::add_options_to_parser(parser);
