@@ -234,6 +234,51 @@ void TransitionUpdater::rewire_loops(
     }
     num_loops -= v->get_loops().size();
 }
+	
+std::pair<std::vector<int>, std::vector<int>> TransitionUpdater::loops_to_transition(AbstractState *v, AbstractState *v1, AbstractState *v2, int var){
+	vector<int> v1tov2;
+	vector<int> v2tov1;
+	
+	for (int op_id : v->get_loops()) {
+        int pre = get_precondition_value(op_id, var);
+        int post = get_postcondition_value(op_id, var);
+        if (pre == UNDEFINED_VALUE) {
+            // op has no precondition on var --> it must start in v1 and v2.
+            if (post == UNDEFINED_VALUE) {
+                // op has no effect on var --> it must end in v1 and v2.
+            } else if (v2->contains(var, post)) {
+                // op must end in v2.
+				v1tov2.push_back(op_id);
+            } else {
+                // op must end in v1.
+                assert(v1->contains(var, post));
+				v2tov1.push_back(op_id);
+            }
+        } else if (v1->contains(var, pre)) {
+            // op must start in v1.
+            assert(post != UNDEFINED_VALUE);
+            if (v1->contains(var, post)) {
+                // op must end in v1.
+            } else {
+                // op must end in v2.
+                assert(v2->contains(var, post));
+				v1tov2.push_back(op_id);
+            }
+        } else {
+            // op must start in v2.
+            assert(v2->contains(var, pre));
+            assert(post != UNDEFINED_VALUE);
+            if (v1->contains(var, post)) {
+                // op must end in v1.
+				v2tov1.push_back(op_id);
+            } else {
+                // op must end in v2.
+                assert(v2->contains(var, post));
+            }
+        }
+    }
+	return make_pair(v1tov2, v2tov1);
+}
 
 void TransitionUpdater::rewire(
     AbstractState *v, AbstractState *v1, AbstractState *v2, int var) {

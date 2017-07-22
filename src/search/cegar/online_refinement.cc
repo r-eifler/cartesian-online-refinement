@@ -7,11 +7,11 @@
 using namespace std;
 
 namespace cegar {
-OnlineRefinement::OnlineRefinement(CostSaturation* cs, utils::RandomNumberGenerator* r, int mso) :
+OnlineRefinement::OnlineRefinement(CostSaturation* cs, utils::RandomNumberGenerator* r, int mso, bool use_us) :
 	cost_saturation(cs), 
 	rng(r),
-	max_states_online(mso){
-
+	max_states_online(mso),
+	use_usefull_split(use_us){
 
 	timer.stop();
 }
@@ -30,44 +30,34 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 	}
         
 	bool refined = false;
-        
-        for(size_t i = 0; i < toRefine.size(); i++){
-            if(false)
-                cout << "------------Refine " << i << " ----------------------" << endl;
-            if(toRefine[i]){              
-               int refined_states = (*heuristic_functions)[i]->online_Refine(state, 5, false, max_states_online - online_refined_states);
-               if(refined_states > 0){
-                    refined = true;  
-                    if(false)
-                        cout << "--> Refined" << endl;
-               }
-               online_refined_states += refined_states;           
-            }
-        }
+    std::vector<std::vector<int>> *unused_cost = NULL;
+	if(use_usefull_split){
+		unused_cost = cost_saturation->get_unused_cost();
+	}
+	
+	for(size_t i = 0; i < toRefine.size(); i++){
+		if(toRefine[i]){  				
+		   int refined_states = (*heuristic_functions)[i]->online_Refine(state, 5, false, max_states_online - online_refined_states, unused_cost);
+		   if(refined_states > 0){			   
+				refined = true;  
+		   }
+		   online_refined_states += refined_states;           
+		}
+	}
 
 	if(!refined){
 		timer.stop();
 		return false;
 	}
-	
-	if(false)
-		cout << "recompute cost partitioning" << endl;
-
 
 	//Recompute costpartitioning, Reset Refined status, update h values
 	int number_orders = cost_saturation->number_of_orders();
 	for(int o = 0; o < number_orders; o++){
-            //cout << "+++++++++ Order: " << o << " ++++++++++" << endl;
-            cost_saturation->recompute_cost_partitioning_unused(o); //has to be executed in this order otherwise the wrong task is set in the abstraktion
-	/*
-            for (CartesianHeuristicFunction *function : (*heuristic_functions)) {
-                function->update_h_and_g_values(o, false);
-            }
-		*/
-        }
-        for (CartesianHeuristicFunction *function : (*heuristic_functions)) {
-             function->set_refined(false);
-        }
+    	cost_saturation->recompute_cost_partitioning_unused(o); 
+	}
+	for (CartesianHeuristicFunction *function : (*heuristic_functions)) {
+		 function->set_refined(false);
+	}
 	timer.stop();
 	return true;
 }

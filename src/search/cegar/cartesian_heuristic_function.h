@@ -38,7 +38,7 @@ public:
 
 	//Online Refinement
 	std::vector<int> get_values(const State &parent_state) const;
-	int online_Refine(const State &state, int max_iter, int update_h_values, int max_states_refine) const;
+	int online_Refine(const State &state, int max_iter, int update_h_values, int max_states_refine, std::vector<std::vector<int>> *unused_cost) const;
 	void print_statistics() const; 
 	void update_h_values();
 	void merge(CartesianHeuristicFunction *function);

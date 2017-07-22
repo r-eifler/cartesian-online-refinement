@@ -16,14 +16,16 @@ class OnlineRefinement {
     	std::vector<CartesianHeuristicFunction*> *heuristic_functions;
 	CostSaturation* cost_saturation;
 	utils::RandomNumberGenerator* rng;
+	
 
 	int max_states_online;
+	bool use_usefull_split = false;
 	int online_refined_states = 0;
 
 	utils::Timer timer;
 
 public:
-    explicit OnlineRefinement(CostSaturation* cs, utils::RandomNumberGenerator* rng, int mso);
+    explicit OnlineRefinement(CostSaturation* cs, utils::RandomNumberGenerator* rng, int mso, bool use_us);
 
 	void set_heuristic_functions(std::vector<CartesianHeuristicFunction*> *fv);
 	bool refine(State state, std::vector<bool> toRefine);

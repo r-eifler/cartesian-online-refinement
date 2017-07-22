@@ -82,7 +82,8 @@ public:
     void recompute_cost_partitioning(std::vector<int> order);    
     void remove_abstraction(int pos);
 	std::vector<int> get_original_cost_partitioning(Abstraction* abs);
-  
+	
+  	std::vector<std::vector<int>>* get_unused_cost();
     std::vector<int> get_order(int id);
     int number_of_orders();
     void update_order(int id, std::vector<int> new_order);

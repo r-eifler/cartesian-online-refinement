@@ -123,6 +123,8 @@ public:
     std::pair<AbstractState *, AbstractState *> split(
         int var, const std::vector<int> &wanted);
 	
+	std::pair<AbstractState *, AbstractState *> split_testwise(int var, const std::vector<int> &wanted);
+	
 	const Domains getDomains() const{
 		return domains;	
 	}

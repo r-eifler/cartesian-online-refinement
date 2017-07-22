@@ -279,7 +279,7 @@ std::shared_ptr<AbstractTask> Abstraction::get_AbsTask(){
    return task;     
 }
     
-int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_values, int max_states_refine){
+int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_values, int max_states_refine, std::vector<std::vector<int>> *unused_cost){
     
     refined = false;
     int state_border = get_num_states() + max_states_refine < 0 ? max_states_refine : get_num_states() + max_states_refine;
@@ -315,11 +315,18 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
         }
         
         const Split &split = split_selector.pick_split(*abstract_state, splits, rng);
-        refine(abstract_state, split.var_id, split.values);         
-                        
-        refined_states++;
-		num_of_Iter--; 
-    
+		
+		bool split_useful = split_usefull(abstract_state, split.var_id, split.values, unused_cost);
+		if(split_useful){	
+			usefull_splits++;	 
+			refine(abstract_state, split.var_id, split.values);                                
+			refined_states++;			
+		}
+		else{
+			break;	
+		}
+    	
+		num_of_Iter--;
    }
     refine_timer.stop();
     if(update_h_values){
@@ -328,6 +335,81 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
     
     refined = refined_states > 0;
    return refined_states;
+}
+	
+bool Abstraction::split_usefull(AbstractState * state, int var, const std::vector<int> &wanted, std::vector<std::vector<int>> *unused_cost){
+	if(unused_cost == NULL){
+		return true;	
+	}
+	
+	
+	pair<AbstractState *, AbstractState *> new_states = state->split_testwise(var, wanted);
+    AbstractState *v1 = new_states.first;
+    AbstractState *v2 = new_states.second;
+
+    /*
+    cout << "-----------------------" << endl;
+    cout << "Split " << *state << " h = " << state->get_h_value() << " in " << endl;
+    cout << *v1 << " h = " << v1->get_h_value() << " and " << endl;
+    cout << *v2 << " h = " << v2->get_h_value() << endl;
+    cout << "-----------------------" << endl;
+    */
+	
+    pair<vector<int>, vector<int>> trans = transition_updater.loops_to_transition(state, v1, v2, var);
+	/*
+	cout << "----------------------------------------------------------------------------------" << endl;
+	for(vector<int> cost : (*unused_cost)){
+		for(int c : cost){
+			cout << c << " ";	
+		}
+		cout << endl;
+	}
+	cout << "v1tov2: ";
+	for(int op_id : trans.first){
+		cout << op_id << " ";
+	}
+	cout << endl;
+	cout << "v2tov1: ";
+	for(int op_id : trans.second){
+		cout << op_id << " ";
+	}
+	cout << endl;
+	*/
+	//Check if all transitions from v1 to v2 (respectively v2 to v1) are contained in any unused_cost
+	//1. v1 to v2
+	bool v1tov2_has_cost = false;
+	for(vector<int> cost : (*unused_cost)){
+		bool has_cost = true;
+		for(int op_id : trans.first){
+			if(cost[op_id] == 0){
+				has_cost = false;
+				break;
+			}
+		}
+		if(has_cost){
+			v1tov2_has_cost = true;
+			break;
+		}
+	}
+	
+	bool v2tov1_has_cost = false;
+	if(!v1tov2_has_cost){
+		for(vector<int> cost : (*unused_cost)){
+			bool has_cost = true;
+			for(int op_id : trans.second){
+				if(cost[op_id] == 0){
+					has_cost = false;
+					break;
+				}
+			}
+			if(has_cost){
+				v2tov1_has_cost = true;
+				break;
+			}
+		}
+	}
+	//cout << "---> Refine usefull: " << (v1tov2_has_cost || v2tov1_has_cost) << endl;
+	return v1tov2_has_cost || v2tov1_has_cost;
 }
 	
 void Abstraction::addGoals(GoalsProxy goalsProxy){
@@ -891,6 +973,7 @@ void Abstraction::print_end_statistics() {
     cout << "Final Unmet goals: " << unmet_goals << endl;
     //cout << "update time: " << update_timer << endl;
     cout << "refinement time: " << refine_timer << endl;
+	cout << "Usefull splits: " << usefull_splits << endl;
     
     /*
     for(vector<int> cp : costs_partitionings){

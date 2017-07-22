@@ -30,7 +30,7 @@ EagerSearch::EagerSearch(const Options &opts)
       //Online Refinement ops
       refine_online(opts.get<bool>("refine_online")),
       refinement_selector(opts.get<int>("refinement_selector")),
-	  refinement_time(opts.get<int>("refinement_time")),
+	  refinement_time(opts.get<double>("refinement_time")),
       //Store open list factory to create new open lists during search
       open_list_factory(opts.get<shared_ptr<OpenListFactory>>("open")),  
       open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
@@ -522,7 +522,7 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "only every refinement_selector states is refined",
         "1",
         Bounds("1", "1000000"));
-	parser.add_option<int>(
+	parser.add_option<double>(
         "refinement_time",
         "only every refinement_times secondes a state is refined",
         "1",

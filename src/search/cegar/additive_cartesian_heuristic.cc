@@ -52,7 +52,7 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
 	  update_h_values(opts.get<int>("update_h_values")),
 	  use_all_goals(opts.get<bool>("use_all_goals")),
       heuristic_functions(generate_heuristic_functions(opts)),
-      onlineRefinement(cost_saturation, rng_order, max_states_online),
+      onlineRefinement(cost_saturation, rng_order, max_states_online, opts.get<bool>("use_useful_split")),
       merge(cost_saturation, rng_order){
           orderSelecter = new OrderSelecter(static_cast<CostOrder>(opts.get<int>("order")), cost_saturation, rng_order);
           orderSelecter->set_heuristic_functions(&heuristic_functions);
@@ -161,14 +161,14 @@ std::vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics_of_or
 }
     
 std::vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics_of_order(const State state, int order){
-        
     vector<int> values;
     int sum_h = 0;
     for (const CartesianHeuristicFunction *function : heuristic_functions) {
         int value = function->get_value(state, order);
+		//cout << "value: " << value << " order: " << order << endl;
         assert(value >= 0);
-        if (value == INF)
-            return values;
+        //if (value == INF)
+        //    return values;
         values.push_back(value);
         sum_h += value;
     }
@@ -235,7 +235,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
    
         
     bool debug = false;
-    if(debug){
+    if(false){
         cout << "----------- Check Refine --------- " << endl;  
         
         cout << "Refine State: " << global_state.get_id() << endl;
@@ -350,70 +350,72 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
     
     
     
-   //CHANGE SCP ORDER
-    cost_timer.resume();
-	//get current maximal order
-    vector<int> updated_order(cost_saturation->get_order(current_order));
-    
-    if(debug){
-        cout << "----------------------------" << endl;
-        cout << "Old order: " << current_order << endl;
-        for(int o : updated_order){
-            cout << o << " ";   
-        }
-        cout << endl;
-    }    
-    
-    //compute new order and update the cost partitioning
-	vector<int> new_order = orderSelecter->compute(state, current_order, updated_order, h_value, toRefine, this);
-    cost_saturation->recompute_cost_partitioning(new_order);
-    
-    if(debug){
-        cout << "New order: "  << endl;
-        for(int o : new_order){
-            cout << o << " ";   
-        }
-        cout << endl;
-    }
-    
-    
-   //Check if heuristic has been improved
-   int new_h_value = compute_current_order_heuristic(state);
-   if(h_value <  new_h_value){    
-       int new_scp_order = current_order;
-	   //check if order already exists
-	   /*
-	   		TODO: There are states where an existing order whith completely new computed cost partitioning 
-			has a higher value than the stepwise addition of the unused cost
-			--> should the same order be added multiple times ?
-	   */
-	   //Add the new order to the cost partitioning
-       bool exists = cost_saturation->add_order(new_order, &new_scp_order);
-       if(!exists){
-		   	if(debug){
-		   		cout << "Order " << current_order << " Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl; 
-			}
-		   	improved_order++;
-            number_of_orders++;
-            usefullnes_of_order.push_back(0);
-            lifetime_of_order.push_back(0);
-		    //update the h values of the abstractions
-            for (CartesianHeuristicFunction *function : heuristic_functions) {
-                function->update_h_and_g_values(new_scp_order, true);
-            }
-		   	cost_timer.stop();
-       		return true;
-       }
-   	}       
-    cost_timer.stop();
+   //CHANGE SCP ORDER	
+	if(heuristic_functions.size() > 1){
+		cost_timer.resume();
+		//get current maximal order
+		vector<int> updated_order(cost_saturation->get_order(current_order));
 
+		if(debug){
+			cout << "----------------------------" << endl;
+			cout << "Old order: " << current_order << endl;
+			for(int o : updated_order){
+				cout << o << " ";   
+			}
+			cout << endl;
+		}    
+
+		//compute new order and update the cost partitioning
+		vector<int> new_order = orderSelecter->compute(state, current_order, updated_order, h_value, toRefine, this);
+		cost_saturation->recompute_cost_partitioning(new_order);
+
+		if(debug){
+			cout << "New order: "  << endl;
+			for(int o : new_order){
+				cout << o << " ";   
+			}
+			cout << endl;
+		}
+
+
+	   //Check if heuristic has been improved
+	   int new_h_value = compute_current_order_heuristic(state);
+	   if(h_value <  new_h_value){    
+		   int new_scp_order = current_order;
+		   //check if order already exists
+				//TODO: There are states where an existing order whith completely new computed cost partitioning 
+				//has a higher value than the stepwise addition of the unused cost
+				//--> should the same order be added multiple times ?
+
+		   //Add the new order to the cost partitioning
+		   bool exists = cost_saturation->add_order(new_order, &new_scp_order);
+		   if(!exists){
+				if(debug){
+					cout << "Order " << current_order << " Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl; 
+				}
+				improved_order++;
+				number_of_orders++;
+				usefullnes_of_order.push_back(0);
+				lifetime_of_order.push_back(0);
+				//update the h values of the abstractions
+				for (CartesianHeuristicFunction *function : heuristic_functions) {
+					function->update_h_and_g_values(new_scp_order, true);
+				}
+				cost_timer.stop();
+				return true;
+		   }
+		}       
+		cost_timer.stop();
+	}
+    
+	
     
     //REFINE
     refine_timer.resume();
     bool refined = onlineRefinement.refine(state, toRefine);
  
     if(refined){
-       new_h_value = compute_heuristic(state);
+       int new_h_value = compute_heuristic(state);
        if(h_value <  new_h_value){
            improved_refine++;    
 		   if(debug){
@@ -597,7 +599,11 @@ static Heuristic *_parse(OptionParser &parser) {
         Bounds("1", "infinity"));
 	parser.add_option<bool>(
         "use_all_goals",
-        "only use the diversification oon goal facts during the offline phase",
+        "only use the diversification on goal facts during the offline phase",
+        "false");
+	parser.add_option<bool>(
+        "use_useful_split",
+        "split the states in the online refinement step based on the unused cost",
         "false");
 	
 	//Different Order selection strategies

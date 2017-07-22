@@ -594,6 +594,10 @@ void CostSaturation::remove_abstraction(int pos){
 	}
 	
 }
+	
+std::vector<std::vector<int>>* CostSaturation::get_unused_cost(){
+	return &remaining_costs_order;
+}
 
 void CostSaturation::print_statistics() const {
 	
@@ -619,16 +623,7 @@ void CostSaturation::print_statistics() const {
 		abs->print_cost();	
 	}
 	*/
-	/*
-	cout << "EXISTING ORDERS REMAINING COST: " << endl;
-	for(size_t i = 0; i < remaining_costs_order.size(); i++){
-		cout << "Remaining Cost: " << i << endl;
-		for(int j : remaining_costs_order[i]){
-			cout << j << " ";	
-		}
-		cout << endl;
-	}
-	*/
+	
 	
 }
 	
@@ -642,5 +637,18 @@ void CostSaturation::print_statistics_end() const{
 		cout << endl;
 	}
 	cout << endl;
+	cout << "UNUSED COST: " << endl;
+	for(size_t i = 0; i < remaining_costs_order.size(); i++){
+		int used = 0;
+		cout << "Remaining Cost: " << i << endl;
+		for(int j : remaining_costs_order[i]){
+			cout << j << " ";	
+			if(j == 0){
+				used++;	
+			}
+		}
+		cout << endl;
+		cout << "Used: " << used << "/" << (remaining_costs_order[i].size()) << "-->" << (((float) used) / remaining_costs_order[i].size()) << endl;
+	}
 }
 }

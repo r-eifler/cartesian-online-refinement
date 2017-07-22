@@ -54,6 +54,7 @@ class Abstraction {
     utils::Timer update_timer;
 	
     int refinement_calls = 0; 
+	int usefull_splits = 0;
 	
 	// stores the saturation which is only computed testwise to find a better order
 	std::vector<int> current_saturation;
@@ -177,7 +178,7 @@ public:
     //Onlie refinement
     Node *get_node(const State &state) const;
     const TaskProxy* get_Task();
-    int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine);
+    int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine, std::vector<std::vector<int>> *unused_cost);
 	//checks if the state satisfis the abstraction (not equals to h(s) = 0)
 	bool satisfies_goal(State state);
 	// checks if the solution of abs and this can be combined to achieve both goals
@@ -188,6 +189,8 @@ public:
 	void update_h_values();
 	void update_h_and_g_values(int pos, bool new_order);	
 	void addGoals(GoalsProxy goals);
+	
+	bool split_usefull(AbstractState * state, int var, const std::vector<int> &wanted, std::vector<std::vector<int>> *unused_cost);
 		
 	void print_states();
 	void print_cost();

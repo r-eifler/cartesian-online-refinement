@@ -128,6 +128,40 @@ pair<AbstractState *, AbstractState *> AbstractState::split(
 
     return make_pair(v1, v2);
 }
+	
+std::pair<AbstractState *, AbstractState *> AbstractState::split_testwise(int var, const std::vector<int> &wanted){
+    int num_wanted = wanted.size();
+    utils::unused_variable(num_wanted);
+    // We can only split states in the refinement hierarchy (not artificial states).
+    assert(node);
+    // We can only refine for variables with at least two values.
+    assert(num_wanted >= 1);
+    assert(domains.count(var) > num_wanted);
+
+    Domains v1_domains(domains);
+    Domains v2_domains(domains);
+
+    v2_domains.remove_all(var);
+    for (int value : wanted) {
+        // The wanted value has to be in the set of possible values.
+        assert(domains.test(var, value));
+
+        // In v1 var can have all of the previous values except the wanted ones.
+        v1_domains.remove(var, value);
+
+        // In v2 var can only have the wanted values.
+        v2_domains.add(var, value);
+    }
+    assert(v1_domains.count(var) == domains.count(var) - num_wanted);
+    assert(v2_domains.count(var) == num_wanted);
+
+    // Do not update refinement hierarchy.
+
+    AbstractState *v1 = new AbstractState(v1_domains, NULL);
+    AbstractState *v2 = new AbstractState(v2_domains, NULL);
+		
+	return make_pair(v1, v2);
+}
 
 AbstractState AbstractState::regress(OperatorProxy op) const {
     Domains regressed_domains = domains;

@@ -26,9 +26,9 @@ std::vector<int> CartesianHeuristicFunction::get_values(const State &parent_stat
 	return abstraction->get_node(local_state)->get_h_values();
 }
     
-int CartesianHeuristicFunction::online_Refine(const State &parent_state, int max_iter, int update_h_values, int max_states_refine) const {
+int CartesianHeuristicFunction::online_Refine(const State &parent_state, int max_iter, int update_h_values, int max_states_refine, std::vector<std::vector<int>> *unused_cost) const {
     State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
-    return abstraction->onlineRefine(local_state, max_iter, update_h_values, max_states_refine);
+    return abstraction->onlineRefine(local_state, max_iter, update_h_values, max_states_refine, unused_cost);
 }
 
 bool CartesianHeuristicFunction::satisfies_goal(State parent_state){

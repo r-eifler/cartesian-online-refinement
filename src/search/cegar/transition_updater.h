@@ -46,6 +46,8 @@ public:
     // Update transition system after v has been split into v1 and v2.
     void rewire(
         AbstractState *v, AbstractState *v1, AbstractState *v2, int var);
+	
+	std::pair<std::vector<int>, std::vector<int>> loops_to_transition(AbstractState *v, AbstractState *v1, AbstractState *v2, int var);
 
     int get_num_non_loops() const;
     int get_num_loops() const;
