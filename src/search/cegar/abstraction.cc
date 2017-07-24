@@ -231,7 +231,6 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
     */
     
     if (task_proxy.get_goals().size() == 1) {
-        cout << "separate_facts_unreachable_before_goal" << endl;
         separate_facts_unreachable_before_goal();
     }
     bool found_concrete_solution = false;
@@ -378,10 +377,10 @@ bool Abstraction::split_usefull(AbstractState * state, int var, const std::vecto
 	//Check if all transitions from v1 to v2 (respectively v2 to v1) are contained in any unused_cost
 	//1. v1 to v2
 	bool v1tov2_has_cost = false;
-	for(vector<int> cost : (*unused_cost)){
+	for(size_t i = 0; i < unused_cost->size(); i++){
 		bool has_cost = true;
 		for(int op_id : trans.first){
-			if(cost[op_id] == 0){
+			if((*unused_cost)[i][op_id] == 0 && costs_partitionings[i][op_id] == 0){
 				has_cost = false;
 				break;
 			}
@@ -394,10 +393,10 @@ bool Abstraction::split_usefull(AbstractState * state, int var, const std::vecto
 	
 	bool v2tov1_has_cost = false;
 	if(!v1tov2_has_cost){
-		for(vector<int> cost : (*unused_cost)){
+		for(size_t i = 0; i < unused_cost->size(); i++){
 			bool has_cost = true;
 			for(int op_id : trans.second){
-				if(cost[op_id] == 0){
+				if((*unused_cost)[i][op_id] == 0 && costs_partitionings[i][op_id] == 0){
 					has_cost = false;
 					break;
 				}

@@ -259,6 +259,9 @@ void CostSaturation::build_abstractions(
 	//vector<int> order;
     for (shared_ptr<AbstractTask> subtask : subtasks) {
 		
+		cout << "-----------------ABSTRACTION " << abstractions.size() << "--------------------------" << endl;
+		cout << "MEMORY: " << utils::extra_memory_padding_is_reserved() << endl;
+		
         subtask = get_remaining_costs_task(subtask);
         assert(num_states < max_states);
         Abstraction *abstraction = new Abstraction(
@@ -271,6 +274,11 @@ void CostSaturation::build_abstractions(
             pick_split,
             rng);
 		
+		//if memory limit has been reached delete abstraction
+		if (should_abort()){
+			delete abstraction;
+            break;			
+		}
 		
 
         ++num_abstractions;
@@ -283,7 +291,8 @@ void CostSaturation::build_abstractions(
         reduce_remaining_costs(sturated_cost);
 		//TODO which abstractions should be stored ?
         //int init_h = abstraction->get_h_value_of_initial_state();
-        //if (init_h > 0) {			
+        //if (init_h > 0) {		
+		//if(abstraction->get_num_states() > 1){
 			abstractions.push_back(abstraction);
           	heuristic_functions.emplace_back(abstraction, abstractions.size()-1);
 		  
@@ -566,7 +575,8 @@ void CostSaturation::remove_abstraction(int pos){
 		*/
 	}
 	
-	//heuristic_functions.erase(heuristic_functions.begin() + pos); TODO !!!!!!!
+	//heuristic_functions.erase(heuristic_functions.begin() + pos); TODO can not be delted
+	delete abs;
 	
 	//erase abstraction from all costpartitionings
 	for(size_t j = 0; j < scp_orders.size(); j++){		

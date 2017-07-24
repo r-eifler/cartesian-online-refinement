@@ -288,7 +288,7 @@ bool Merge::merge(vector<bool> toRefine){
     //cout << "Merge: " << p1 << " id=" << f1->id << " with : " << p2 << " id=" << f2->id << endl;
 	//Merge abstractions
 	f1->merge(f2);
-	(*heuristic_functions).erase((*heuristic_functions).begin() + p2);
+	(*heuristic_functions).erase((*heuristic_functions).begin() + p2); //TODO can not be deleted in cost_saturation
 	cost_saturation->remove_abstraction(p2);
 
 
