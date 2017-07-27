@@ -239,7 +239,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
         //cout << "-----------------------" << endl;
         bool found_abstract_solution = abstract_search.find_solution(init, goals);
         if (!found_abstract_solution) {
-            cout << "Abstract problem is unsolvable!" << endl;
+            //cout << "Abstract problem is unsolvable!" << endl;
             break;
         }
         unique_ptr<Flaw> flaw = find_flaw(abstract_search.get_solution(), init, task_proxy.get_initial_state());
@@ -529,9 +529,19 @@ bool Abstraction::merge(Abstraction* abs){
 			
 				if(is_goal(result.second)){
 				   for(AbstractState* g2 : abs->goals){
-						if(g2->domains_intersect(result.first)){
-							goals.insert(result.first);	
-							//cout << "Could get more goals based on: " << *(result.first) << endl;
+						if(g2->is_more_general_than(*(result.first))){
+							bool subset = false;
+							for(AbstractState* g1 : goals){
+								if(g1->is_more_general_than(*(result.first))){
+									subset = true;
+									goals.insert(result.first);	
+									//cout << "Could get more goals based on: " << *(result.first) << endl;
+									break;
+								}
+						   	}
+							if(subset){
+								break;	
+							}
 						}
 				   }
 				}

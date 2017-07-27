@@ -19,6 +19,7 @@ class Merge {
 
 	int max_merge_size = 5000;
 	int merged_abs = 0;
+	int max_size_reached = false;
 
 	utils::Timer merge_timer;
 protected:

@@ -51,6 +51,7 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
       max_iter(opts.get<int>("max_iter")),
 	  update_h_values(opts.get<int>("update_h_values")),
 	  use_all_goals(opts.get<bool>("use_all_goals")),
+	  use_merge(opts.get<bool>("use_merge")),
 	  strategy(static_cast<Strategy>(opts.get<int>("strategy"))),
       heuristic_functions(generate_heuristic_functions(opts)),
       onlineRefinement(cost_saturation, rng_order, max_states_online, opts.get<bool>("use_useful_split")),
@@ -163,7 +164,6 @@ std::vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics_of_or
     
 std::vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics_of_order(const State state, int order){
     vector<int> values;
-    int sum_h = 0;
     for (const CartesianHeuristicFunction *function : heuristic_functions) {
         int value = function->get_value(state, order);
 		//cout << "value: " << value << " order: " << order << endl;
@@ -171,9 +171,7 @@ std::vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics_of_or
         //if (value == INF)
         //    return values;
         values.push_back(value);
-        sum_h += value;
     }
-    assert(sum_h >= 0);
     return values;
 }
 	
@@ -347,7 +345,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
     State state = convert_global_state(global_state);
     
     //Refinement pathology   
-    if((heuristic_functions.size() > 1 && (conflict) && !use_all_goals )){
+    if( use_merge && heuristic_functions.size() > 1 && conflict && !use_all_goals ){
         refinement_pathology++;
 		//TODO modify refined -> otherwise no merge is selected 
 		vector<bool> modified_toRefine(toRefine.size(), true);
@@ -396,7 +394,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 
 	//MERGE
 	//if all goal facts are used in every abstraction in the online phase a merge is not useful ?
-   	if(heuristic_functions.size() > 1 && !use_all_goals){             
+   	if(use_merge && heuristic_functions.size() > 1 && !use_all_goals){             
        int merged = merge.merge(toRefine);      
        //Check if merge improved the heuristic
        if(merged){
@@ -625,6 +623,10 @@ static Heuristic *_parse(OptionParser &parser) {
         "use_all_goals",
         "only use the diversification on goal facts during the offline phase",
         "false");
+	parser.add_option<bool>(
+        "use_merge",
+        "TODO",
+        "true");
 	parser.add_option<bool>(
         "use_useful_split",
         "split the states in the online refinement step based on the unused cost",

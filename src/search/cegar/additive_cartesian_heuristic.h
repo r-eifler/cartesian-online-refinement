@@ -33,6 +33,7 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int max_iter;
 	int update_h_values;
 	bool use_all_goals;
+	bool use_merge;
 	
 	Strategy strategy = Strategy::ORDER_REFINE;
 	

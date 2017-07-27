@@ -238,13 +238,13 @@ int Merge::select_compatible_plan(std::vector<bool> toRefine, CartesianHeuristic
 		}
 		//cout << "--------------------------------------------------------------------------------" << endl;
 	}
-		
-	cout << "Canditates: ";
+	/*
+	cout << "Candidates: ";
 	for(bool b : canditates){
 		cout << b << " ";	
 	}
 	cout << endl;	
-			   
+	*/		   
 	//find the smallest candidate
 	int s2 = infinity;	
 	for(size_t i = 0; i < (*heuristic_functions).size(); i ++){ 
@@ -269,6 +269,9 @@ int Merge::select_compatible_plan(std::vector<bool> toRefine, CartesianHeuristic
 
 bool Merge::merge(vector<bool> toRefine){
 	//return false;
+	if(max_size_reached){
+		return false;	
+	}
 	
 	merge_timer.resume();
 	for (CartesianHeuristicFunction *function : (*heuristic_functions)) {
@@ -284,7 +287,10 @@ bool Merge::merge(vector<bool> toRefine){
 	int max_size = select_compatible_plan(toRefine, &f1, &p1, &f2, &p2);
 		
 	if(max_size == -1 || max_size > max_merge_size){
-		cout << "MAX SIZE MERGE: " << max_size << " < " << max_merge_size << endl;
+		//cout << "MAX SIZE MERGE: " << max_size << " < " << max_merge_size << endl;
+		if(max_size > max_merge_size){
+			max_size_reached = true;	
+		}
 		merge_timer.stop();
 		return false;
 	}
