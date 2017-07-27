@@ -185,8 +185,10 @@ public:
 	bool are_plans_compatible(Abstraction* abs);
 	//merges the abstratcion abs and this
 	bool merge(Abstraction* abs);
+	std::pair<AbstractState*, AbstractState*> refineMerge(AbstractState *state, int var, const std::vector<int> &wanted);
 	
 	void update_h_values();
+	void update_h_values_complete_cost();
 	void update_h_and_g_values(int pos, bool new_order);	
 	void addGoals(GoalsProxy goals);
 	

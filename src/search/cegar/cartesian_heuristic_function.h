@@ -34,6 +34,7 @@ public:
 	CartesianHeuristicFunction(Abstraction *abs, int id);
 
     int get_value(const State &parent_state) const;
+	int get_original_value(const State &parent_state) const;
 	int get_value(const State &parent_state, int order) const;
 
 	//Online Refinement

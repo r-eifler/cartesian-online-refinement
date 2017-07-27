@@ -179,6 +179,10 @@ AbstractState AbstractState::regress(OperatorProxy op) const {
 bool AbstractState::domains_intersect(const AbstractState *other, int var) const {
     return domains.intersects(other->domains, var);
 }
+	
+bool AbstractState::domains_intersect(const AbstractState *other) const {
+	return domains.intersects(other->domains);	
+}
 
 bool AbstractState::includes(const State &concrete_state) const {
     for (FactProxy fact : concrete_state) {

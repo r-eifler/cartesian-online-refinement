@@ -222,12 +222,15 @@ int Merge::select_compatible_plan(std::vector<bool> toRefine, CartesianHeuristic
 		//cout << "Candidate: " << i << endl;
 		if(toRefine[i] && (int)i != *p1){
 			CartesianHeuristicFunction* f = (*heuristic_functions)[i];
-			if(! (*f1)->get_abstraction()->are_plans_compatible(f->get_abstraction())){
-				
+			//cout << "................ Check compatible " << (*f1)->id << " with " << f->id << "..........." << endl; 
+			if(!( (*f1)->get_abstraction()->are_plans_compatible(f->get_abstraction()) || 
+				 f->get_abstraction()->are_plans_compatible((*f1)->get_abstraction()))){	
+				//cout << "Merge candidate" << endl;
 				canditates.push_back(true);
 			}
 			else{
 				canditates.push_back(false);
+				//cout << "No Merge candidate" << endl;
 			}
 		}
 		else{
@@ -235,13 +238,13 @@ int Merge::select_compatible_plan(std::vector<bool> toRefine, CartesianHeuristic
 		}
 		//cout << "--------------------------------------------------------------------------------" << endl;
 	}
-	/*		
+		
 	cout << "Canditates: ";
 	for(bool b : canditates){
 		cout << b << " ";	
 	}
 	cout << endl;	
-	*/		   
+			   
 	//find the smallest candidate
 	int s2 = infinity;	
 	for(size_t i = 0; i < (*heuristic_functions).size(); i ++){ 
@@ -281,7 +284,7 @@ bool Merge::merge(vector<bool> toRefine){
 	int max_size = select_compatible_plan(toRefine, &f1, &p1, &f2, &p2);
 		
 	if(max_size == -1 || max_size > max_merge_size){
-		//cout << "MAX SIZE MERGE: " << max_size << " < " << max_merge_size << endl;
+		cout << "MAX SIZE MERGE: " << max_size << " < " << max_merge_size << endl;
 		merge_timer.stop();
 		return false;
 	}
@@ -300,9 +303,13 @@ bool Merge::merge(vector<bool> toRefine){
 		//Also updates the h values
 	}
 
+	//cout << "Functions after merge: ";
 	for (CartesianHeuristicFunction *function : (*heuristic_functions)) {
+		//cout << function->id << " ";
+		cost_saturation->update_h_complete_cost(function->get_abstraction());
 		 function->set_refined(false);
 	}  
+	//cout << endl;
 	merge_timer.stop();    
 	merged_abs++;
 	return true;	

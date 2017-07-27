@@ -74,6 +74,7 @@ class AbstractState {
 	
 	//H values of the different scp orders
 	std::vector<int> h_values;
+	int c_h ;
 
     // Transitions from and to other abstract states.
     Transitions incoming_transitions;
@@ -90,9 +91,11 @@ class AbstractState {
     void remove_non_looping_transition(
         Transitions &transitions, int op_id, AbstractState *other);
 
-    bool is_more_general_than(const AbstractState &other) const;
+    
 
 public:
+	bool is_more_general_than(const AbstractState &other) const;
+	
     void add_outgoing_transition(int op_id, AbstractState *target);
     void add_incoming_transition(int op_id, AbstractState *src);
     void add_loop(int op_id);
@@ -101,6 +104,7 @@ public:
     void remove_outgoing_transition(int op_id, AbstractState *other);
 
     bool domains_intersect(const AbstractState *other, int var) const;
+	bool domains_intersect(const AbstractState *other) const;
 
     AbstractState(const AbstractState &) = delete;
 
@@ -138,6 +142,13 @@ public:
 	int add_h_value(int value);
     int get_h_value(int pos) const;
 	std::vector<int> get_h_values() const;
+	
+	void set_c_h(int v){
+		c_h = v;	
+	}
+	int get_c_h(){
+		return c_h;	
+	}
 
     const Transitions &get_outgoing_transitions() const {
         return outgoing_transitions;

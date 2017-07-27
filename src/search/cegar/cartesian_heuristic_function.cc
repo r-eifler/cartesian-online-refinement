@@ -16,6 +16,11 @@ int CartesianHeuristicFunction::get_value(const State &parent_state) const {
     return abstraction->get_node(local_state)->get_h_value();
 }
 	
+int CartesianHeuristicFunction::get_original_value(const State &parent_state) const {
+	State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
+    return abstraction->get_node(local_state)->get_c_h();
+}
+	
 int CartesianHeuristicFunction::get_value(const State &parent_state, int order) const{
 	State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
 	return abstraction->get_node(local_state)->get_h_value(order);

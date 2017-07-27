@@ -56,6 +56,7 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
     	cost_saturation->recompute_cost_partitioning_unused(o); 
 	}
 	for (CartesianHeuristicFunction *function : (*heuristic_functions)) {
+		cost_saturation->update_h_complete_cost(function->get_abstraction());
 		 function->set_refined(false);
 	}
 	timer.stop();

@@ -116,13 +116,13 @@ Abstraction::Abstraction(
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
     */
        
-     /*     
+          
      cout << "+++++++++++++++++++ Goals ++++++++++++++++++" << endl;
      GoalsProxy goals = task_proxy.get_goals();
      for(uint i = 0; i < goals.size(); i++){
 		cout << goals[i].get_variable().get_name() <<  " = " << goals[i].get_value() << endl;	
 	}
-    */
+    
           
     assert(max_states >= 1);
     g_log << "Start building abstraction." << endl;
@@ -137,13 +137,12 @@ Abstraction::Abstraction(
        last iteration, so we should update the distances. */
     update_h_and_g_values();
     update_h_and_g_values(0, false);  
-          
+    update_h_values_complete_cost();
     print_statistics();
 }
 
 
 Abstraction::~Abstraction() {
-    cout << "Abstruction deleted" << endl;
     for (AbstractState *state : states)
         delete state;
 }
@@ -231,8 +230,10 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
     */
     
     if (task_proxy.get_goals().size() == 1) {
+		cout << "...... separate_facts_unreachable_before_goal ... " << endl;
         separate_facts_unreachable_before_goal();
     }
+	cout << "...... REFINE ... " << endl;
     bool found_concrete_solution = false;
     while (may_keep_refining()) {
         //cout << "-----------------------" << endl;
@@ -452,19 +453,20 @@ bool Abstraction::merge(Abstraction* abs){
            cout << fp.var << " = " << fp.value << endl;
     }
     print_states();
-    print_cost();
+    //print_cost();
     */
     
     const TaskProxy *task_proxy_goals =  abs->get_Task();
     vector<FactPair> goal_facts_add = get_fact_pairs(task_proxy_goals->get_goals());
-    /*
+    
+	/*
      cout << "..............." << endl;
         cout << "Additional goal facts: " << endl;
     for(FactPair fp : goal_facts_add){
            cout << fp.var << " = " << fp.value << endl;
     }
     abs->print_states();
-    abs->print_cost();
+    //abs->print_cost();
     */
     
     goal_facts_original.insert(goal_facts_original.end(), goal_facts_add.begin(), goal_facts_add.end());
@@ -472,7 +474,7 @@ bool Abstraction::merge(Abstraction* abs){
     
     task_proxy = TaskProxy(*task);
 
-    
+    /*
     //cout << "---------- Check existing goals ---------" << endl;
     AbstractStates absGoals;
     for(AbstractState* a : goals){
@@ -486,7 +488,9 @@ bool Abstraction::merge(Abstraction* abs){
         }   
     }
     goals = absGoals;
-    //cout << "---------- Check existing goals ---------" << endl;    
+    //cout << "---------- Check existing goals ---------" << endl; 
+	*/
+	
     unordered_set<pair<AbstractState*, Node*>> states_to_split;
     //init all original states with the root node of the refinement hierarchy
     //cout << "--------- init states_to_split --------------" << endl;
@@ -513,9 +517,26 @@ bool Abstraction::merge(Abstraction* abs){
         Node* rc = NULL;
         pair<int, vector<int>> split = next.second->get_wanted_vars(next.first, &lc, &rc);
         if(rc != NULL){
-               //cout << "Split on: var " << split.first << " = " << split.second[0] << endl;
+				/*
+               cout << "Split on: var " << split.first << " = {";
+				for(int v : split.second){
+					cout << v << " ";
+				}
+				cout << "}" << endl;
+				*/
                
-               pair<AbstractState*, AbstractState*> result = refine(next.first, split.first, split.second);
+               pair<AbstractState*, AbstractState*> result = refineMerge(next.first, split.first, split.second);
+			
+				if(is_goal(result.second)){
+				   for(AbstractState* g2 : abs->goals){
+						if(g2->domains_intersect(result.first)){
+							goals.insert(result.first);	
+							//cout << "Could get more goals based on: " << *(result.first) << endl;
+						}
+				   }
+				}
+			
+			
                /*
                cout << "Result state: " << endl;
                cout << "    " << *(result.first) << endl;
@@ -531,12 +552,78 @@ bool Abstraction::merge(Abstraction* abs){
 	/*
     cout << "++++++++++++ RESULT MERGE +++++++++++++++++++++" << endl;
     print_states();
-    print_cost();
-    */
+    //print_cost();
+	*/
+    
     
     //update_h_and_g_values();
     refined = true;
     return true;
+}
+	
+std::pair<AbstractState*, AbstractState*> Abstraction::refineMerge(AbstractState *state, int var, const std::vector<int> &wanted){
+	if (debug){
+		cout << "---------------------------------------" << endl;
+        cout << "MergeRefine " << *state << " for " << var << "=" << wanted << endl;
+	}
+    
+    pair<AbstractState *, AbstractState *> new_states = state->split(var, wanted);
+    AbstractState *v1 = new_states.first;
+    AbstractState *v2 = new_states.second;
+
+    /*
+    cout << "-----------------------" << endl;
+    cout << "Split " << *state << " h = " << state->get_h_value() << " in " << endl;
+    cout << *v1 << " h = " << v1->get_h_value() << " and " << endl;
+    cout << *v2 << " h = " << v2->get_h_value() << endl;
+    cout << "-----------------------" << endl;
+    */
+    transition_updater.rewire(state, v1, v2, var);
+
+    states.erase(state);
+    states.insert(v1);
+    states.insert(v2);
+
+    /* Since the search is always started from the abstract initial state, v2
+       is never the new initial state and v1 is never a goal state. */
+	//The start state does not matter
+    if (state == init) {
+        assert(v1->includes(task_proxy.get_initial_state()) || v2->includes(task_proxy.get_initial_state()));
+        if(v1->includes(task_proxy.get_initial_state())){
+            init = v1;   
+            //cout << "new Init 1" << endl;
+        }
+        else{
+            init = v2;
+            //cout << "new Init 1" << endl;
+        }
+		
+        if (debug)
+            cout << "New init state: " << *init << endl;
+    }
+	
+	if(is_goal(state)){
+		goals.erase(state);
+		goals.insert(v2);  
+		if (debug)
+		cout << "New/additional goal state: " << *v2 << endl;
+	}
+
+    int num_states = get_num_states();
+    if (num_states % 1000 == 0) {
+        g_log << num_states << "/" << max_states << " states, "
+              << transition_updater.get_num_non_loops() << "/"
+              << max_non_looping_transitions << " transitions"        
+                << " update Time: " << update_timer
+                << " refine Time: " << refine_timer << endl;
+    }
+
+    delete state;
+    //cout << "RESULT STATE " << *v1 << endl;
+    //cout << "RESULT STATE " << *v2 << endl;
+    
+    return make_pair(v1,v2);
+	
 }
 	
 bool Abstraction::are_plans_compatible(Abstraction* abs){
@@ -583,6 +670,13 @@ bool Abstraction::are_plans_compatible(Abstraction* abs){
 		//if the action in plan2 is a self loop in abstraction 1 the action can be skipt
 		// as it does not influence the solution of abstraction 1
 		vector<int> loops = current_state1->get_loops();
+		/*
+		cout << "loops: ";
+		for(int o : loops){
+			cout << o << " ";	
+		}
+		cout << endl;
+		*/
 		if(find(loops.begin(), loops.end(), sol2_it->op_id) != loops.end()){
 			//cout << "---> self loop: " << sol2_it->op_id << endl;
 			current_state2 = sol2_it->target;
@@ -641,16 +735,20 @@ bool Abstraction::are_plans_compatible(Abstraction* abs){
 		}
 		
 	}
-	/*
-	cout << "---------------------------------------" << endl;
-	cout << "plans compatible: " << !error << endl;
-	*/
+	
+	//cout << "---------------------------------------" << endl;
+	//cout << "plans compatible: " << !error << endl;
+	
 	return !error;
 }
 
+
+
 std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *state, int var, const vector<int> &wanted) {
-    if (debug)
+    if (debug){
+		cout << "---------------------------------------" << endl;
         cout << "Refine " << *state << " for " << var << "=" << wanted << endl;
+	}
     
     pair<AbstractState *, AbstractState *> new_states = state->split(var, wanted);
     AbstractState *v1 = new_states.first;
@@ -671,15 +769,15 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *sta
 
     /* Since the search is always started from the abstract initial state, v2
        is never the new initial state and v1 is never a goal state. */
+	//The start state does not matter
     if (state == init) {
-        
         /*
         assert(v1->includes(task_proxy.get_initial_state()));
         assert(!v2->includes(task_proxy.get_initial_state()));
         init = v1;
         */
-        
         //TODO why ?
+		
         assert(v1->includes(task_proxy.get_initial_state()) || v2->includes(task_proxy.get_initial_state()));
         if(v1->includes(task_proxy.get_initial_state())){
             init = v1;   
@@ -689,20 +787,17 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *sta
             init = v2;
             //cout << "new Init 1" << endl;
         }
-
+		
         if (debug)
             cout << "New init state: " << *init << endl;
     }
-    //if (is_goal(state)) { //TODO why does not work ?
-	if(is_abstract_goal(state)){
+    if (is_goal(state)) { 
+	//if(is_abstract_goal(state)){
         
-        /*
         goals.erase(state);
         goals.insert(v2);
-        */
-        //TODO why !!!!!!!!!!!!!!!!!!1 does nothing !!
-        //does is_abstract_goals also works with the landmark setting ?
-        
+
+        /*
         goals.erase(state);
         if(is_abstract_goal(v1)){
            goals.insert(v1);  
@@ -710,8 +805,8 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *sta
         if(is_abstract_goal(v2)){
             goals.insert(v2);
         }
-        
-        if (false)
+        */
+        if (debug)
             cout << "New/additional goal state: " << *v2 << endl;
     }
 
@@ -831,6 +926,18 @@ void Abstraction::update_h_and_g_values(int pos, bool new_order){
 	//cout << "abstract_search.forward_dijkstra" << endl;
     abstract_search.forward_dijkstra(init);
     update_timer.stop();   
+}
+	
+void Abstraction::update_h_values_complete_cost(){
+	update_timer.resume();
+    abstract_search.backwards_dijkstra(goals);
+    for (AbstractState *state : states) {
+        state->set_c_h(state->get_search_info().get_g_value());
+    }
+    // Update g values.
+    // TODO: updating h values overwrites g values. Find better solution.
+    abstract_search.forward_dijkstra(init);
+    update_timer.stop();
 }
 
 void Abstraction::update_h_and_g_values() {
@@ -989,9 +1096,10 @@ void Abstraction::print_states(){
     cout << "+++++++++++++++++++ All States (" << states.size() << ") +++++++++++++++++++++" << endl;
 	cout << "Init: " << *init << endl;
     for(AbstractState* state : states){            
-        //cout << "STATE G "<<  is_abstract_goal(state) << " " << is_goal(state) << " " << *state <<  endl;
-		cout << "STATE G "<<  is_abstract_goal(state) << " " << *state <<  endl;
+        cout << "STATE G "<<  is_abstract_goal(state) << " " << is_goal(state) << " " << *state <<  endl;
+		//cout << "STATE G "<<  is_abstract_goal(state) << " " << *state <<  endl;
         
+		/*
         Transitions trans = state->get_outgoing_transitions();
         for(Transition t : trans){
             cout << "	--> " << t.op_id << " " << *(t.target) << endl; 
@@ -1001,6 +1109,7 @@ void Abstraction::print_states(){
 			cout << i << " ";		
 		}
         cout << endl;
+		*/
     }     
 }
  

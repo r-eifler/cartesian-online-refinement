@@ -256,9 +256,16 @@ void CostSaturation::build_abstractions(
     const utils::CountdownTimer &timer,
     function<bool()> should_abort) {
     int rem_subtasks = subtasks.size();
-	//vector<int> order;
+	//vector<pair<int,int>> used_goals;
     for (shared_ptr<AbstractTask> subtask : subtasks) {
 		
+		/*
+		//check if goals fact has already been used
+		FactPair goal_fact = get_fact_pairs(task_proxy = TaskProxy(*subtask))[0];
+		for(pair<int,int> g : used_goals){
+			   if(g.first
+		}
+		*/
 		cout << "-----------------ABSTRACTION " << abstractions.size() << "--------------------------" << endl;
 		cout << "MEMORY: " << utils::extra_memory_padding_is_reserved() << endl;
 		
@@ -279,7 +286,7 @@ void CostSaturation::build_abstractions(
 			delete abstraction;
             break;			
 		}
-		
+	
 
         ++num_abstractions;
         num_states += abstraction->get_num_states();
@@ -490,10 +497,26 @@ std::vector<int> CostSaturation::get_original_cost_partitioning(Abstraction* abs
 	subtask = get_remaining_costs_task(subtask);
 	abs->update_Task(subtask);
 
-	//Update the remaining cost of the states aber refinement
+	//Update the remaining cost of the states after refinement
 	abs->update_h_values();
 
 	return abs->get_saturated_costs(-1);	
+}
+	
+void CostSaturation::update_h_complete_cost(Abstraction* abs){
+	
+	TaskProxy task_proxy(*abstask); 
+	
+	//reset ramaining cost;
+	remaining_costs = get_operator_costs(task_proxy);
+	
+	//update the task in the abstraction
+	shared_ptr<AbstractTask> subtask = abs->get_AbsTask();
+	subtask = get_remaining_costs_task(subtask);
+	abs->update_Task(subtask);
+
+	//Update the remaining cost of the states after refinement
+	abs->update_h_values_complete_cost();
 }
 	
 int CostSaturation::number_of_orders(){
@@ -639,6 +662,7 @@ void CostSaturation::print_statistics() const {
 	
 void CostSaturation::print_statistics_end() const{
 	cout << "----- COST PARTITIONING -----" << endl;
+	cout << "Number of orders: " << scp_orders.size() << endl;
 	cout << "Orders: " << endl;
 	for(vector<int> o : scp_orders){
 		for(int pos : o){
@@ -650,14 +674,14 @@ void CostSaturation::print_statistics_end() const{
 	cout << "UNUSED COST: " << endl;
 	for(size_t i = 0; i < remaining_costs_order.size(); i++){
 		int used = 0;
-		cout << "Remaining Cost: " << i << endl;
+		//cout << "Remaining Cost: " << i << endl;
 		for(int j : remaining_costs_order[i]){
-			cout << j << " ";	
+			//cout << j << " ";	
 			if(j == 0){
 				used++;	
 			}
 		}
-		cout << endl;
+		//cout << endl;
 		cout << "Used: " << used << "/" << (remaining_costs_order[i].size()) << "-->" << (((float) used) / remaining_costs_order[i].size()) << endl;
 	}
 }

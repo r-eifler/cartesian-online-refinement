@@ -42,6 +42,15 @@ int Domains::count(int var) const {
 bool Domains::intersects(const Domains &other, int var) const {
     return domain_subsets[var].intersects(other.domain_subsets[var]);
 }
+	
+bool Domains::intersects(const Domains &other) const {
+	for(size_t var = 0; var < domain_subsets.size(); var++){
+		if(! domain_subsets[var].intersects(other.domain_subsets[var])){
+			return false;	
+		}
+	}
+    return true;
+}
 
 bool Domains::is_superset_of(const Domains &other) const {
     int num_vars = domain_subsets.size();

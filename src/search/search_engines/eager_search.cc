@@ -153,9 +153,9 @@ SearchStatus EagerSearch::step() {
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
-    if(refine_online && refine_timer() > refinement_time){  
+    if(refine_online && (refine_timer() > refinement_time || need_to_refine)){  		
+    //if(refine_online && (statistics.get_expanded() % refinement_selector == 0 || need_to_refine)){
 		total_refine_timer.resume();
-    //if(refine_online && statistics.get_expanded() % refinement_selector == 0){
         Heuristic* h = heuristics[0];        
         // Check whether h(s) is too low by looking at all successors.
         assert(heuristics.size() == 1);  // HACK
@@ -176,13 +176,18 @@ SearchStatus EagerSearch::step() {
 
             bool refined = h->online_Refine(s, succStates);
             if(refined){
-               num_refined_nodes++;                 
+               num_refined_nodes++;   
+				refine_timer.reset();
+				need_to_refine = false;
             } 
+			else{
+				need_to_refine = true;	
+			}
             //cout << "-------------------------------------" << endl;
         }
 
         total_refine_timer.stop();    
-        refine_timer.reset();
+        
     }
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
@@ -371,7 +376,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 			}
         }
         open_list_timer.stop();
-        /*
+        
         if(print_timer() > 30){
             cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
             cout << "Num reeval states " << num_reeval_states  << endl;
@@ -379,7 +384,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             print_statistics();
 			print_timer.reset();
         }
-		*/
+		
 
         if (use_multi_path_dependence) {
             assert(last_key_removed.size() == 2);

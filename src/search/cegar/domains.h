@@ -32,6 +32,7 @@ public:
 
     int count(int var) const;
     bool intersects(const Domains &other, int var) const;
+	bool intersects(const Domains &other) const;
     bool is_superset_of(const Domains &other) const;
 
     friend std::ostream &operator<<(

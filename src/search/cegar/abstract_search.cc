@@ -84,8 +84,10 @@ AbstractState *AbstractSearch::astar_search(
             int op_id = transition.op_id;
             AbstractState *successor = transition.target;
 
-            //cout << "op_id " << op_id << endl;
-            //cout << "size: " << operator_costs.size() << endl;
+            if(!utils::in_bounds(op_id, operator_costs)){
+                cout << "op_id " << op_id << endl;
+                cout << "size: " << operator_costs.size() << endl;
+            }
             
             assert(utils::in_bounds(op_id, operator_costs));
             const int op_cost = operator_costs[op_id];

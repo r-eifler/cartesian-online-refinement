@@ -15,6 +15,13 @@
 namespace cegar {
 class OrderSelecter;	
 class CartesianHeuristicFunction;
+	
+enum class Strategy {
+    ORDER_REFINE,
+	REFINE_ORDER,
+	ONLY_ORDER,
+	ONLY_REFINE
+};
 
 /*
   Store CartesianHeuristicFunctions and compute overall heuristic by
@@ -26,6 +33,8 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int max_iter;
 	int update_h_values;
 	bool use_all_goals;
+	
+	Strategy strategy = Strategy::ORDER_REFINE;
 	
 	int online_refined_states = 0; 	
 	utils::Timer cost_timer;
@@ -68,11 +77,16 @@ protected:
     virtual int compute_heuristic(const GlobalState &global_state) override;
 	// returns a vector which contains the heuristic value of each abstraction for the given state
 	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state) override;
+	
+	bool refine(State state, int* current_max_h, std::vector<bool> &toRefine);
+	bool reorder(State state, int* current_max_h, std::vector<bool> &toRefine);
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
 	
 	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates) override;
+	
+	std::vector<int> compute_original_individual_heuristics(State state);
 	
 	std::vector<int> compute_individual_heuristics_of_order(const GlobalState &global_state, int order);
 	std::vector<int> compute_individual_heuristics_of_order(const State state, int order);

@@ -140,6 +140,13 @@ public:
 		return abstract_state->get_h_values();
 	}
   
+	void set_c_h(int v){
+		abstract_state->set_c_h(v);	
+	}
+	
+	int get_c_h(){
+		return abstract_state->get_c_h();	
+	}
   
     //TODO
     void set_AbstractState(AbstractState *state){
@@ -187,26 +194,6 @@ public:
 	}
 	
 	std::pair<int, std::vector<int>> get_wanted_vars(AbstractState* state, Node** lc, Node** rc){
-		/*std::pair<int, std::vector<int>> wanted;
-		if(! is_split()){
-			return wanted;	
-		}
-		//std::cout << "State: " << *state << std::endl;
-		//std::cout << "var " << var << " = " << value << std::endl;
-		if(state->contains(var, value) && state->count(var) > 1){
-			//std::cout << "---> OK" << std::endl;
-			std::vector<int> values;
-			values.push_back(value);
-			wanted = make_pair(var, values);		
-			*lc = left_child;
-			*rc = right_child;			
-		}
-		if(state->contains(var, value) && state->count(var) == 1){
-			return right_child->get_wanted_vars(state, lc, rc);			
-		}
-		if(!state->contains(var, value)){
-			return left_child->get_wanted_vars(state, lc, rc);			
-		}*/
 		std::pair<int, std::vector<int>> wanted;
 		if(! is_split()){
 			return wanted;	
@@ -221,6 +208,10 @@ public:
 			while(cn->right_child == right_child){
 				values.push_back(cn->value);
 				cn = cn->left_child;
+			}
+			//if the state only containes the wanted vars a split is not neccesary
+			if((int)values.size() >= state->count(var)){
+				return right_child->get_wanted_vars(state, lc, rc);
 			}
 			/*
 			std::cout << "Wanted: ";

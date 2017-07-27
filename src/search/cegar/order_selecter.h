@@ -19,7 +19,9 @@ enum class CostOrder {
     SWAP_ALL_CHECK,
     SHUFFLE_CHECK,
     ORDER_ASC,
-    ORDER_DESC
+    ORDER_DESC,
+	ORDER_ORG_ASC,
+	ORDER_ORG_DESC
 };
 
 /*
@@ -50,6 +52,9 @@ protected:
 	std::vector<int> compute_new_order_random_check(State state, std::vector<int> max_order, int start_value, AdditiveCartesianHeuristic* heuristic);
 	std::vector<int> compute_order_heuristic(State state, int maxOrderId, AdditiveCartesianHeuristic* heuristic);
 	std::vector<int> compute_order_heuristic_rev(State state, int maxOrderId, AdditiveCartesianHeuristic* heuristic);
+	
+	std::vector<int> compute_order_org_heuristic(State state, AdditiveCartesianHeuristic* heuristic);
+	std::vector<int> compute_order_org_heuristic_rev(State state, AdditiveCartesianHeuristic* heuristic);
 	
 	
 

@@ -37,6 +37,10 @@ std::vector<int> OrderSelecter::compute(State state, int maxOrderId, std::vector
 			return compute_order_heuristic_rev(state, maxOrderId, heuristic);
 		case CostOrder::ORDER_DESC :	
 			return compute_order_heuristic(state, maxOrderId, heuristic);
+		case CostOrder::ORDER_ORG_ASC:
+			return compute_order_org_heuristic_rev(state, heuristic);
+		case CostOrder::ORDER_ORG_DESC:
+			return compute_order_org_heuristic(state, heuristic);
 	}
 	
 	return max_order;
@@ -153,14 +157,12 @@ std::vector<int> OrderSelecter::compute_order_heuristic(State state, int maxOrde
 	timer.resume();
 	vector<int> current_values = heuristic->compute_individual_heuristics_of_order(state, maxOrderId);
 	/*
-	cout << "-----------------------------------" << endl;
-	cout << "Values: ";
+	cout << "Original Values: ";
 	for(int v : current_values){
 		cout << v << " ";	
 	}
 	cout << endl;
 	*/
-	
 	//Sort the functions according to the highest value in curretn_values
 	vector<pair<int,int>> valpos;
 	for(size_t i = 0; i < current_values.size(); i++){
@@ -202,6 +204,60 @@ std::vector<int> OrderSelecter::compute_order_heuristic(State state, int maxOrde
 std::vector<int> OrderSelecter::compute_order_heuristic_rev(State state, int maxOrderId, AdditiveCartesianHeuristic* heuristic){
 	timer.resume();
 	vector<int> ordered_values = compute_order_heuristic(state, maxOrderId, heuristic);
+	vector<int> rev_order;
+	for(int i = ordered_values.size() - 1; i >= 0; i--){
+		rev_order.push_back(ordered_values[i]);	
+	}
+	vector<int> new_order;
+    vector<int> sat_abs;
+	for(int pos : rev_order){
+		CartesianHeuristicFunction *function = (*heuristic_functions)[pos];
+		if(function->satisfies_goal(state)){
+			sat_abs.push_back(pos);
+		}
+		else{
+				new_order.push_back(pos);
+		}	
+	}
+    	
+    new_order.insert( new_order.end(), sat_abs.begin(), sat_abs.end() );
+	return new_order;
+}
+	
+	
+std::vector<int> OrderSelecter::compute_order_org_heuristic(State state, AdditiveCartesianHeuristic* heuristic){
+	timer.resume();
+	vector<int> current_values = heuristic->compute_original_individual_heuristics(state);
+	
+	//Sort the functions according to the highest value in curretn_values
+	vector<pair<int,int>> valpos;
+	for(size_t i = 0; i < current_values.size(); i++){
+		valpos.push_back(make_pair(i, current_values[i]));
+	}
+	vector<int> new_order;
+	while(valpos.size() > 0){
+
+		pair<int,int> max = valpos[0];
+		int pos = 0;
+		for(size_t i = 0; i < valpos.size(); i++){
+			if(valpos[i].second > max.second){
+				max = valpos[i];
+				pos = i;
+			}			
+		}
+
+		valpos.erase(valpos.begin() + pos);
+		new_order.push_back(max.first);
+	}
+
+	timer.stop();
+	return new_order;
+}
+	
+	
+std::vector<int> OrderSelecter::compute_order_org_heuristic_rev(State state, AdditiveCartesianHeuristic* heuristic){	
+	timer.resume();
+	vector<int> ordered_values = compute_order_org_heuristic(state, heuristic);
 	vector<int> rev_order;
 	for(int i = ordered_values.size() - 1; i >= 0; i--){
 		rev_order.push_back(ordered_values[i]);	
