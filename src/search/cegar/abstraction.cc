@@ -293,7 +293,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
         AbstractState *start_state = get_node(state)->get_AbstractState(); 
         bool found_abstract_solution = abstract_search.find_solution(start_state, goals);
         if (!found_abstract_solution) {
-            cout << "Abstract problem is unsolvable!" << endl;
+            //cout << "Abstract problem is unsolvable!" << endl;
             break;
         }
         
@@ -526,7 +526,6 @@ bool Abstraction::merge(Abstraction* abs){
 				*/
                
                pair<AbstractState*, AbstractState*> result = refineMerge(next.first, split.first, split.second);
-			
 				if(is_goal(result.second)){
 				   for(AbstractState* g2 : abs->goals){
 						if(g2->is_more_general_than(*(result.first))){
@@ -545,7 +544,6 @@ bool Abstraction::merge(Abstraction* abs){
 						}
 				   }
 				}
-			
 			
                /*
                cout << "Result state: " << endl;
@@ -611,14 +609,12 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refineMerge(AbstractState
         if (debug)
             cout << "New init state: " << *init << endl;
     }
-	
 	if(is_goal(state)){
 		goals.erase(state);
 		goals.insert(v2);  
 		if (debug)
 		cout << "New/additional goal state: " << *v2 << endl;
 	}
-
     int num_states = get_num_states();
     if (num_states % 1000 == 0) {
         g_log << num_states << "/" << max_states << " states, "

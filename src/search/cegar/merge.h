@@ -8,6 +8,11 @@
 #include <vector>
 
 namespace cegar {
+	
+enum class MergeStrategy {
+    COMPATIBLE_PLANS,
+	SMALLEST
+};
 
 /*
   Decides which abstraction should be merged and merges them 
@@ -20,6 +25,7 @@ class Merge {
 	int max_merge_size = 5000;
 	int merged_abs = 0;
 	int max_size_reached = false;
+	MergeStrategy merge_strategy = MergeStrategy::COMPATIBLE_PLANS;
 
 	utils::Timer merge_timer;
 protected:
@@ -36,7 +42,7 @@ protected:
 	int select_compatible_plan(std::vector<bool> toRefine, CartesianHeuristicFunction** f1, int* p1, CartesianHeuristicFunction** f2, int*p2);
 
 public:
-    explicit Merge(CostSaturation* cs, utils::RandomNumberGenerator* rng);
+    explicit Merge(CostSaturation* cs, utils::RandomNumberGenerator* rng, MergeStrategy ms);
 
 	void set_heuristic_functions(std::vector<CartesianHeuristicFunction*> *fv);
 	bool merge(std::vector<bool> toRefine);

@@ -52,10 +52,11 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
 	  update_h_values(opts.get<int>("update_h_values")),
 	  use_all_goals(opts.get<bool>("use_all_goals")),
 	  use_merge(opts.get<bool>("use_merge")),
+	  prove_bellman(opts.get<bool>("prove_bellman")),
 	  strategy(static_cast<Strategy>(opts.get<int>("strategy"))),
       heuristic_functions(generate_heuristic_functions(opts)),
       onlineRefinement(cost_saturation, rng_order, max_states_online, opts.get<bool>("use_useful_split")),
-      merge(cost_saturation, rng_order){
+      merge(cost_saturation, rng_order, static_cast<MergeStrategy>(opts.get<int>("merge_strategy"))){
           orderSelecter = new OrderSelecter(static_cast<CostOrder>(opts.get<int>("order")), cost_saturation, rng_order);
           orderSelecter->set_heuristic_functions(&heuristic_functions);
           onlineRefinement.set_heuristic_functions(&heuristic_functions);
@@ -264,82 +265,93 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
     }
     
     prove_timer.resume();
-    int infinity = EvaluationResult::INFTY;
-    //heuristc value of currently expanded state
-    vector<int> h_values = compute_individual_heuristics_of_order(global_state, current_order);
-    int h_value = 0;
-    if(debug)
-        cout << "h value:       ";
-    for(int v : h_values){
-        if(debug)
-            cout << v << " ";
-        h_value += v;   
-    }
-    if(debug)
-        cout << " = " << h_value << endl;
-    
-    //Compute provable h values for all successor states
-    vector<int> provable_h_values;   
-    int provable_h_value = infinity;
-    //init
-    for(uint i = 0; i < h_values.size(); i++){
-           provable_h_values.push_back(infinity);
-    }
-    for (pair<GlobalState, int> succ : succStates) {
-        string succ_h_values("succ h values: ");
-        vector<int> succ_values = compute_individual_heuristics_of_order(succ.first, current_order);
-        int succ_h_value = 0;
-        for(int v : succ_values){
-            succ_h_value += v;   
-        }
-        for(uint i = 0; i < provable_h_values.size(); i++){
-            succ_h_values += to_string(succ_values[i]) + " ";
-            provable_h_values[i] = min(
-                provable_h_values[i],
-                (succ_values[i] == infinity) ? infinity : succ_values[i] + succ.second);
-        }
-        provable_h_value = min(
-                provable_h_value,
-                (succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
-        if(debug)
-            cout << succ_h_values <<  " = " << succ_h_value << endl;
-    }
+	bool conflict = false;
+	int h_value = 0;
+	vector<bool> toRefine;
+	if(prove_bellman){ //TODO push check to egar_search
+		
+		int infinity = EvaluationResult::INFTY;
+		//heuristc value of currently expanded state
+		vector<int> h_values = compute_individual_heuristics_of_order(global_state, current_order);
+		int h_value = 0;
+		if(debug)
+			cout << "h value:       ";
+		for(int v : h_values){
+			if(debug)
+				cout << v << " ";
+			h_value += v;   
+		}
+		if(debug)
+			cout << " = " << h_value << endl;
 
-    //Check if sum could be refined
-    bool refine_sum = provable_h_value > h_value ? true : false;
-    
-    if(!refine_sum){
-     if(debug)
-        cout << "---> not improvable" << endl;       
-     prove_timer.stop();
-     return false;    //REFINE ERVERYTING TODO
-    }
-	
-    online_refined_states++;
-	
-    if(debug)
-        cout << "---> h(s) = " << h_value << " improvable to " << provable_h_value << endl;
-    
-    //Check which heuristic could be refined
-    bool conflict = true; // Refinement pathology
-    vector<bool> toRefine;
-    string provable_h_values_s("provable h values: ");
-    for(uint i = 0; i < provable_h_values.size(); i++){
-        provable_h_values_s += to_string(provable_h_values[i]) + " ";
-        if(provable_h_values[i] > h_values[i]){
-            conflict = false;
-            toRefine.push_back(true);
-            provable_h_values_s += "r ";   
-        }
-        else{
-            toRefine.push_back(false);
-            provable_h_values_s += "f ";
-        }
-    }
-    if(debug){
-        cout << provable_h_values_s << endl;
-        cout << "Refinment pathology: " << conflict << endl;
-    }
+		//Compute provable h values for all successor states
+		vector<int> provable_h_values;   
+		int provable_h_value = infinity;
+		//init
+		for(uint i = 0; i < h_values.size(); i++){
+			   provable_h_values.push_back(infinity);
+		}
+		for (pair<GlobalState, int> succ : succStates) {
+			string succ_h_values("succ h values: ");
+			vector<int> succ_values = compute_individual_heuristics_of_order(succ.first, current_order);
+			int succ_h_value = 0;
+			for(int v : succ_values){
+				succ_h_value += v;   
+			}
+			for(uint i = 0; i < provable_h_values.size(); i++){
+				succ_h_values += to_string(succ_values[i]) + " ";
+				provable_h_values[i] = min(
+					provable_h_values[i],
+					(succ_values[i] == infinity) ? infinity : succ_values[i] + succ.second);
+			}
+			provable_h_value = min(
+					provable_h_value,
+					(succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
+			if(debug)
+				cout << succ_h_values <<  " = " << succ_h_value << endl;
+		}
+
+		//Check if sum could be refined
+		bool refine_sum = provable_h_value > h_value ? true : false;
+
+		if(!refine_sum){
+		 if(debug)
+			cout << "---> not improvable" << endl;       
+		 prove_timer.stop();
+		 return false;    //REFINE ERVERYTING TODO
+		}
+
+		online_refined_states++;
+
+		if(debug)
+			cout << "---> h(s) = " << h_value << " improvable to " << provable_h_value << endl;
+
+
+		//Check which heuristic could be refined
+		conflict = true; // Refinement pathology
+		string provable_h_values_s("provable h values: ");
+		for(uint i = 0; i < provable_h_values.size(); i++){
+			provable_h_values_s += to_string(provable_h_values[i]) + " ";
+			if(provable_h_values[i] > h_values[i]){
+				conflict = false;
+				toRefine.push_back(true);
+				provable_h_values_s += "r ";   
+			}
+			else{
+				toRefine.push_back(false);
+				provable_h_values_s += "f ";
+			}
+		}
+		if(debug){
+			cout << provable_h_values_s << endl;
+			cout << "Refinment pathology: " << conflict << endl;
+		}
+		
+	}
+	else{		
+		vector<bool> toRefine(heuristic_functions.size(), true);
+		h_value = compute_heuristic(global_state);
+	}
     prove_timer.stop();
     
     State state = convert_global_state(global_state);
@@ -631,6 +643,10 @@ static Heuristic *_parse(OptionParser &parser) {
         "use_useful_split",
         "split the states in the online refinement step based on the unused cost",
         "false");
+	parser.add_option<bool>(
+        "prove_bellman",
+        "TODO",
+        "true");
 	
 	vector<string> refine_strategies;
 	refine_strategies.push_back("ORDER_REFINE");
@@ -639,6 +655,12 @@ static Heuristic *_parse(OptionParser &parser) {
 	refine_strategies.push_back("ONLY_REFINE");
 	parser.add_enum_option(
         "strategy", refine_strategies, "order of reorder abd refine strategy", "ORDER_REFINE");
+	
+	vector<string> merge_strategies;
+	merge_strategies.push_back("COMPATIBLE_PLANS");
+	merge_strategies.push_back("SMALLEST");
+	parser.add_enum_option(
+        "merge_strategy", merge_strategies, "TODO", "COMPATIBLE_PLANS");
 		
 	//Different Order selection strategies
 	vector<string> order_strategies;

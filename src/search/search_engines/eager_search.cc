@@ -349,7 +349,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         
         
         //------------ Check if state needs to be reevaluated ------------
-        if(refine_online){
+        if(true){
 			//h value of the last evaluation
 			int old_h = node.get_h_value();
 

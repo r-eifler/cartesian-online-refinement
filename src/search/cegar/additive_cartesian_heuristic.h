@@ -22,6 +22,8 @@ enum class Strategy {
 	ONLY_ORDER,
 	ONLY_REFINE
 };
+	
+
 
 /*
   Store CartesianHeuristicFunctions and compute overall heuristic by
@@ -33,7 +35,8 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int max_iter;
 	int update_h_values;
 	bool use_all_goals;
-	bool use_merge;
+	bool use_merge;	
+	bool prove_bellman;
 	
 	Strategy strategy = Strategy::ORDER_REFINE;
 	
@@ -81,6 +84,8 @@ protected:
 	
 	bool refine(State state, int* current_max_h, std::vector<bool> &toRefine);
 	bool reorder(State state, int* current_max_h, std::vector<bool> &toRefine);
+	
+	//bool prove(State state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine);
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);

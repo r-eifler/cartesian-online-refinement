@@ -7,9 +7,10 @@
 using namespace std;
 
 namespace cegar {
-Merge::Merge(CostSaturation* cs, utils::RandomNumberGenerator* r) :
+Merge::Merge(CostSaturation* cs, utils::RandomNumberGenerator* r, MergeStrategy ms) :
 	cost_saturation(cs), 
-	rng(r){
+	rng(r),
+	merge_strategy(ms){
 	merge_timer.stop();
 }
 
@@ -283,8 +284,16 @@ bool Merge::merge(vector<bool> toRefine){
 	int p2 = 0;
 	
 	//Which abstractions should be merged
-    //int max_size = select_smallest_abstractions(&f1, &p1, &f2, &p2);
-	int max_size = select_compatible_plan(toRefine, &f1, &p1, &f2, &p2);
+	int max_size = -1;
+	switch (merge_strategy){
+		case MergeStrategy::COMPATIBLE_PLANS : 
+			max_size = select_compatible_plan(toRefine, &f1, &p1, &f2, &p2);
+			break;
+		case MergeStrategy::SMALLEST : 
+			max_size = select_smallest_abstractions(&f1, &p1, &f2, &p2);
+			break;
+		
+	}
 		
 	if(max_size == -1 || max_size > max_merge_size){
 		//cout << "MAX SIZE MERGE: " << max_size << " < " << max_merge_size << endl;
