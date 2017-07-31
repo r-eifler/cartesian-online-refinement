@@ -349,8 +349,11 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 		
 	}
 	else{		
-		vector<bool> toRefine(heuristic_functions.size(), true);
+		for(size_t i = 0; i < heuristic_functions.size(); i++){
+			toRefine.push_back(true);	
+		}
 		h_value = compute_heuristic(global_state);
+		online_refined_states++;
 	}
     prove_timer.stop();
     
@@ -451,12 +454,20 @@ bool AdditiveCartesianHeuristic::reorder(State state, int* current_max_h, std::v
 		cost_timer.resume();
 		//get current maximal order
 		vector<int> updated_order(cost_saturation->get_order(current_order));
+		/*
+		cout << "Order: ";
+		for(int v : updated_order){
+			cout << v << " ";	
+		}
+		cout << endl;
+		*/
 		//compute new order and update the cost partitioning
 		vector<int> new_order = orderSelecter->compute(state, current_order, updated_order, *current_max_h, toRefine, this);
 		cost_saturation->recompute_cost_partitioning(new_order);
 
 	   //Check if heuristic has been improved
 	   int new_h_value = compute_current_order_heuristic(state);
+		//cout << "Order " << current_order << " Heuristic h_old(s) = " << *current_max_h << " --> h_new(s) = " << new_h_value << endl;
 	   if(*current_max_h <  new_h_value){    
 		   int new_scp_order = current_order;
 		   //check if order already exists

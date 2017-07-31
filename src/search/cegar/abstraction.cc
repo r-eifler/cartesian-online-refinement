@@ -1137,8 +1137,11 @@ void Abstraction::print_cost(int order){
 }
 	
 void Abstraction::print_current_cost(){
+	int n = 0;
 	for(int c : current_saturation){
-		cout << c << " ";   
+		if(c > 0)
+			cout << n << " "; 
+		n++;
 	}
 	cout << endl;
 }

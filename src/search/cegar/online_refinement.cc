@@ -22,7 +22,6 @@ void OnlineRefinement::set_heuristic_functions(std::vector<CartesianHeuristicFun
 
 bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 	timer.resume();
-	//cout << "ONLINE Refinement refine" << endl;
     if(max_states_online - online_refined_states <= 0){ 
 		//maximal number of online refined states reached ?
 		//cout << "Max states reached" << endl;
@@ -34,11 +33,13 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 	if(use_usefull_split){
 		unused_cost = cost_saturation->get_unused_cost();
 	}
-	
 	for(size_t i = 0; i < toRefine.size(); i++){
-		if(toRefine[i]){  				
+		//cout << "Refine: " << (*heuristic_functions)[i]->id << " toRefine " << toRefine[i] << endl;
+		if(toRefine[i]){  		
+			
 		   int refined_states = (*heuristic_functions)[i]->online_Refine(state, 5, false, max_states_online - online_refined_states, unused_cost);
-		   if(refined_states > 0){			   
+			//cout << "Refined states: " << refined_states << endl;
+		   if(refined_states > 0){				    
 				refined = true;  
 		   }
 		   online_refined_states += refined_states;           

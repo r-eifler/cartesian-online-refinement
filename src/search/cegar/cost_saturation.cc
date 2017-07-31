@@ -78,8 +78,9 @@ vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions
 	*/
 	/*
 	cout << "Operators" << endl;
+	int op_n = 0;
       for (OperatorProxy op : task_proxy.get_operators())
-          cout << op.get_name() << endl;
+          cout << op_n++ << " " << op.get_name() << endl;
 	*/
 	/*
 	cout << "Variables: " << endl;
@@ -409,11 +410,13 @@ void CostSaturation::recompute_cost_partitioning(int order_id){
 }
 
 void CostSaturation::recompute_cost_partitioning(std::vector<int> order){
-	//cout << "recompute_cost_partitioning: testwise ";
-	/*for(int p : order){
+	/*
+	cout << "recompute_cost_partitioning: testwise ";
+	for(int p : order){
 		cout << p << " ";	
 	}
-	cout << endl;*/
+	cout << endl;
+	*/
 	TaskProxy task_proxy(*abstask); 
 	
 	//reset ramaining cost;
@@ -431,6 +434,13 @@ void CostSaturation::recompute_cost_partitioning(std::vector<int> order){
 		}
 		cout << endl;
 		*/
+		/*
+		cout << "--------Pos " << pos << "----------" << endl;
+		cout << "Current Saturation" << endl;
+			 cout << "Abs " << pos << ":";
+			abs->print_current_cost();	
+		
+		*/
 		
 		
 		//update the task in the abstraction
@@ -444,8 +454,9 @@ void CostSaturation::recompute_cost_partitioning(std::vector<int> order){
 		vector<int> sturated_cost = abs->get_saturated_costs(-1);
 		
 		//cout << "Saturated cost" << endl;	
+		
+		
 		/*
-		cout << "--------Pos " << pos << "----------" << endl;
 		for(int i : sturated_cost){
 			cout << i << " ";	
 		}
@@ -460,18 +471,20 @@ void CostSaturation::recompute_cost_partitioning(std::vector<int> order){
 		cout << endl;
 		*/
 		/*
-		cout << "Current Saturation" << endl;
-		for(Abstraction* abs : abstractions){
+		cout << "New Saturation" << endl;
+			 cout << "Abs " << pos << ":";
 			abs->print_current_cost();	
-		}
-		cout << "******************************************************************" << endl;
+		
 		*/
 	}	
 	/*
-	cout << "Current Saturation" << endl;
+	int abs_n = 0;
+	cout << "Current Saturation all" << endl;
 	for(Abstraction* abs : abstractions){
+		cout << "Abs " << abs_n++ << ":";
 		abs->print_current_cost();	
 	}
+	cout << "******************************************************************" << endl;
 	*/
 	/*
 	cout << "EXISTING ORDERS REMAINING COST TESTWISE: " << endl;
