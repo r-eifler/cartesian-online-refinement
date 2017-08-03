@@ -268,12 +268,10 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	bool conflict = false;
 	int h_value = 0;
 	vector<bool> toRefine;
-	if(prove_bellman){ //TODO push check to egar_search
-		
+	if(prove_bellman){ //TODO push check to egar_search		
 		int infinity = EvaluationResult::INFTY;
 		//heuristc value of currently expanded state
 		vector<int> h_values = compute_individual_heuristics_of_order(global_state, current_order);
-		int h_value = 0;
 		if(debug)
 			cout << "h value:       ";
 		for(int v : h_values){
@@ -323,7 +321,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 
 		online_refined_states++;
 
-		if(debug)
+		if(false)
 			cout << "---> h(s) = " << h_value << " improvable to " << provable_h_value << endl;
 
 
@@ -376,7 +374,6 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
        }
        return true; // TODO also use the other steps ?
     }
-    
     switch (strategy){
 		case Strategy::ORDER_REFINE : 
 			if(reorder(state, &h_value, toRefine)){

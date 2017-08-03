@@ -31,8 +31,10 @@ class EagerSearch : public SearchEngine {
     int refinement_selector;
 	// only every refinement_time seconds a state is tried to be refined
 	double refinement_time;
+	int collect_states;
 	
 	bool need_to_refine = false;
+	std::vector<std::pair<GlobalState, int>> states_to_refine;
     
     //create new openlists
     std::shared_ptr<OpenListFactory> open_list_factory;

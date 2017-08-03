@@ -31,6 +31,7 @@ EagerSearch::EagerSearch(const Options &opts)
       refine_online(opts.get<bool>("refine_online")),
       refinement_selector(opts.get<int>("refinement_selector")),
 	  refinement_time(opts.get<double>("refinement_time")),
+	  collect_states(opts.get<int>("collect_states")),
       //Store open list factory to create new open lists during search
       open_list_factory(opts.get<shared_ptr<OpenListFactory>>("open")),  
       open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
@@ -153,41 +154,50 @@ SearchStatus EagerSearch::step() {
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
-    if(refine_online && (refine_timer() > refinement_time || need_to_refine)){  		
-    //if(refine_online && (statistics.get_expanded() % refinement_selector == 0 || need_to_refine)){
-		total_refine_timer.resume();
-        Heuristic* h = heuristics[0];        
-        // Check whether h(s) is too low by looking at all successors.
-        assert(heuristics.size() == 1);  // HACK
-        ScalarEvaluator *heuristic = heuristics[0];  // HACK
-        int infinity = EvaluationResult::INFTY;
-        EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
-        int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
+    if(refine_online && (refine_timer() > refinement_time || need_to_refine)){ 
+		refine_timer.reset();
+		//store state
+		states_to_refine.push_back(make_pair(s, node.get_g()));
+		//cout << "States: " << states_to_refine.size() << " <= " << collect_states << endl;
+		if(collect_states == 1 || (int) states_to_refine.size() >= collect_states){
+			for(pair<GlobalState, int> gs : states_to_refine){	
+				total_refine_timer.resume();
+				Heuristic* h = heuristics[0];        
+				// Check whether h(s) is too low by looking at all successors.
+				assert(heuristics.size() == 1);  // HACK
+				ScalarEvaluator *heuristic = heuristics[0];  // HACK
+				int infinity = EvaluationResult::INFTY;
+				EvaluationContext state_eval_context(gs.first, gs.second, false, nullptr);
+				int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
 
-        if (state_h != infinity) {
-			//Generate all succesor states 
-            vector<pair<GlobalState, int>> succStates;
-            for (const GlobalOperator *op : applicable_ops) {
-                GlobalState succ_state = state_registry.get_successor_state(s, *op);
-                succStates.push_back(make_pair(succ_state, op->get_cost()));
-            }
+				if (state_h != infinity) {
+					//Generate all succesor states 
+					vector<pair<GlobalState, int>> succStates;
+					for (const GlobalOperator *op : applicable_ops) {
+						GlobalState succ_state = state_registry.get_successor_state(gs.first, *op);
+						succStates.push_back(make_pair(succ_state, op->get_cost()));
+					}
 
-            //ONLINE REFINEMENT  
+					//ONLINE REFINEMENT  
+					bool refined = h->online_Refine(gs.first, succStates);
+					if(refined){
+					    num_refined_nodes++;  						
+						if(collect_states == 1){
+							need_to_refine = false;
+						}
+					} 
+					else{
+						if(collect_states == 1){
+							need_to_refine = true;
+						}
+					}
+					//cout << "-------------------------------------" << endl;
+				}
 
-            bool refined = h->online_Refine(s, succStates);
-            if(refined){
-               num_refined_nodes++;   
-				refine_timer.reset();
-				need_to_refine = false;
-            } 
-			else{
-				need_to_refine = true;	
+				total_refine_timer.stop();  
 			}
-            //cout << "-------------------------------------" << endl;
-        }
-
-        total_refine_timer.stop();    
-        
+			states_to_refine.clear();
+		}
     }
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
@@ -371,7 +381,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 				node.set_h_value(new_h);
 				open_list->insert(state_eval_context, node.get_state_id());  
 				num_reeval_states++;
-				//std::cout << "Fetch next Node: " << id << " old h: " << old_h << " new h: " << new_h << std::endl;
+				//std::cout << "Fetch next Node: " << old_h + node.get_g() << " old h: " << old_h << " new h: " << new_h << " state: " << num_reeval_states << std::endl;
 				continue;  
 			}
         }
@@ -532,6 +542,11 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "only every refinement_times secondes a state is refined",
         "1",
         Bounds("0", "60"));
+	parser.add_option<int>(
+        "collect_states",
+        "TODO",
+        "1",
+        Bounds("1", "100"));
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);

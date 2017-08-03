@@ -47,7 +47,7 @@ int Merge::select_smallest_abstractions(CartesianHeuristicFunction** f1, int* p1
                 *p2 = i;
             }
         }
-	cout << "Merge: " << *p1 << " id=" << (*f1)->id << " (" << s1 << ") with : " << *p2 << " id=" << (*f2)->id << " (" << s2 << ")" << endl; 
+	//cout << "Merge: " << *p1 << " id=" << (*f1)->id << " (" << s1 << ") with : " << *p2 << " id=" << (*f2)->id << " (" << s2 << ")" << endl; 
 
 	return s1 * s2;
 }
@@ -92,7 +92,7 @@ int Merge::select_smallest_abstractions_and_refine(std::vector<bool> toRefine, C
 		return -1;	
 	}
 	
-	cout << "Merge: " << *p1 << " id=" << (*f1)->id << " (" << s1 << ") with : " << *p2 << " id=" << (*f2)->id << " (" << s2 << ")" << endl; 
+	//cout << "Merge: " << *p1 << " id=" << (*f1)->id << " (" << s1 << ") with : " << *p2 << " id=" << (*f2)->id << " (" << s2 << ")" << endl; 
 
 	return s1 * s2;
 }
