@@ -280,7 +280,7 @@ std::vector<int> OrderSelecter::compute_order_org_heuristic_rev(State state, Add
 
 void OrderSelecter::print_statistics(){
 	cout << "--------- ORDER SELECTER ---------" << endl;
-	cout << "Reorder time: " << timer << endl;
+	//cout << "Reorder time: " << timer << endl;
 }
 
 }

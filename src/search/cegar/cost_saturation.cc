@@ -154,6 +154,13 @@ vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions
 		recompute_cost_partitioning_unused(0);
 	}
 	
+	//Compute average abstraction size
+	int abs_size_total = 0;
+	for(Abstraction* abs : abstractions){
+		abs_size_total += abs->get_num_states();
+	}
+	cout << "Average abstratcion size begin: " << (abs_size_total / abstractions.size()) << endl;
+	
     //swap(heuristic_functions, functions);
 	/*
 	for(Abstraction* abs : abstractions){
@@ -697,5 +704,12 @@ void CostSaturation::print_statistics_end() const{
 		//cout << endl;
 		cout << "Used: " << used << "/" << (remaining_costs_order[i].size()) << "-->" << (((float) used) / remaining_costs_order[i].size()) << endl;
 	}
+	
+	//Compute average abstraction size
+	int abs_size_total = 0;
+	for(Abstraction* abs : abstractions){
+		abs_size_total += abs->get_num_states();
+	}
+	cout << "Average abstratcion size end: " << (abs_size_total / abstractions.size()) << endl;
 }
 }

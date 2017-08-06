@@ -160,6 +160,7 @@ SearchStatus EagerSearch::step() {
 		states_to_refine.push_back(make_pair(s, node.get_g()));
 		//cout << "States: " << states_to_refine.size() << " <= " << collect_states << endl;
 		if(collect_states == 1 || (int) states_to_refine.size() >= collect_states){
+			//cout << "---> REFINE" << endl;
 			for(pair<GlobalState, int> gs : states_to_refine){	
 				total_refine_timer.resume();
 				Heuristic* h = heuristics[0];        
@@ -387,7 +388,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         }
         open_list_timer.stop();
         /*
-        if(print_timer() > 30){
+        if(print_timer() > 60){
             cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
             cout << "Num reeval states " << num_reeval_states  << endl;
 			cout << "OpenList Timer: " << open_list_timer << endl << endl;   

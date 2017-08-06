@@ -33,11 +33,12 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 	if(use_usefull_split){
 		unused_cost = cost_saturation->get_unused_cost();
 	}
+	assert(toRefine.size() == heuristic_functions->size());
 	for(size_t i = 0; i < toRefine.size(); i++){
 		//cout << "Refine: " << (*heuristic_functions)[i]->id << " toRefine " << toRefine[i] << endl;
 		if(toRefine[i]){  		
 			
-		   int refined_states = (*heuristic_functions)[i]->online_Refine(state, 5, false, max_states_online - online_refined_states, unused_cost);
+		   int refined_states = (*heuristic_functions)[i]->online_Refine(state, 1, false, max_states_online - online_refined_states, unused_cost);
 			//cout << "Refined states: " << refined_states << endl;
 		   if(refined_states > 0){				    
 				refined = true;  
@@ -45,13 +46,14 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 		   online_refined_states += refined_states;           
 		}
 	}
-
+	//cout << "	Refined states total: " << online_refined_states << endl;
 	if(!refined){
 		timer.stop();
 		return false;
 	}
 
 	//Recompute costpartitioning, Reset Refined status, update h values
+	//cout << "Recompute cost partitioning" << endl;
 	int number_orders = cost_saturation->number_of_orders();
 	for(int o = 0; o < number_orders; o++){
     	cost_saturation->recompute_cost_partitioning_unused(o); 
@@ -60,6 +62,8 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 		cost_saturation->update_h_complete_cost(function->get_abstraction());
 		 function->set_refined(false);
 	}
+	
+	
 	timer.stop();
 	return true;
 }
@@ -67,7 +71,7 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 void OnlineRefinement::print_statistics(){
 	cout << "--------- ONLINE REFINEMENT ---------" << endl;
 	cout << "Online refined states: " << online_refined_states << "/" << max_states_online << endl;
-	cout << "Refine time: " << timer << endl;
+	//cout << "Refine time: " << timer << endl;
 }
 
 }

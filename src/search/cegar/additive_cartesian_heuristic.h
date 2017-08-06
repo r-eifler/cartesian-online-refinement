@@ -40,7 +40,10 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	
 	Strategy strategy = Strategy::ORDER_REFINE;
 	
-	int online_refined_states = 0; 	
+	int bellman_sat = 0;
+	int bellman_not_sat = 0;
+	int refine_steps_total = 0;
+	int refined_states_total = 0;
 	utils::Timer cost_timer;
 	utils::Timer refine_timer;
 	utils::Timer prove_timer;
@@ -85,7 +88,8 @@ protected:
 	bool refine(State state, int* current_max_h, std::vector<bool> &toRefine);
 	bool reorder(State state, int* current_max_h, std::vector<bool> &toRefine);
 	
-	//bool prove(State state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine);
+	//bool prove_bellman_sum(State state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h);
+	bool prove_bellman_individual(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h, bool* conflict);
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);

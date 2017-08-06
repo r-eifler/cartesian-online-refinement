@@ -333,7 +333,7 @@ bool Merge::merge(vector<bool> toRefine){
 void Merge::print_statistics(){
 	cout << "----------- MERGE --------------" << endl;
 	cout << "Merged abstractions: " << merged_abs << endl;
-	cout << "Merge time: " << merge_timer << endl;
+	//cout << "Merge time internal: " << merge_timer << endl;
 }
 
 }
