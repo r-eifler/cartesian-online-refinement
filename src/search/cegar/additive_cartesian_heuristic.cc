@@ -279,9 +279,6 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	vector<bool> toRefine;
 	if(prove_bellman){ //TODO push check to egar_search		
 		bool bellman = prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict);
-		for(size_t i = 0; i < heuristic_functions.size(); i++){
-			toRefine.push_back(true);	
-		}
 		if(bellman){
 			bellman_sat++;
 			return false;	
@@ -473,11 +470,11 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 		provable_h_values_s += to_string(provable_h_values[i]) + " ";
 		if(provable_h_values[i] > h_values[i]){
 			*conflict = false;
-			toRefine->push_back(true);
+			//toRefine->push_back(true);
 			provable_h_values_s += "r ";   
 		}
 		else{
-			toRefine->push_back(false);
+			//toRefine->push_back(false);
 			provable_h_values_s += "f ";
 		}
 	}
@@ -487,6 +484,11 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 	}
 	prove_timer.stop();
 	//cout << "	BELLMAN FALSE" << endl;
+	
+	//TODO do I have to refine all abstractions to acheive  a convergence against h* ?
+	for(size_t i = 0; i < heuristic_functions.size(); i++){
+			toRefine->push_back(true);	
+	}
 	return false;
 }
 	

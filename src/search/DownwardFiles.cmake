@@ -245,6 +245,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME DFS_PRUNING
+    HELP "DFS algorithm with pruning"
+    SOURCES
+        search_engines/dfs_pruning
+    DEPENDS SEARCH_COMMON NULL_PRUNING_METHOD
+)
+
+fast_downward_plugin(
     NAME ENFORCED_HILL_CLIMBING_SEARCH
     HELP "Lazy enforced hill-climbing search algorithm"
     SOURCES
