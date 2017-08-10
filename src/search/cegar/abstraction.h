@@ -154,6 +154,9 @@ public:
     int get_num_states() const {
         return states.size();
     }
+	int get_num_orders() const {
+        return costs_partitionings.size();
+    }
 
     int get_num_non_looping_transitions() const {
         return transition_updater.get_num_non_loops();

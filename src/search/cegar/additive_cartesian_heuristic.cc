@@ -57,18 +57,26 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
       heuristic_functions(generate_heuristic_functions(opts)),
       onlineRefinement(cost_saturation, rng_order, max_states_online, opts.get<bool>("use_useful_split")),
       merge(cost_saturation, rng_order, static_cast<MergeStrategy>(opts.get<int>("merge_strategy"))){
+		  cout << "Max states online: " << max_states_online << endl;
+		  refine_timer.reset();
+          refine_timer.stop();
+		  cost_timer.reset();
+          cost_timer.stop();
+		  update_timer.reset();
+          update_timer.stop();
+		  prove_timer.reset();
+          prove_timer.stop();
+		  merge_timer.reset();
+          merge_timer.stop();
+		  values_timer.reset();
+          values_timer.stop();
+		  
           orderSelecter = new OrderSelecter(static_cast<CostOrder>(opts.get<int>("order")), cost_saturation, rng_order);
           orderSelecter->set_heuristic_functions(&heuristic_functions);
           onlineRefinement.set_heuristic_functions(&heuristic_functions);
           merge.set_heuristic_functions(&heuristic_functions);
           
-          cout << "Max states online: " << max_states_online << endl;
-          refine_timer.stop();
-          cost_timer.stop();
-          update_timer.stop();
-          prove_timer.stop();
-          merge_timer.stop();
-          values_timer.stop();
+          
           
      usefullnes_of_order.push_back(0);
      lifetime_of_order.push_back(0);
@@ -217,7 +225,7 @@ void AdditiveCartesianHeuristic::print_order(){
 }
     
 bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
-    
+   //cout << "--------------------------------------------------------------------------------" << endl;
    //TODO delete order if not usefull
    //TODO delete abstraction if not usefull
 	/*
@@ -271,6 +279,9 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	vector<bool> toRefine;
 	if(prove_bellman){ //TODO push check to egar_search		
 		bool bellman = prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict);
+		for(size_t i = 0; i < heuristic_functions.size(); i++){
+			toRefine.push_back(true);	
+		}
 		if(bellman){
 			bellman_sat++;
 			return false;	
@@ -335,7 +346,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 			break;
 	}
 	*/
-	//cout << "--------------------------------------------------------------------------------" << endl;
+	
 
 	//First find a new order
 	bool order_improved = reorder(state, &h_value, toRefine);
@@ -349,8 +360,8 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 		//if not refinable merge 
 		if(!still_refinable){
 			merge_timer.resume();
-			assert(heuristic_functions.size() > 1);
-			if(!merge.merge(toRefine)){
+			//assert(heuristic_functions.size() > 1);
+			if(heuristic_functions.size() == 1 || !merge.merge(toRefine)){
 				merge_timer.stop();
 				break;	
 			}
@@ -390,21 +401,23 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	
 bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_state, vector<pair<GlobalState, int>> succStates, vector<bool> *toRefine, int* current_h, bool* conflict){
 	prove_timer.resume();
+	//cout << "---------------------------------------" << endl;
 	bool debug = false;
 	*current_h = 0;
 	toRefine->clear();
 	int infinity = EvaluationResult::INFTY;
 	//heuristc value of currently expanded state
 	vector<int> h_values = compute_individual_heuristics_of_order(global_state, current_order);
-	if(false)
+	if(debug)
 		cout << "h value:       ";
 	for(int v : h_values){
 		if(debug)
 			cout << v << " ";
 		*current_h += v;   
 	}
-	if(false)
+	if(debug){		
 		cout << " = " << *current_h << endl;
+	}
 	
 	
 
@@ -470,7 +483,7 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 	}
 	if(debug){
 		cout << provable_h_values_s << endl;
-		cout << "Refinment pathology: " << conflict << endl;
+		cout << "Refinment pathology: " << *conflict << endl;
 	}
 	prove_timer.stop();
 	//cout << "	BELLMAN FALSE" << endl;

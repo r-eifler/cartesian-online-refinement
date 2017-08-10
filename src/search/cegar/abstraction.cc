@@ -230,10 +230,11 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
     */
     
     if (task_proxy.get_goals().size() == 1) {
-		cout << "...... separate_facts_unreachable_before_goal ... " << endl;
-        separate_facts_unreachable_before_goal();
+		//cout << "...... separate_facts_unreachable_before_goal ... " << endl;
+        //separate_facts_unreachable_before_goal();
+		//cout << "...... separate_facts_unreachable_before_goal ... " << endl;
     }
-	cout << "...... REFINE ... " << endl;
+	//cout << "...... REFINE ... " << endl;
     bool found_concrete_solution = false;
     while (may_keep_refining()) {
         //cout << "-----------------------" << endl;
@@ -280,7 +281,6 @@ std::shared_ptr<AbstractTask> Abstraction::get_AbsTask(){
 }
     
 int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_values, int max_states_refine, std::vector<std::vector<int>> *unused_cost){
-    
     refined = false;
     int state_border = get_num_states() + max_states_refine < 0 ? max_states_refine : get_num_states() + max_states_refine;
     if(!(utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0)){
@@ -290,7 +290,15 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
     int refined_states = 0;
     refine_timer.resume();
 	while((utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter > 0)){
-        AbstractState *start_state = get_node(state)->get_AbstractState(); 
+		
+        AbstractState *start_state = NULL;
+		if(states.size() == 1){
+			start_state = *(states.begin());	
+		}
+		else{
+			start_state = get_node(state)->get_AbstractState(); 
+		}
+		
         bool found_abstract_solution = abstract_search.find_solution(start_state, goals);
         if (!found_abstract_solution) {
             //cout << "Abstract problem is unsolvable!" << endl;
@@ -306,7 +314,6 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
         }
         AbstractState *abstract_state = flaw->current_abstract_state;
         vector<Split> splits = flaw->get_possible_splits();
-        
         if(splits.empty()){
            // cout << "Split empty" << endl;
             refine_timer.stop();
@@ -319,7 +326,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
 		bool split_useful = split_usefull(abstract_state, split.var_id, split.values, unused_cost);
 		if(split_useful){	
 			usefull_splits++;	 
-			refine(abstract_state, split.var_id, split.values);                                
+			refine(abstract_state, split.var_id, split.values);  
 			refined_states++;			
 		}
 		else{
@@ -334,7 +341,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
     }
     
     refined = refined_states > 0;
-   return refined_states;
+    return refined_states;
 }
 	
 bool Abstraction::split_usefull(AbstractState * state, int var, const std::vector<int> &wanted, std::vector<std::vector<int>> *unused_cost){

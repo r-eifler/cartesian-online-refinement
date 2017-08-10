@@ -75,13 +75,15 @@ vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
 	c_graph.dump(task_proxy);
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
-	*/
-	/*
+	
+	
 	cout << "Operators" << endl;
 	int op_n = 0;
       for (OperatorProxy op : task_proxy.get_operators())
           cout << op_n++ << " " << op.get_name() << endl;
 	*/
+	
+	
 	/*
 	cout << "Variables: " << endl;
 	VariablesProxy vars = task_proxy.get_variables();
@@ -175,6 +177,8 @@ vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions
 	*/
     return functions;
 }
+	
+
 
 void CostSaturation::reset(const TaskProxy &task_proxy) {
     remaining_costs = get_operator_costs(task_proxy);
@@ -264,7 +268,7 @@ void CostSaturation::build_abstractions(
     const utils::CountdownTimer &timer,
     function<bool()> should_abort) {
     int rem_subtasks = subtasks.size();
-	//vector<pair<int,int>> used_goals;
+	
     for (shared_ptr<AbstractTask> subtask : subtasks) {
 		
 		/*

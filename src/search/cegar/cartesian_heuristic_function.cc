@@ -10,6 +10,9 @@ CartesianHeuristicFunction::CartesianHeuristicFunction(Abstraction *abs, int i)
 }
 
 int CartesianHeuristicFunction::get_value(const State &parent_state) const {
+	if(abstraction->get_num_states() == 1){
+		return 0;	
+	}
     //State local_state = task_proxy.convert_ancestor_state(parent_state);
     State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
     //return refinement_hierarchy.get_node(local_state)->get_h_value();
@@ -17,16 +20,29 @@ int CartesianHeuristicFunction::get_value(const State &parent_state) const {
 }
 	
 int CartesianHeuristicFunction::get_original_value(const State &parent_state) const {
+	if(abstraction->get_num_states() == 1){
+		return 0;	
+	}
 	State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
     return abstraction->get_node(local_state)->get_c_h();
 }
 	
 int CartesianHeuristicFunction::get_value(const State &parent_state, int order) const{
+	if(abstraction->get_num_states() == 1){
+		return 0;	
+	}
 	State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
 	return abstraction->get_node(local_state)->get_h_value(order);
 }
 	
 std::vector<int> CartesianHeuristicFunction::get_values(const State &parent_state) const {
+	if(abstraction->get_num_states() == 1){
+		vector<int> res;
+		for(int i = 0; i < abstraction->get_num_orders(); i++){
+			res.push_back(0);	
+		}
+		return res;
+	}
 	 State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
 	return abstraction->get_node(local_state)->get_h_values();
 }

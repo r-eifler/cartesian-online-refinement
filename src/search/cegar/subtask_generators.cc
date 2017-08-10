@@ -49,14 +49,14 @@ public:
 };
 
 
-static void remove_initial_state_facts(
+/*static void remove_initial_state_facts(
     const TaskProxy &task_proxy, Facts &facts) {
     State initial_state = task_proxy.get_initial_state();
     facts.erase(remove_if(facts.begin(), facts.end(), [&](FactPair fact) {
             return initial_state[fact.var].get_value() == fact.value;
         }), facts.end());
 }
-
+*/
 static void order_facts(
     const shared_ptr<AbstractTask> &task,
     FactOrder fact_order,
@@ -88,7 +88,8 @@ static Facts filter_and_order_facts(
     Facts &facts,
     utils::RandomNumberGenerator &rng) {
     TaskProxy task_proxy(*task);
-    remove_initial_state_facts(task_proxy, facts);
+	//TODO needs all goals facts otherwise the abstraction does not converge against h*
+    //remove_initial_state_facts(task_proxy, facts);
     order_facts(task, fact_order, facts, rng);
     return facts;
 }
@@ -117,6 +118,7 @@ SharedTasks GoalDecomposition::get_subtasks(
     SharedTasks subtasks;
     TaskProxy task_proxy(*task);
     Facts goal_facts = get_fact_pairs(task_proxy.get_goals());
+	cout << "Number of goal facts: " << goal_facts.size() << endl;
     filter_and_order_facts(task, fact_order, goal_facts, *rng);
     for (const FactPair &goal : goal_facts) {
         shared_ptr<AbstractTask> subtask =
