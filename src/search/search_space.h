@@ -52,6 +52,11 @@ public:
     void set_h_value(int h);
     int get_h_value();
 	
+	StateID get_parent();
+	
+	void set_solution(bool s);
+    bool get_solution();
+	
 };
 
 

@@ -180,7 +180,7 @@ SearchStatus EagerSearch::step() {
 					}
 
 					//ONLINE REFINEMENT  
-					bool refined = h->online_Refine(gs.first, succStates);
+					bool refined = h->online_Refine(gs.first, succStates, state_h);
 					if(refined){
 					    num_refined_nodes++;  						
 						if(collect_states == 1){

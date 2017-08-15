@@ -124,6 +124,18 @@ int SearchNode::get_h_value(){
 	return info.h;
 }
 
+void SearchNode::set_solution(bool s){
+	info.solution = s;
+}
+
+bool SearchNode::get_solution(){
+	return info.solution;
+}
+
+StateID SearchNode::get_parent(){
+	return info.parent_state_id;	
+}
+
 SearchSpace::SearchSpace(StateRegistry &state_registry, OperatorCost cost_type)
     : state_registry(state_registry),
       cost_type(cost_type) {

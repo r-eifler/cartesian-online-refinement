@@ -94,7 +94,7 @@ protected:
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
 	
-	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates) override;
+	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, int bound) override;
 	
 	std::vector<int> compute_original_individual_heuristics(State state);
 	

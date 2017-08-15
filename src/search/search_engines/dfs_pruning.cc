@@ -14,6 +14,8 @@
 
 #include "../open_lists/open_list_factory.h"
 
+#include "../cegar/additive_cartesian_heuristic.h"
+
 #include <cassert>
 #include <cstdlib>
 #include <memory>
@@ -36,6 +38,7 @@ DFSPruning::DFSPruning(const Options &opts)
                 create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
+	  pruning_heuristic(opts.get<ScalarEvaluator *>("pruningh", nullptr)),
       pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")){		  
 }
 
@@ -123,6 +126,7 @@ void DFSPruning::print_statistics() const {
     cout << endl;
     cout << "Nodes which have been refined: " << num_refined_nodes << endl;
     cout << "Number of  reevaluated states: " << num_reeval_states << endl;
+	cout << "Number of pruned states: " << num_pruned_states << endl;
 	
 	cout << "openlist time: " << open_list_timer << endl;
     cout << "total refine time: " << total_refine_timer << endl;
@@ -137,18 +141,50 @@ void DFSPruning::print_statistics() const {
 
 SearchStatus DFSPruning::step() {
 	cout << "--------------------------------------------------------" << endl;
+	if (current_goal_state != NULL && open_list->empty()) {
+		cout << "Solution Found!" << endl;
+		check_goal_and_set_plan(*current_goal_state);
+		return SOLVED; 
+	}
+	
     pair<SearchNode, bool> n = fetch_next_node();
     if (!n.second) {
         return FAILED;
     }
+
     SearchNode node = n.first;
-	
-	cout << "Expanded node " << node.get_state_id() << endl;
 
     GlobalState s = node.get_state();
-    if (check_goal_and_set_plan(s))
-        return SOLVED;
-
+	current_path.push_back(s);
+	
+    if (check_goal_and_set_plan(s)){
+		if(open_list->empty()){
+        	return SOLVED;
+		}
+		
+		if((int) get_plan().size() < upper_bound){
+			cout << "Upper bound updated ----> " << upper_bound << " -> " << get_plan().size() << endl;
+			upper_bound = get_plan().size(); //TODO cost only size if unitcost
+			current_goal_state = &s;
+			better_solution_found = true;
+			for(GlobalState cs : current_path){
+				cout << search_space.get_node(cs).get_state_id() << " ";	
+			}
+			cout << endl;
+			for(GlobalState cs : current_solution){
+				SearchNode cs_node = search_space.get_node(cs);
+				cs_node.set_solution(false);
+			}
+			current_solution = current_path;
+			for(GlobalState cs : current_solution){
+				SearchNode cs_node = search_space.get_node(cs);
+				cs_node.set_solution(true);
+			}
+		}
+		
+		return IN_PROGRESS;
+	}
+	
     vector<const GlobalOperator *> applicable_ops;
     g_successor_generator->generate_applicable_ops(s, applicable_ops);
 
@@ -157,7 +193,7 @@ SearchStatus DFSPruning::step() {
       TODO: When preferred operators are in use, a preferred operator will be
       considered by the preferred operator queues even when it is pruned.
     */
-    pruning_method->prune_operators(s, applicable_ops);
+    //pruning_method->prune_operators(s, applicable_ops);
 
     // This evaluates the expanded state (again) to get preferred ops
     EvaluationContext eval_context(s, node.get_g(), false, &statistics, true);
@@ -165,12 +201,11 @@ SearchStatus DFSPruning::step() {
         collect_preferred_operators(eval_context, preferred_operator_heuristics);
 
 	
-	//Find node with the smallest h value
-	//int min_h = EvaluationResult::INFTY;
     for (const GlobalOperator *op : applicable_ops) {
         if ((node.get_real_g() + op->get_cost()) >= bound)
             continue;
 
+		
 		
         GlobalState succ_state = state_registry.get_successor_state(s, *op);
         statistics.inc_generated();
@@ -178,8 +213,6 @@ SearchStatus DFSPruning::step() {
 
         SearchNode succ_node = search_space.get_node(succ_state);
 		
-		cout << "Child " << succ_node.get_state_id() << endl; 
-
         // Previously encountered dead end. Don't re-evaluate.
         if (succ_node.is_dead_end())
             continue;
@@ -194,6 +227,21 @@ SearchStatus DFSPruning::step() {
                 heuristic->notify_state_transition(s, *op, succ_state);
             }
         }
+		
+		cout << "------------" << endl;
+		cout << "Child " << succ_node.get_state_id() ; 
+		//cout << " h=" << succ_node.get_h_value();
+		cout << endl;
+		 //PRUN
+		int h = eval_context.get_heuristic_value_or_infinity(pruning_heuristic);
+		succ_node.set_h_value(h);
+		cout << "Prune: " << node.get_g() << " + " << h << " = " << (node.get_g() + h) <<  " > " << upper_bound << endl;
+		if(node.get_g() + h > upper_bound){
+			cout << "----> Prune" << endl;
+			num_pruned_states++;
+			continue;	
+		}
+		
 
         if (succ_node.is_new()) {
             // We have not seen this state before.
@@ -215,21 +263,7 @@ SearchStatus DFSPruning::step() {
             }
             succ_node.open(node, op);
             
-            
-            //Store h value in node for online refinement openlist check
-            ScalarEvaluator *heuristic = heuristics[0];
-            int h = eval_context.get_heuristic_value_or_infinity(heuristic);
-            succ_node.set_h_value(h);
-			
-			//find new min
-			/*
-			cout << "h = " << h << endl;
-			if(h < min_h){
-				min_h = h;
-				cout << "new min h value: " << min_h << " State: " << succ_node.get_state_id() << endl;
-				currentStateID = succ_node.get_state_id();
-			}
-			*/
+
             open_list->insert(eval_context, succ_state.get_id());
 			
             if (search_progress.check_progress(eval_context)) {
@@ -237,6 +271,7 @@ SearchStatus DFSPruning::step() {
                 reward_progress();
             }
         } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
+			
             // We found a new cheapest path to an open or closed state.
             if (reopen_closed_nodes) {
                 if (succ_node.is_closed()) {                    
@@ -254,26 +289,13 @@ SearchStatus DFSPruning::step() {
                 succ_node.update_parent(node, op);
             }
         }
+
     }
 
     return IN_PROGRESS;
 }
 
-pair<SearchNode, bool> DFSPruning::fetch_next_node() {
-	/*
-	cout << "fetch_next_node" << endl;
-		GlobalState sn = state_registry.lookup_state(currentStateID);
-        SearchNode currentNode = search_space.get_node(sn);
-		cout << "Current Node: " << currentNode.get_state_id() << endl;
-		vector<const GlobalOperator *> applicable_ops;
-		g_successor_generator->generate_applicable_ops(currentNode.get_state(), applicable_ops);
-
-		if(applicable_ops.size() > 0){
-			return make_pair(currentNode, true);	
-		}
-	*/
-	
-	cout << "---> open_list node" << endl;
+pair<SearchNode, bool> DFSPruning::fetch_next_node() {	
     while (true) {
         if (open_list->empty()) {
             cout << "Completely explored state space -- no solution!" << endl;
@@ -292,6 +314,73 @@ pair<SearchNode, bool> DFSPruning::fetch_next_node() {
         //      instead of StateIDs
         GlobalState s = state_registry.lookup_state(id);
         SearchNode node = search_space.get_node(s);       
+		cout << "Expanded node: " << node.get_state_id() << endl;
+		
+		//Refine Pruning heuristic
+		if(last_key_removed[0] && upper_bound != EvaluationResult::INFTY && false){
+			cout << "--- Backtrack ---" << endl;
+			//remove states from path
+			for(GlobalState cs : current_path){
+				cout << search_space.get_node(cs).get_state_id() << " ";	
+			}
+			cout << endl;
+			cout << "Remove " << (current_path.size() - node.get_g()) << endl;
+			current_path.erase(current_path.end() - (current_path.size() - node.get_g() - 1), current_path.end());
+			SearchNode last_node = search_space.get_node(*(current_path.end()-1));
+
+			current_path.erase(current_path.end());
+			for(GlobalState cs : current_path){
+				cout << search_space.get_node(cs).get_state_id() << " ";	
+			}
+			cout << endl;
+			cout << "Last node: " << last_node.get_state_id() << endl;
+			if(!last_node.get_solution()){
+			
+				GlobalState state_to_refine = state_registry.lookup_state(last_node.get_parent());			
+
+				cout << "------------------------- ONLINE REFINEMENT ----------------------------------------" << endl;
+				better_solution_found = false;
+				refine_timer.reset();
+
+				//store state
+				states_to_refine.push_back(make_pair(state_to_refine, node.get_g()));
+				cout << "States: " << states_to_refine.size() << " <= " << collect_states << endl;
+				for(pair<GlobalState, int> gs : states_to_refine){	
+					vector<const GlobalOperator *> applicable_ops;
+					g_successor_generator->generate_applicable_ops(gs.first, applicable_ops);
+					total_refine_timer.resume();       
+					// Check whether h(s) is too low by looking at all successors.
+					int infinity = EvaluationResult::INFTY;
+					EvaluationContext state_eval_context(gs.first, gs.second, false, nullptr);
+					int state_h = state_eval_context.get_heuristic_value_or_infinity(pruning_heuristic);
+
+					if (state_h != infinity) {
+						//Generate all succesor states 
+						vector<pair<GlobalState, int>> succStates;
+						for (const GlobalOperator *op : applicable_ops) {
+							GlobalState succ_state = state_registry.get_successor_state(gs.first, *op);
+							succStates.push_back(make_pair(succ_state, op->get_cost()));
+						}
+
+						//ONLINE REFINEMENT  
+						Heuristic* h = (Heuristic*) pruning_heuristic;
+						cout << "Prune: " << node.get_g() << " + " << state_h << " = " << (node.get_g() + state_h) <<  " > " << upper_bound << endl; 
+						if((node.get_g() + state_h) > upper_bound){
+							cout << "----> prune fetch" << endl;
+							continue;	
+						}
+						h->online_Refine(gs.first, succStates, upper_bound - node.get_g());
+						//cout << "-------------------------------------" << endl;
+					}
+					total_refine_timer.stop();  
+				}
+				states_to_refine.clear();    
+				cout << "------------------------- ONLINE REFINEMENT ----------------------------------------" << endl;	
+			}
+			else{
+				cout << "Countained in current solution" << endl;	
+			}
+		}
         
         if (node.is_closed())
             continue;
@@ -329,11 +418,10 @@ pair<SearchNode, bool> DFSPruning::fetch_next_node() {
             }
         }
         
-
         node.close();
         assert(!node.is_dead_end());
         update_f_value_statistics(node);
-        statistics.inc_expanded();
+        statistics.inc_expanded();	
         return make_pair(node, true);
     }
 }
@@ -399,6 +487,7 @@ static SearchEngine *_parse_dfs(OptionParser &parser) {
         "               reopen_closed=true, f_eval=sum([g(), h]))\n"
         "```\n", true);
     parser.add_option<ScalarEvaluator *>("eval", "evaluator for h-value");
+	parser.add_option<ScalarEvaluator *>("pruningh", "evaluator for pruning");
     parser.add_option<bool>("mpd",
                             "use multi-path dependence (LM-A*)", "false");
     
@@ -434,7 +523,7 @@ static SearchEngine *_parse_dfs(OptionParser &parser) {
 
     DFSPruning *engine = nullptr;
     if (!parser.dry_run()) {
-        auto temp = search_common::create_astar_open_list_factory_and_f_eval(opts);
+        auto temp = search_common::create_dfs_openlist(opts);
         opts.set("open", temp.first);
         opts.set("f_eval", temp.second);
         opts.set("reopen_closed", true);

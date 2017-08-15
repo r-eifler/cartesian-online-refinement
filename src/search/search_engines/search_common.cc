@@ -7,6 +7,7 @@
 #include "../evaluators/weighted_evaluator.h"
 
 #include "../open_lists/alternation_open_list.h"
+#include "../open_lists/dfs_open_list.h"
 #include "../open_lists/open_list_factory.h"
 #include "../open_lists/standard_scalar_open_list.h"
 #include "../open_lists/tiebreaking_open_list.h"
@@ -33,7 +34,7 @@ static shared_ptr<OpenListFactory> create_alternation_open_list_factory(
     Options options;
     options.set("sublists", subfactories);
     options.set("boost", boost);
-    return make_shared<AlternationOpenListFactory>(options);
+    return make_shared<DFSOpenListFactory>(options); //TODO
 }
 
 /*
@@ -62,6 +63,7 @@ static shared_ptr<OpenListFactory> create_alternation_open_list_factory_aux(
     }
 }
 
+
 shared_ptr<OpenListFactory> create_greedy_open_list_factory(
     const Options &options) {
     return create_alternation_open_list_factory_aux(
@@ -69,6 +71,7 @@ shared_ptr<OpenListFactory> create_greedy_open_list_factory(
         options.get_list<Heuristic *>("preferred"),
         options.get<int>("boost"));
 }
+	
 
 /*
   Helper function for creating a single g + w * h evaluator
@@ -124,5 +127,22 @@ create_astar_open_list_factory_and_f_eval(const Options &opts) {
     shared_ptr<OpenListFactory> open =
         make_shared<TieBreakingOpenListFactory>(options);
     return make_pair(open, f);
+}
+	
+	
+pair<shared_ptr<OpenListFactory>, ScalarEvaluator *>
+	create_dfs_openlist(const Options &opts) {
+    ScalarEvaluator *h = opts.get<ScalarEvaluator *>("eval");
+	ScalarEvaluator *p = opts.get<ScalarEvaluator *>("pruningh");
+    vector<ScalarEvaluator *> evals = {h};
+
+    Options options;
+	options.set("eval", h);
+    options.set("pref_only", false);
+    options.set("unsafe_pruning", false);
+	options.set("pruningh", p);
+    shared_ptr<OpenListFactory> open =
+        make_shared<DFSOpenListFactory>(options);
+    return make_pair(open, h);
 }
 }

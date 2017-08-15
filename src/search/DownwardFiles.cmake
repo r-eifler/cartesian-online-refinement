@@ -83,6 +83,7 @@ fast_downward_plugin(
         variable_order_finder
 
         open_lists/alternation_open_list
+		open_lists/dfs_open_list
         open_lists/epsilon_greedy_open_list
         open_lists/open_list
         open_lists/open_list_factory
@@ -201,6 +202,13 @@ fast_downward_plugin(
     HELP "Pruning method that does nothing"
     SOURCES
         pruning/null_pruning_method
+)
+
+fast_downward_plugin(
+    NAME REFINE_PRUNING_METHOD
+    HELP "TODO"
+    SOURCES
+        pruning/refine_pruning
 )
 
 fast_downward_plugin(
@@ -401,9 +409,9 @@ fast_downward_plugin(
         cegar/cartesian_heuristic_function
         cegar/cost_saturation
         cegar/domains
-	cegar/order_selecter
-	cegar/online_refinement
-	cegar/merge
+		cegar/order_selecter
+		cegar/online_refinement
+		cegar/merge
         cegar/refinement_hierarchy
         cegar/split_selector
         cegar/subtask_generators

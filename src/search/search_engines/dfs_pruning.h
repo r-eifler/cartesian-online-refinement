@@ -7,6 +7,8 @@
 #include "../open_lists/open_list_factory.h"
 #include "../utils/timer.h"
 
+#include "../cegar/additive_cartesian_heuristic.h"
+
 #include <memory>
 #include <vector>
 
@@ -41,8 +43,17 @@ class DFSPruning : public SearchEngine {
 
     std::vector<Heuristic *> heuristics;
     std::vector<Heuristic *> preferred_operator_heuristics;
+	
+	ScalarEvaluator* pruning_heuristic;
 
     std::shared_ptr<PruningMethod> pruning_method;
+	
+	int upper_bound = EvaluationResult::INFTY;
+	GlobalState* current_goal_state = NULL;
+	bool better_solution_found = false;
+	
+	std::vector<GlobalState> current_solution;
+	std::vector<GlobalState> current_path;
 
 	//number of nodes which have have been refined 
     int num_refined_nodes = 0;
@@ -56,6 +67,7 @@ class DFSPruning : public SearchEngine {
 	// number of stets whose heuristic value increased since the last evaluation
 	// need to be put back into the open list
 	int num_reeval_states = 0;
+	int num_pruned_states = 0;
 
     std::pair<SearchNode, bool> fetch_next_node();
     void start_f_value_statistics(EvaluationContext &eval_context);

@@ -66,6 +66,7 @@ extern std::shared_ptr<OpenListFactory> create_greedy_open_list_factory(
 */
 extern std::shared_ptr<OpenListFactory> create_wastar_open_list_factory(
     const options::Options &opts);
+	
 
 /*
   Create open list factory and f_evaluator (used for displaying progress
@@ -77,6 +78,10 @@ extern std::shared_ptr<OpenListFactory> create_wastar_open_list_factory(
 */
 extern std::pair<std::shared_ptr<OpenListFactory>, ScalarEvaluator *>
 create_astar_open_list_factory_and_f_eval(const options::Options &opts);
+
+
+extern std::pair<std::shared_ptr<OpenListFactory>, ScalarEvaluator *>
+create_dfs_openlist(const options::Options &opts);
 }
 
 #endif
