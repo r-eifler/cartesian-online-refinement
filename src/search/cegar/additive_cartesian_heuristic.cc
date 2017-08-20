@@ -348,9 +348,9 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	
 
 	//First find a new order
-	cout << "Bound: " << h_value << " <= " << bound << endl;
+	//cout << "Bound: " << h_value << " <= " << bound << endl;
 	bool order_improved = reorder(state, &h_value, toRefine);
-	cout << "Bound: " << h_value << " <= " << bound << endl;
+	//cout << "Bound: " << h_value << " <= " << bound << endl;
 	if(order_improved && h_value <= bound){//prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){
 		return true;	
 	}
@@ -363,7 +363,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 			merge_timer.resume();
 			//assert(heuristic_functions.size() > 1);
 			if(heuristic_functions.size() == 1 || !merge.merge(toRefine)){
-				cout << "	---> NO MERGE " << endl;
+				//cout << "	---> NO MERGE POSSIBLE" << endl;
 				merge_timer.stop();
 				break;	
 			}
@@ -378,11 +378,14 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 		still_refinable = refine(state, &h_value, toRefine);
 		refinement_steps++;
 		refine_steps_total++;
-		cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
-		cout << "Bound: " << h_value << " <= " << bound << endl;
+		//cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
+		//cout << "Bound: " << h_value << " <= " << bound << endl;
 		
 	}
     	
+	if(h_value > bound){
+		num_reached_bound++;	
+	}
 	/*
 	//MERGE
 	//if all goal facts are used in every abstraction in the online phase a merge is not useful ?
@@ -593,6 +596,7 @@ void AdditiveCartesianHeuristic::print_statistics(){
 		cout << "Bellman proof time: " << prove_timer << endl;
 		cout << "States satisfied bellman equation: " << bellman_sat << "/" << (bellman_sat + bellman_not_sat) << endl;
 		cout << "States not satisfied bellman equation: " << bellman_not_sat << "/" << (bellman_sat + bellman_not_sat) << endl;
+		cout << "States reached pruning bound: " << num_reached_bound << endl;
 		cout << endl;
 	
 		orderSelecter->print_statistics();

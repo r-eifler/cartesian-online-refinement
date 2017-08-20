@@ -46,7 +46,6 @@ public:
 
 
 	bool backtrack = false;
-	int backtrack_depth = 0;
 
     virtual Entry remove_min(vector<int> *key = nullptr) override;
     virtual bool empty() const override;
@@ -93,11 +92,10 @@ void DFSOpenList<Entry>::do_insertion(
 template<class Entry>
 Entry DFSOpenList<Entry>::remove_min(vector<int> *key) {	
 	key->push_back(backtrack);
-	key->push_back(backtrack_depth);
 	newdepth = true;
 	assert(size > 0);
 	priority_queue<pair<int, Entry>, vector<pair<int, Entry>>, Mycomparison > &top = open_list.front();
-
+	assert(top.size() > 0);
 	Entry result = top.top().second;
 	top.pop();
 	

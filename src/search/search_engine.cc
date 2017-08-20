@@ -56,6 +56,15 @@ const SearchEngine::Plan &SearchEngine::get_plan() const {
     return plan;
 }
 
+int SearchEngine::get_plan_cost() const{
+	assert(solution_found);
+	int cost = 0;
+	for(const GlobalOperator* op : plan){
+		cost += op->get_cost();
+	}
+	return cost;
+}
+
 void SearchEngine::set_plan(const Plan &p) {
     solution_found = true;
     plan = p;

@@ -61,6 +61,7 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int improved_merge = 0;
 	int refinement_pathology = 0;
 	int merged_abstractions = 0;
+	int num_reached_bound = 0;
 	
 	int current_order = 0;
 	int number_of_orders = 1;

@@ -50,7 +50,6 @@ class DFSPruning : public SearchEngine {
 	
 	int upper_bound = EvaluationResult::INFTY;
 	GlobalState* current_goal_state = NULL;
-	bool better_solution_found = false;
 	
 	std::vector<GlobalState> current_solution;
 	std::vector<GlobalState> current_path;
@@ -68,8 +67,11 @@ class DFSPruning : public SearchEngine {
 	// need to be put back into the open list
 	int num_reeval_states = 0;
 	int num_pruned_states = 0;
+	int num_refined_states = 0;
+	int openlist_size = 0;
 
-    std::pair<SearchNode, bool> fetch_next_node();
+    std::pair<SearchNode, int> fetch_next_node();
+	void refine(bool backtracked, int backtrack_depth);
     void start_f_value_statistics(EvaluationContext &eval_context);
     void update_f_value_statistics(const SearchNode &node);
     void reward_progress();

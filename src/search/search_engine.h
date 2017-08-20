@@ -54,6 +54,7 @@ public:
     bool found_solution() const;
     SearchStatus get_status() const;
     const Plan &get_plan() const;
+	int get_plan_cost() const;
     void search();
     const SearchStatistics &get_statistics() const {return statistics; }
     void set_bound(int b) {bound = b; }

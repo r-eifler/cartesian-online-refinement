@@ -22,7 +22,7 @@ class Merge {
 	CostSaturation* cost_saturation;
 	utils::RandomNumberGenerator* rng;
 
-	int max_merge_size = 100000;
+	int max_merge_size = 10000;
 	int merged_abs = 0;
 	int max_size_reached = false;
 	MergeStrategy merge_strategy = MergeStrategy::COMPATIBLE_PLANS;
