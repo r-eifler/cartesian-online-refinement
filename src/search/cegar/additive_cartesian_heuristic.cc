@@ -739,7 +739,7 @@ static Heuristic *_parse(OptionParser &parser) {
 	merge_strategies.push_back("COMPATIBLE_PLANS");
 	merge_strategies.push_back("SMALLEST");
 	parser.add_enum_option(
-        "merge_strategy", merge_strategies, "TODO", "COMPATIBLE_PLANS");
+        "merge_strategy", merge_strategies, "TODO", "SMALLEST");
 		
 	//Different Order selection strategies
 	vector<string> order_strategies;
@@ -753,7 +753,7 @@ static Heuristic *_parse(OptionParser &parser) {
 	order_strategies.push_back("ORDER_ORG_ASC");
     order_strategies.push_back("ORDER_ORG_DESC");
     parser.add_enum_option(
-        "order", order_strategies, "scp order strategy", "SHUFFLE_CHECK");
+        "order", order_strategies, "scp order strategy", "ORDER_ORG_ASC");
 	
 
     
