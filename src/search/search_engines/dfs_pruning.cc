@@ -46,8 +46,6 @@ void DFSPruning::initialize() {
     
     cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
     //Stop Timer
-	open_list_timer.reset();
-    open_list_timer.stop();
 	total_refine_timer.reset();
     total_refine_timer.stop();
     
@@ -104,6 +102,7 @@ void DFSPruning::initialize() {
         ScalarEvaluator *heuristic = heuristics[0];
         int h = eval_context.get_heuristic_value_or_infinity(heuristic);
         node.set_h_value(h);
+		node.set_depth(0);
         open_list->insert(eval_context, initial_state.get_id());
     }
 
@@ -124,15 +123,10 @@ void DFSPruning::print_statistics() const {
     pruning_method->print_statistics();
     
     cout << endl;
-    cout << "Nodes which have been refined: " << num_refined_nodes << endl;
-    cout << "Number of  reevaluated states: " << num_reeval_states << endl;
 	cout << "Number of pruned states: " << num_pruned_states << endl;
 	cout << "Number of refined states: " << num_refined_states << endl;
-	cout << "Openlist size: " << openlist_size << endl;
 	
 	cout << endl << "Current upper bound: " << get_plan_cost() << endl;
-	//cout << "Openlist size: " << open_list.size() << endl;
-	//cout << "openlist time: " << open_list_timer << endl;
     cout << "total refine time: " << total_refine_timer << endl;
     cout << endl;	
     
@@ -160,14 +154,25 @@ SearchStatus DFSPruning::step() {
 
     GlobalState s = node.get_state();
 	current_path.push_back(s);
+	/*
+	cout << "Current Path: ";
+	for(GlobalState cs : current_path){
+		cout << search_space.get_node(cs).get_state_id() << " ";	
+	}
+	cout << endl;
+	*/
 	
+	//Check if solution found
     if (check_goal_and_set_plan(s)){
 		if(open_list->empty()){ // can this case appeare ?
         	return SOLVED;
 		}
-		
+		//check if new solution is cheaper -> update
 		if((int) get_plan_cost() < upper_bound){
-			cout << "Upper bound updated ----> " << upper_bound << " -> " << get_plan_cost() << endl;
+			if(upper_bound == EvaluationResult::INFTY){
+				cout << "First upper bound: " << 	get_plan_cost() << endl;
+			}
+			//cout << "Upper bound updated ----> " << upper_bound << " -> " << get_plan_cost() << endl;
 			upper_bound = get_plan_cost(); 
 			current_goal_state = &s;
 			/*
@@ -180,12 +185,25 @@ SearchStatus DFSPruning::step() {
 				SearchNode cs_node = search_space.get_node(cs);
 				cs_node.set_solution(false);
 			}
-			current_solution = current_path;
+			
+			//TODO can I use =
+			current_solution.clear();
+			for(GlobalState cs : current_path){
+				current_solution.push_back(cs);
+			}
+				
+			
 			for(GlobalState cs : current_solution){
 				SearchNode cs_node = search_space.get_node(cs);
 				cs_node.set_solution(true);
 			}
 		}
+		/*
+		else{
+			cout << "Solution worse ----> " << upper_bound << " -> " << get_plan_cost() << endl;
+		}
+		*/
+		//cout << "Look for better solution" << endl;
 		
 		return IN_PROGRESS;
 	}
@@ -217,6 +235,7 @@ SearchStatus DFSPruning::step() {
         bool is_preferred = preferred_operators.contains(op);
 
         SearchNode succ_node = search_space.get_node(succ_state);
+		//cout << "Child node: " << succ_node.get_state_id() << endl;
 		
         // Previously encountered dead end. Don't re-evaluate.
         if (succ_node.is_dead_end())
@@ -232,31 +251,32 @@ SearchStatus DFSPruning::step() {
                 heuristic->notify_state_transition(s, *op, succ_state);
             }
         }
-		/*
-		cout << "------------" << endl;
-		cout << "Child " << succ_node.get_state_id() ; 
-		//cout << " h=" << succ_node.get_h_value();
-		cout << endl;
-		*/
-		 //PRUN
+		
+		
+		// Careful: succ_node.get_g() is not available here yet,
+        // hence the stupid computation of succ_g.
+        // TODO: Make this less fragile.
+        int succ_g = node.get_g() + get_adjusted_cost(*op);
+
+		//PRUN
 		int h = eval_context.get_heuristic_value_or_infinity(pruning_heuristic);
 		succ_node.set_h_value(h);
-		//cout << "Prune: " << node.get_g() << " + " << h << " = " << (node.get_g() + h) <<  " > " << upper_bound << endl;
-		if(node.get_g() + h > upper_bound){
-			//cout << "----> Prune" << endl;
+		//cout << "	Prune: " << succ_g << " + " << h << " = " << (succ_g + h) <<  " > " << upper_bound << endl;
+		//need to compute succ.g
+		if(succ_g + h > upper_bound){
+			//cout << "		----> Prune" << endl;
 			num_pruned_states++;
 			continue;	
 		}
 		
-
+			
+		
         if (succ_node.is_new()) {
+			//set depth only if node is new -> need lowest depth TODO
+			succ_node.set_depth(node.get_depth() + 1);
+			
             // We have not seen this state before.
-            // Evaluate and create a new node.
-
-            // Careful: succ_node.get_g() is not available here yet,
-            // hence the stupid computation of succ_g.
-            // TODO: Make this less fragile.
-            int succ_g = node.get_g() + get_adjusted_cost(*op);
+            // Evaluate and create a new node.            
 
             EvaluationContext eval_context(
                 succ_state, succ_g, is_preferred, &statistics);
@@ -313,6 +333,7 @@ pair<SearchNode, int> DFSPruning::fetch_next_node() {
 				return make_pair(dummy_node, 0);
 			}
 			else{
+				cout << "Completely explored state space -- solution found!" << endl;
 				return make_pair(dummy_node, 2);
 			}
 		}
@@ -324,59 +345,44 @@ pair<SearchNode, int> DFSPruning::fetch_next_node() {
         
         GlobalState s = state_registry.lookup_state(id);
         SearchNode node = search_space.get_node(s);       
-		//cout << "Expanded node: " << node.get_state_id() << endl;
 		
-		//Refine the pruning heuristic such the state space area which did not lead to a better solution is pruned
-		refine(last_key_removed[0], node.get_g());
+		//if there is no online refinement the current path has to be updated seperately
+		if(!refine_online && last_key_removed[0]){
+			current_path.erase(current_path.end() - (current_path.size() - node.get_depth()), current_path.end());
+		}
 		
-        if (node.is_closed())
+		 if (node.is_closed())
             continue;
-        
-		//The value of the pruning heuristic could habe changed since the node has been inserted in the openlist
+		
+		//cout << "Expanded node: " << node.get_state_id() << endl;		
+		//Refine the pruning heuristic such the state space area which did not lead to a better solution is pruned
+		if(refine_online){
+			refine(last_key_removed[0], node.get_depth());
+		}
+
+		//The value of the pruning heuristic could have changed since the node has been inserted in the open list 
+		//or a new path could be found (-> also in offline version)
 		EvaluationContext state_eval_context(s, node.get_g(), false, nullptr);
 		int state_h = state_eval_context.get_heuristic_value_or_infinity(pruning_heuristic);
 		if(node.get_g() + state_h > upper_bound){
 			/*
-			cout << "Prune: " << node.get_g() << " + " << state_h << " = " << (node.get_g() + state_h) <<  " > " << upper_bound << endl;
-			cout << "----> Prune fetch" << endl;
+			cout << "	Prune: " << node.get_g() << " + " << state_h << " = " << (node.get_g() + state_h) <<  " > " << upper_bound << endl;
+			cout << "	----> Prune fetch" << endl;
 			cout << "......................" << endl;
 			*/
 			num_pruned_states++;
 			continue;	
 		}
-        
-        if(print_timer() > 30){
-            cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
-            cout << "Num reeval states " << num_reeval_states  << endl;
-			cout << "OpenList Timer: " << open_list_timer << endl << endl;   
+		/*
+        if(print_timer() > 10){
+            cout << "+++++++++++++++++++++++++++++++++++++" << endl;                        
             print_statistics();
 			print_timer.reset();
         }
-		
-
-        if (use_multi_path_dependence) {
-            assert(last_key_removed.size() == 2);
-            if (node.is_dead_end())
-                continue;
-            int pushed_h = last_key_removed[1];
-
-            if (!node.is_closed()) {
-                EvaluationContext eval_context(
-                    node.get_state(), node.get_g(), false, &statistics);
-
-                if (open_list->is_dead_end(eval_context)) {
-                    node.mark_as_dead_end();
-                    statistics.inc_dead_ends();
-                    continue;
-                }
-                if (pushed_h < eval_context.get_result(heuristics[0]).get_h_value()) {
-                    assert(node.is_open());                   
-                    open_list->insert(eval_context, node.get_state_id());
-                    continue;
-                }
-            }
-        }
+		*/
         
+		//no multipath dependencies
+		
         node.close();
         assert(!node.is_dead_end());
         update_f_value_statistics(node);
@@ -387,18 +393,21 @@ pair<SearchNode, int> DFSPruning::fetch_next_node() {
 	
 void DFSPruning::refine(bool backtracked, int backtrack_depth){
 	total_refine_timer.resume();
+	//cout << "backtracked: " << backtracked << endl;
 	if(!backtracked || upper_bound == EvaluationResult::INFTY){
 		total_refine_timer.stop();
 		return;	
 	}
-	//cout << "--- Backtrack ---" << endl;
-	//remove states from path
 	/*
+	cout << "--- Backtrack ---" << endl;
+	cout << "Current path lenght: " << current_path.size() << endl;
+	cout << "Bacltrack depth: " << backtrack_depth << endl;
+	//remove states from path	
 	for(GlobalState cs : current_path){
 		cout << search_space.get_node(cs).get_state_id() << " ";	
 	}
 	cout << endl;
-	cout << "Remove " << (current_path.size() - backtrack_depth) << endl;
+	cout << "Remove: " << current_path.size() << " - " << backtrack_depth << "  " << (current_path.size() - backtrack_depth) << endl;
 	*/
 	//Backtrack the current path to the depth of the expanded node
 	current_path.erase(current_path.end() - (current_path.size() - backtrack_depth - 1), current_path.end());
@@ -409,12 +418,11 @@ void DFSPruning::refine(bool backtracked, int backtrack_depth){
 	for(GlobalState cs : current_path){
 		cout << search_space.get_node(cs).get_state_id() << " ";	
 	}
-	cout << endl;
+	cout << endl;	
+	cout << "Refined state: " << last_node.get_state_id() << endl;
 	*/
-	//cout << "Refined state: " << last_node.get_state_id() << endl;
-	
 	//if the current node is contained in the current best solution it is not pruned
-	if(last_node.get_solution()){
+	if(last_node.get_solution()){ //|| statistics.get_expanded() % 1 != 0){
 		//cout << "Countained in current solution" << endl;
 		total_refine_timer.stop();
 		return;	
@@ -426,7 +434,6 @@ void DFSPruning::refine(bool backtracked, int backtrack_depth){
 	g_successor_generator->generate_applicable_ops(state_to_refine, applicable_ops);
 	  
 	
-	// Check whether h(s) is too low by looking at all successors.
 	int infinity = EvaluationResult::INFTY;
 	EvaluationContext state_eval_context(state_to_refine, last_node.get_g(), false, nullptr);
 	int state_h = state_eval_context.get_heuristic_value_or_infinity(pruning_heuristic);
@@ -438,25 +445,26 @@ void DFSPruning::refine(bool backtracked, int backtrack_depth){
 	
 	//Generate all succesor states 
 	vector<pair<GlobalState, int>> succStates;
+	/*
 	for (const GlobalOperator *op : applicable_ops) {
 		GlobalState succ_state = state_registry.get_successor_state(state_to_refine, *op);
 		succStates.push_back(make_pair(succ_state, op->get_cost()));
 	}
-
+	*/
 	//ONLINE REFINEMENT  
 	Heuristic* h = (Heuristic*) pruning_heuristic;
-	//cout << "Prune: " << backtrack_depth << " + " << state_h << " = " << (backtrack_depth + state_h) <<  " > " << upper_bound << endl; 
-	if((backtrack_depth + state_h) > upper_bound){
+	//cout << "Prune: " << last_node.get_g() << " + " << state_h << " = " << (last_node.get_g() + state_h) <<  " > " << upper_bound << endl; 
+	if((last_node.get_g() + state_h) > upper_bound){
 		//cout << "----> would already be pruned" << endl;
 		total_refine_timer.stop();
 		return;	
 	}
-	//upper_bound - backtrack_depth is the value the heuristic estimatischen has to exceed such that the state can be pruned
-	h->online_Refine(state_to_refine, succStates, upper_bound - backtrack_depth);
+	//upper_bound - last_node.get_g() is the value the heuristic has to exceed such that the state can be pruned
+	h->online_Refine(state_to_refine, succStates, upper_bound - last_node.get_g());
 	num_refined_states++;
 	
 	total_refine_timer.stop();
-	//cout << "------------------------- ONLINE REFINEMENT ----------------------------------------" << endl;		
+	//cout << "------------------------- ONLINE REFINEMENT END----------------------------------------" << endl;		
 }
 
 void DFSPruning::reward_progress() {
@@ -542,7 +550,7 @@ static SearchEngine *_parse_dfs(OptionParser &parser) {
 	parser.add_option<double>(
         "refinement_time",
         "only every refinement_times secondes a state is refined",
-        "1",
+        "0",
         Bounds("0", "60"));
 	parser.add_option<int>(
         "collect_states",

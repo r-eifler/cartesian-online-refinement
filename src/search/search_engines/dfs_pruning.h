@@ -58,14 +58,10 @@ class DFSPruning : public SearchEngine {
     int num_refined_nodes = 0;
 	
 	//TIMER
-	utils::Timer open_list_timer;
 	utils::Timer total_refine_timer;
 	utils::Timer print_timer;
 	utils::Timer refine_timer;
 	
-	// number of stets whose heuristic value increased since the last evaluation
-	// need to be put back into the open list
-	int num_reeval_states = 0;
 	int num_pruned_states = 0;
 	int num_refined_states = 0;
 	int openlist_size = 0;

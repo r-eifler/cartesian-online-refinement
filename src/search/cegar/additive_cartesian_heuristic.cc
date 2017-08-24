@@ -225,7 +225,7 @@ void AdditiveCartesianHeuristic::print_order(){
     cout << endl;
 }
     
-bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, int bound){
+bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> , int bound){
    //cout << "--------------------------------------------------------------------------------" << endl;
    //TODO delete order if not usefull
    //TODO delete abstraction if not usefull
@@ -274,90 +274,24 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
     }
     State state = convert_global_state(global_state);
 	
-    
-	bool conflict = false;
-	int h_value = 0;
-	vector<bool> toRefine;
-	if(prove_bellman){ //TODO push check to egar_search		
-		bool bellman = prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict);
-		
-		if(bellman){
-			bellman_sat++;
-			return false;	
-		}
-	}
-	else{		
+	vector<bool> toRefine;		
 		for(size_t i = 0; i < heuristic_functions.size(); i++){
 			toRefine.push_back(true);	
 		}
-		h_value = compute_heuristic(global_state);
-	}
-    
-	bellman_not_sat++;
-	
-    //Refinement pathology   
-    if( use_merge && heuristic_functions.size() > 1 && conflict && !use_all_goals ){
-		merge_timer.resume();
-        refinement_pathology++;
-		//TODO modify refined -> otherwise no merge is selected 
-		vector<bool> modified_toRefine(toRefine.size(), true);
-        int merged = merge.merge(modified_toRefine);
-      
-       //Check if merge improved the heuristic
-       if(merged){
-		   int new_h_value = compute_heuristic(state);
-		   if(false && h_value <  new_h_value){   
-				cout << "Merge Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
-		   }
-		   assert(new_h_value >= h_value); //TODO
-       }
-		merge_timer.stop();
-       return true; // TODO also use the other steps ?
-    }
-	
-	/*
-    switch (strategy){
-		case Strategy::ORDER_REFINE : 
-			if(reorder(state, &h_value, toRefine)){
-				return true;	
-			}
-			if(refine(state, &h_value, toRefine)){
-				return true;	
-			}			
-			break;
-		case Strategy::REFINE_ORDER : 
-			if(refine(state, &h_value, toRefine)){
-				return true;	
-			}
-			if(reorder(state, &h_value, toRefine)){
-				return true;	
-			}
-			break;
-		case Strategy::ONLY_ORDER : 
-			if(reorder(state, &h_value, toRefine)){
-				return true;	
-			}
-			break;
-		case Strategy::ONLY_REFINE : 
-			if(refine(state, &h_value, toRefine)){
-				return true;	
-			}
-			break;
-	}
-	*/
+	int h_value = compute_heuristic(global_state);
 	
 
 	//First find a new order
 	//cout << "Bound: " << h_value << " <= " << bound << endl;
 	bool order_improved = reorder(state, &h_value, toRefine);
 	//cout << "Bound: " << h_value << " <= " << bound << endl;
-	if(order_improved && h_value <= bound){//prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){
+	if(order_improved && h_value <= bound){
 		return true;	
 	}
 	bool still_refinable = true;
 	int refinement_steps = 0;
 	refined_states_total++;
-	while(h_value <= bound){//&& !prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict) ){
+	while(h_value <= bound){
 		//if not refinable merge 
 		if(!still_refinable){
 			merge_timer.resume();
@@ -373,39 +307,23 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 				toRefine.push_back(true);	
 			}
 			merge_timer.stop();
-			continue;
 		}				
 		still_refinable = refine(state, &h_value, toRefine);
 		refinement_steps++;
 		refine_steps_total++;
 		//cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
 		//cout << "Bound: " << h_value << " <= " << bound << endl;
-		
+		/*
+		if(refinement_steps == 10){
+			break;	
+		}
+		*/
 	}
     	
 	if(h_value > bound){
 		num_reached_bound++;	
 	}
-	/*
-	//MERGE
-	//if all goal facts are used in every abstraction in the online phase a merge is not useful ?
-   	if(use_merge && heuristic_functions.size() > 1 && !use_all_goals){             
-       int merged = merge.merge(toRefine);      
-       //Check if merge improved the heuristic
-       if(merged){
-           int new_h_value = compute_heuristic(state);
-           if(h_value <  new_h_value){
-			   improved_merge++; 
-			   if(true){
-               		cout << "Merge Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;		
-			   }
-           }
-		   //A merge can not decrease the heuristic value of a state
-		   // TODO unsolvable tasks ? can decrease the value ?
-           assert(new_h_value >= h_value);
-       }
-   }
-   */
+
    //cout << "--------------------------------------------------------------------------------" << endl;
    return true;  
 }
@@ -515,7 +433,7 @@ bool AdditiveCartesianHeuristic::refine(State state, int* current_max_h, std::ve
        if(*current_max_h <  new_h_value){
 		   
            improved_refine++;    
-		   if(true){
+		   if(false){
            		cout << "Refine Heuristic with order " << current_order << " has been improved h_old(s) = " << *current_max_h << " --> h_new(s) = " << new_h_value << endl;
 		   }
 		   *current_max_h = new_h_value;
@@ -555,7 +473,7 @@ bool AdditiveCartesianHeuristic::reorder(State state, int* current_max_h, std::v
 		   bool exists = cost_saturation->add_order(new_order, &new_scp_order);
 		   if(!exists){
 			   	current_order = new_scp_order;
-				if(true){
+				if(false){
 					cout << "Order " << current_order << " Heuristic has been improved h_old(s) = " << *current_max_h << " --> h_new(s) = " << new_h_value << endl; 
 				}
 				improved_order++;
@@ -584,18 +502,14 @@ void AdditiveCartesianHeuristic::print_statistics(){
 			function->print_statistics();	
 		}
         cout << endl;
-        cout << "Total refined states: " << (bellman_sat + bellman_not_sat) << endl;              
-        cout << "Refinement Pathology: " << refinement_pathology << endl;
+        cout << "Total refined states: " << refined_states_total << endl;              
     
         cout << endl << "Times: " << endl;
         cout << "Heuristic evaluation time: " << update_timer << endl;
         cout << "Get values time: " << values_timer << endl;
     	cout << endl;
 	
-		cout << "---------------- BELLMAN ----------------- " << endl;
-		cout << "Bellman proof time: " << prove_timer << endl;
-		cout << "States satisfied bellman equation: " << bellman_sat << "/" << (bellman_sat + bellman_not_sat) << endl;
-		cout << "States not satisfied bellman equation: " << bellman_not_sat << "/" << (bellman_sat + bellman_not_sat) << endl;
+		cout << "---------------- PRRUNING ----------------- " << endl;
 		cout << "States reached pruning bound: " << num_reached_bound << endl;
 		cout << endl;
 	
@@ -606,7 +520,7 @@ void AdditiveCartesianHeuristic::print_statistics(){
 	
 		onlineRefinement.print_statistics();
 		cout << "Refine time: " << refine_timer << endl;
-		cout << "Improved States refine: " << improved_refine << endl;
+		cout << "Improved iterations refine: " << improved_refine << endl;
 		cout << "Average number of refine steps per state: " << (refine_steps_total / (double) refined_states_total) << endl;
 		cout << endl;
 	
@@ -770,7 +684,7 @@ static Heuristic *_parse(OptionParser &parser) {
 	order_strategies.push_back("ORDER_ORG_ASC");
     order_strategies.push_back("ORDER_ORG_DESC");
     parser.add_enum_option(
-        "order", order_strategies, "scp order strategy", "SHUFFLE_CHECK");
+        "order", order_strategies, "scp order strategy", "ORDER_ORG_ASC");
 	
 
     

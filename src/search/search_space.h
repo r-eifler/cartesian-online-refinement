@@ -36,6 +36,9 @@ public:
 
     int get_g() const;
     int get_real_g() const;
+	
+	int get_depth() const;
+	void set_depth(int d) const;
 
     void open_initial();
     void open(const SearchNode &parent_node,

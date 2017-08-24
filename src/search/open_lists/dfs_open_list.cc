@@ -92,6 +92,7 @@ void DFSOpenList<Entry>::do_insertion(
 template<class Entry>
 Entry DFSOpenList<Entry>::remove_min(vector<int> *key) {	
 	key->push_back(backtrack);
+	backtrack = false;
 	newdepth = true;
 	assert(size > 0);
 	priority_queue<pair<int, Entry>, vector<pair<int, Entry>>, Mycomparison > &top = open_list.front();

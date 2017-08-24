@@ -40,13 +40,11 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	
 	Strategy strategy = Strategy::ORDER_REFINE;
 	
-	int bellman_sat = 0;
-	int bellman_not_sat = 0;
 	int refine_steps_total = 0;
 	int refined_states_total = 0;
+	utils::Timer prove_timer;
 	utils::Timer cost_timer;
 	utils::Timer refine_timer;
-	utils::Timer prove_timer;
 	utils::Timer merge_timer;
 	utils::Timer print_timer;
     utils::Timer update_timer;
@@ -59,7 +57,6 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	int decreased_order = 0;
 	int improved_refine = 0;
 	int improved_merge = 0;
-	int refinement_pathology = 0;
 	int merged_abstractions = 0;
 	int num_reached_bound = 0;
 	

@@ -17,6 +17,7 @@ struct SearchNodeInfo {
 	
 	int h;
 	int solution = false;
+	int depth = 0;
 
     SearchNodeInfo()
         : status(NEW), g(-1), parent_state_id(StateID::no_state),

@@ -49,6 +49,14 @@ int SearchNode::get_real_g() const {
     return info.real_g;
 }
 
+int SearchNode::get_depth() const{
+	return info.depth;
+}
+
+void SearchNode::set_depth(int d) const{
+	info.depth = d;
+}
+
 void SearchNode::open_initial() {
     assert(info.status == SearchNodeInfo::NEW);
     info.status = SearchNodeInfo::OPEN;
