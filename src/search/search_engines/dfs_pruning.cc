@@ -272,7 +272,7 @@ SearchStatus DFSPruning::step() {
 			
 		
         if (succ_node.is_new()) {
-			//set depth only if node is new -> need lowest depth TODO
+			//set depth if node is new
 			succ_node.set_depth(node.get_depth() + 1);
 			
             // We have not seen this state before.
@@ -298,6 +298,8 @@ SearchStatus DFSPruning::step() {
                 reward_progress();
             }
         } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
+			//set depth if a chaeper path to the node has been found
+			succ_node.set_depth(node.get_depth() + 1);
 			
             // We found a new cheapest path to an open or closed state.
             if (reopen_closed_nodes) {
