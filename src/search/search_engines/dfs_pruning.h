@@ -65,7 +65,8 @@ class DFSPruning : public SearchEngine {
 	int num_pruned_states = 0;
 	int num_refined_states = 0;
 	int openlist_size = 0;
-
+	int update_steps = 0;
+	
     std::pair<SearchNode, int> fetch_next_node();
 	void refine(bool backtracked, int backtrack_depth);
     void start_f_value_statistics(EvaluationContext &eval_context);

@@ -127,6 +127,7 @@ void DFSPruning::print_statistics() const {
 	cout << "Number of refined states: " << num_refined_states << endl;
 	
 	cout << endl << "Current upper bound: " << get_plan_cost() << endl;
+	cout << "Update steps: " << update_steps << endl;
     cout << "total refine time: " << total_refine_timer << endl;
     cout << endl;	
     
@@ -169,10 +170,11 @@ SearchStatus DFSPruning::step() {
 		}
 		//check if new solution is cheaper -> update
 		if((int) get_plan_cost() < upper_bound){
+			update_steps++;
 			if(upper_bound == EvaluationResult::INFTY){
 				cout << "First upper bound: " << 	get_plan_cost() << endl;
 			}
-			//cout << "Upper bound updated ----> " << upper_bound << " -> " << get_plan_cost() << endl;
+			//ut << "Upper bound updated ----> " << upper_bound << " -> " << get_plan_cost() << endl;
 			upper_bound = get_plan_cost(); 
 			current_goal_state = &s;
 			/*
