@@ -354,10 +354,12 @@ void CostSaturation::recompute_cost_partitioning_unused(int order_id){
 		Abstraction* abs = abstractions[pos];
 		//cout << "------------- Recompute unused cost abs: " << pos << " refined " << abs->refined  << " ---------------------" << endl;
 		
-		if(!abs->refined){
+		//As the refinement of an abstraction can also derease the cost of un action 
+		//all abstractions are recomputed
+		//if(!abs->refined){
 			//cout << "not refined" << endl;
-			continue;	
-		}
+		//	continue;	
+		//}
 		
 		//abs->refined = false; //TODO
 		vector<int> sturated_cost_old = abs->get_costs_partitioning(order_id);
