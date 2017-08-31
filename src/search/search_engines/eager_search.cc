@@ -29,8 +29,8 @@ EagerSearch::EagerSearch(const Options &opts)
       use_multi_path_dependence(opts.get<bool>("mpd")),
       //Online Refinement ops
       refine_online(opts.get<bool>("refine_online")),
-      refinement_selector(opts.get<int>("refinement_selector")),
-	  refinement_time(opts.get<double>("refinement_time")),
+	  refinement_waiting(opts.get<double>("refinement_waiting")),
+	  wait_time(opts.get<bool>("wait_time")),
 	  collect_states(opts.get<int>("collect_states")),
       //Store open list factory to create new open lists during search
       open_list_factory(opts.get<shared_ptr<OpenListFactory>>("open")),  
@@ -154,7 +154,9 @@ SearchStatus EagerSearch::step() {
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
-    if(refine_online && (refine_timer() > refinement_time || need_to_refine)){ 
+    if(refine_online && ((wait_time && refine_timer() > refinement_waiting) || 
+						 (!wait_time && statistics.get_expanded() % (int) refinement_waiting == 0) || 
+						 need_to_refine)){ 
 		refine_timer.reset();
 		//store state
 		states_to_refine.push_back(make_pair(s, node.get_g()));
@@ -529,20 +531,19 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "use online refinement",
         "true");
     parser.add_option<int>(
-        "refinement_threshold",
-        "the threshold the provable minimum h value has to exceed to start online refinement",
-        "0",
-        Bounds("0", "infinity"));
-    parser.add_option<int>(
         "refinement_selector",
         "only every refinement_selector states is refined",
         "1",
         Bounds("1", "1000000"));
 	parser.add_option<double>(
-        "refinement_time",
-        "only every refinement_times secondes a state is refined",
-        "1",
-        Bounds("0", "60"));
+        "refinement_waiting",
+        "only every refinement_times secondes/states a state is refined",
+        "0",
+        Bounds("0", "infinity"));
+	parser.add_option<bool>(
+        "wait_time",
+        "TODO",
+        "true");
 	parser.add_option<int>(
         "collect_states",
         "TODO",

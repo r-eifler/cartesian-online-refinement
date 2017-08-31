@@ -53,6 +53,8 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
 	  use_all_goals(opts.get<bool>("use_all_goals")),
 	  use_merge(opts.get<bool>("use_merge")),
 	  prove_bellman(opts.get<bool>("prove_bellman")),
+	  threshold(opts.get<int>("threshold")),
+	  local_minimum(opts.get<bool>("local_minimum")),
 	  strategy(static_cast<Strategy>(opts.get<int>("strategy"))),
       heuristic_functions(generate_heuristic_functions(opts)),
       onlineRefinement(cost_saturation, rng_order, max_states_online, opts.get<bool>("use_useful_split")),
@@ -70,6 +72,7 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
           merge_timer.stop();
 		  values_timer.reset();
           values_timer.stop();
+		
 		  
           orderSelecter = new OrderSelecter(static_cast<CostOrder>(opts.get<int>("order")), cost_saturation, rng_order);
           orderSelecter->set_heuristic_functions(&heuristic_functions);
@@ -339,6 +342,12 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 		for(int v : succ_values){
 			succ_h_value += v;   
 		}
+		if(local_minimum && succ_h_value <= *current_h){
+			prove_timer.stop();
+			//cout << "NO LOCAL MINIMUM" << endl;
+			return true;
+		}
+		
 		for(uint i = 0; i < provable_h_values.size(); i++){
 			succ_h_values += to_string(succ_values[i]) + " ";
 			provable_h_values[i] = min(
@@ -351,9 +360,10 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 		if(debug)
 			cout << succ_h_values <<  " = " << succ_h_value << endl;
 	}
-
+	//cout << "LOCAL MINIMUM" << endl;
 	//Check if sum could be refined
-	bool refine_sum = provable_h_value > *current_h ? true : false;
+	bool refine_sum = provable_h_value > *current_h + threshold ? true : false;
+	//cout << provable_h_value << " > " << *current_h << " +  " << threshold << endl;
 
 	if(!refine_sum){
 		if(debug)
@@ -365,7 +375,7 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 
 	
 
-	if(false)
+	if(debug)
 		cout << "---> h(s) = " << *current_h << " improvable to " << provable_h_value << endl;
 
 	
@@ -580,7 +590,7 @@ static Heuristic *_parse(OptionParser &parser) {
         "max_transitions",
         "maximum sum of real transitions (excluding self-loops) over "
         " all abstractions",
-        "1000000",
+        "infinity",
         Bounds("0", "infinity"));
     parser.add_option<double>(
         "max_time",
@@ -600,7 +610,7 @@ static Heuristic *_parse(OptionParser &parser) {
     parser.add_option<bool>(
         "use_general_costs",
         "allow negative costs in cost partitioning",
-        "true");
+        "false");
     
     //Online Refinement options
     parser.add_option<int>(
@@ -634,6 +644,15 @@ static Heuristic *_parse(OptionParser &parser) {
         "prove_bellman",
         "TODO",
         "true");
+	parser.add_option<int>(
+        "threshold",
+        "TODO",
+        "0",
+        Bounds("0", "100"));
+	parser.add_option<bool>(
+        "local_minimum",
+        "TODO",
+        "false");
 	
 	vector<string> refine_strategies;
 	refine_strategies.push_back("ORDER_REFINE");

@@ -37,6 +37,8 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	bool use_all_goals;
 	bool use_merge;	
 	bool prove_bellman;
+	int threshold = 0;
+	bool local_minimum = false;
 	
 	Strategy strategy = Strategy::ORDER_REFINE;
 	

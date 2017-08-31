@@ -27,10 +27,9 @@ class EagerSearch : public SearchEngine {
 	//Online Refinement ops
 	//flag use online refinement (default true)
 	bool refine_online;
-	// only every refinement_selector state is tried to be refined
-    int refinement_selector;
 	// only every refinement_time seconds a state is tried to be refined
-	double refinement_time;
+	double refinement_waiting = 0;
+	bool wait_time = false;
 	int collect_states;
 	
 	bool need_to_refine = false;
