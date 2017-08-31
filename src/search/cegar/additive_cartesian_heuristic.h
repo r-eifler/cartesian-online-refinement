@@ -23,6 +23,11 @@ enum class Strategy {
 	ONLY_REFINE
 };
 	
+enum class CheckStrategy {
+	BOUND,
+	BELLMAN
+};
+	
 
 
 /*
@@ -39,6 +44,7 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	bool prove_bellman;
 	
 	Strategy strategy = Strategy::ORDER_REFINE;
+	CheckStrategy check_strategy = CheckStrategy::BOUND;
 	
 	int refine_steps_total = 0;
 	int refined_states_total = 0;
@@ -86,13 +92,16 @@ protected:
 	bool refine(State state, int* current_max_h, std::vector<bool> &toRefine);
 	bool reorder(State state, int* current_max_h, std::vector<bool> &toRefine);
 	
-	//bool prove_bellman_sum(State state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h);
+	bool prove_bellman_sum(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, int* current_h);
 	bool prove_bellman_individual(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h, bool* conflict);
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
 	
 	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, int bound) override;
+	
+	bool refine_check_bound(const GlobalState &global_state, int bound);
+	bool refine_check_bellman(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates);
 	
 	std::vector<int> compute_original_individual_heuristics(State state);
 	

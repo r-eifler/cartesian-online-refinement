@@ -54,6 +54,7 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
 	  use_merge(opts.get<bool>("use_merge")),
 	  prove_bellman(opts.get<bool>("prove_bellman")),
 	  strategy(static_cast<Strategy>(opts.get<int>("strategy"))),
+	  check_strategy(static_cast<CheckStrategy>(opts.get<int>("check"))),
       heuristic_functions(generate_heuristic_functions(opts)),
       onlineRefinement(cost_saturation, rng_order, max_states_online, opts.get<bool>("use_useful_split")),
       merge(cost_saturation, rng_order, static_cast<MergeStrategy>(opts.get<int>("merge_strategy"))){
@@ -225,53 +226,20 @@ void AdditiveCartesianHeuristic::print_order(){
     cout << endl;
 }
     
-bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> , int bound){
-   //cout << "--------------------------------------------------------------------------------" << endl;
-   //TODO delete order if not usefull
-   //TODO delete abstraction if not usefull
-	/*
-   if(!deleted && delete_timer() > 125){
-        //delete once the not usefull abstractions
-       cout << "-------- delete useles abstractions --------" << endl;
-       int delete_start = 0;
-       for(size_t i = 0; i < usefullnes_of_abstraction.size(); i++){
-               if(usefullnes_of_abstraction[i] == 0){
-                    delete_start = i;
-                    break;
-               }
-       }
-       if(delete_start != 0){
-           for(size_t i = delete_start; i < heuristic_functions.size(); i++){
-               cost_saturation->remove_abstraction(delete_start);
-           }
-		   //update cost partitioning
-           cost_saturation->recompute_cost_partitioning_unused_all();
-		   
-		   //delete corresponding cartesian heuristic functions
-           heuristic_functions.erase(heuristic_functions.begin() + delete_start, heuristic_functions.end());
-           usefullnes_of_abstraction.erase(usefullnes_of_abstraction.begin() + delete_start, usefullnes_of_abstraction.end());
-		   
-           //print_statistics();
-           
-       }
-       deleted = true;
-   }
-   */  
-        
-    
-    if(false){
-        cout << "----------- Check Refine --------- " << endl;  
-        
-        cout << "Refine State: " << global_state.get_id() << endl;
-		/*
-        int i = 0;
-        for(int n : global_state.get_values()){
-            cout << i << "=" << n << " " ;
-            i++;
-        }
-        cout << endl;
-        */
-    }
+bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, int bound){
+   
+	switch(check_strategy){
+		case CheckStrategy::BOUND :
+			return refine_check_bound(global_state, bound);
+		case CheckStrategy::BELLMAN :
+			return refine_check_bellman(global_state, succStates);			
+	}
+	return false;
+}
+	
+bool AdditiveCartesianHeuristic::refine_check_bound(const GlobalState &global_state, int bound){
+	//cout << "--------------------------------------------------------------------------------" << endl;
+
     State state = convert_global_state(global_state);
 	
 	vector<bool> toRefine;		
@@ -325,7 +293,90 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	}
 
    //cout << "--------------------------------------------------------------------------------" << endl;
-   return true;  
+   return true;
+}
+	
+bool AdditiveCartesianHeuristic::refine_check_bellman(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
+	//cout << "--------------------------------------------------------------------------------" << endl;
+
+    State state = convert_global_state(global_state);
+	
+	vector<bool> toRefine;		
+		for(size_t i = 0; i < heuristic_functions.size(); i++){
+			toRefine.push_back(true);	
+		}
+	int h_value = 0;
+	bool bellman = prove_bellman_sum(global_state, succStates, &h_value);
+	if(bellman){
+		return false;
+	}
+	
+
+	//First find a new order
+	bool order_improved = reorder(state, &h_value, toRefine);
+	if(order_improved && prove_bellman_sum(global_state, succStates, &h_value)){
+		return true;	
+	}
+	
+	bool still_refinable = true;
+	int refinement_steps = 0;
+	refined_states_total++;
+	while(! prove_bellman_sum(global_state, succStates, &h_value)){
+		//if not refinable merge 
+		if(!still_refinable){
+			merge_timer.resume();
+			//assert(heuristic_functions.size() > 1);
+			if(heuristic_functions.size() == 1 || !merge.merge(toRefine)){
+				//cout << "	---> NO MERGE POSSIBLE" << endl;
+				merge_timer.stop();
+				break;	
+			}
+			still_refinable = true;
+			toRefine.clear();
+			for(size_t i = 0; i < heuristic_functions.size(); i++){
+				toRefine.push_back(true);	
+			}
+			merge_timer.stop();
+		}				
+		still_refinable = refine(state, &h_value, toRefine);
+		refinement_steps++;
+		refine_steps_total++;
+		//cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
+		/*
+		if(refinement_steps == 10){
+			break;	
+		}
+		*/
+	}
+    	
+   //cout << "--------------------------------------------------------------------------------" << endl;
+   return true;	
+}
+	
+bool AdditiveCartesianHeuristic::prove_bellman_sum(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, int* current_h){
+	prove_timer.resume();
+
+	int infinity = EvaluationResult::INFTY;
+	//heuristc value of currently expanded state
+	*current_h = compute_heuristic(global_state);
+
+	//Compute provable h values for all successor states   
+	int provable_h_value = infinity;
+	
+	for (pair<GlobalState, int> succ : succStates) {
+		int succ_h_value = compute_heuristic(succ.first);
+
+		provable_h_value = min(
+				provable_h_value,
+				(succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
+	}
+
+	//Check if sum could be refined
+	bool refine_sum = provable_h_value > *current_h ? true : false;
+     
+	prove_timer.stop();
+	
+	return !refine_sum;
 }
 	
 bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_state, vector<pair<GlobalState, int>> succStates, vector<bool> *toRefine, int* current_h, bool* conflict){
@@ -686,7 +737,12 @@ static Heuristic *_parse(OptionParser &parser) {
     parser.add_enum_option(
         "order", order_strategies, "scp order strategy", "ORDER_ORG_ASC");
 	
-
+	//refinement strategies check
+	vector<string> check_strategies;
+	check_strategies.push_back("BOUND");
+	check_strategies.push_back("BELLMAN");
+	parser.add_enum_option(
+		"check", check_strategies, "refinement strategy check", "BOUND");
     
     Heuristic::add_options_to_parser(parser);
     utils::add_rng_options(parser);

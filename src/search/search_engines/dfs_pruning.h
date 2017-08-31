@@ -21,7 +21,15 @@ namespace options {
 class Options;
 }
 
+
+
 namespace dfs_pruning {
+	
+enum class CheckStrategy {
+	BOUND,
+	BELLMAN
+};	
+	
 class DFSPruning : public SearchEngine {
     const bool reopen_closed_nodes;
     const bool use_multi_path_dependence;
@@ -34,6 +42,7 @@ class DFSPruning : public SearchEngine {
 	// only every refinement_time seconds a state is tried to be refined
 	double refinement_time;
 	int collect_states;
+	CheckStrategy check_strategy = CheckStrategy::BOUND;
 	
 	bool need_to_refine = false;
 	std::vector<std::pair<GlobalState, int>> states_to_refine;
@@ -68,7 +77,9 @@ class DFSPruning : public SearchEngine {
 	int update_steps = 0;
 	
     std::pair<SearchNode, int> fetch_next_node();
-	void refine(bool backtracked, int backtrack_depth);
+	void refine(bool backtracked, int backtrack_depth, GlobalState expandedState);
+	void refine_bound(GlobalState backtrackedState);
+	void refine_bellman(GlobalState expandedState);
     void start_f_value_statistics(EvaluationContext &eval_context);
     void update_f_value_statistics(const SearchNode &node);
     void reward_progress();
