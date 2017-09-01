@@ -347,6 +347,14 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 			//cout << "NO LOCAL MINIMUM" << endl;
 			return true;
 		}
+		provable_h_value = min(
+				provable_h_value,
+				(succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
+		
+		if(provable_h_value <= *current_h + threshold){
+			prove_timer.stop();
+			return true;	
+		}
 		
 		for(uint i = 0; i < provable_h_values.size(); i++){
 			succ_h_values += to_string(succ_values[i]) + " ";
@@ -354,15 +362,13 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 				provable_h_values[i],
 				(succ_values[i] == infinity) ? infinity : succ_values[i] + succ.second);
 		}
-		provable_h_value = min(
-				provable_h_value,
-				(succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
+		
 		if(debug)
 			cout << succ_h_values <<  " = " << succ_h_value << endl;
 	}
 	//cout << "LOCAL MINIMUM" << endl;
 	//Check if sum could be refined
-	bool refine_sum = provable_h_value > *current_h + threshold ? true : false;
+	bool refine_sum = provable_h_value > *current_h + threshold;
 	//cout << provable_h_value << " > " << *current_h << " +  " << threshold << endl;
 
 	if(!refine_sum){
