@@ -502,8 +502,8 @@ void AdditiveCartesianHeuristic::print_statistics(){
 	
 		cout << "---------------- BELLMAN ----------------- " << endl;
 		cout << "Bellman proof time: " << prove_timer << endl;
-		cout << "States satisfied bellman equation: " << bellman_sat << "/" << (bellman_sat + bellman_not_sat) << endl;
-		cout << "States not satisfied bellman equation: " << bellman_not_sat << "/" << (bellman_sat + bellman_not_sat) << endl;
+		cout << "States satisfied bellman equation: " << bellman_sat << endl;
+		cout << "States not satisfied bellman equation: " << bellman_not_sat << endl;
 		cout << endl;
 	
 		orderSelecter->print_statistics();
