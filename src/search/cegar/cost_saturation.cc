@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 using namespace std;
 
@@ -178,7 +179,20 @@ vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions
     return functions;
 }
 	
-
+int CostSaturation::compute_threshold(){
+	TaskProxy task_proxy(*abstask);
+	int op_n = 0;
+	//long long cost_mul = 1;
+	long cost_add = 0;
+    for (OperatorProxy op : task_proxy.get_operators()){
+    	op_n++;
+		//cost_mul *= op.get_cost();
+		cost_add += op.get_cost();
+	}
+	//cout << pow(cost_mul, 1.0/op_n) << endl;
+	//cout << cost_add / op_n << endl;
+	return cost_add / op_n;
+}
 
 void CostSaturation::reset(const TaskProxy &task_proxy) {
     remaining_costs = get_operator_costs(task_proxy);

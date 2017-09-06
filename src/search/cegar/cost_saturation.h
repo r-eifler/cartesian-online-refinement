@@ -91,6 +91,8 @@ public:
     void update_order(int id, std::vector<int> new_order);
     bool add_order(std::vector<int> order, int* order_id);
     void delete_order(int order_id);
+	
+	int compute_threshold();
 };
 }
 

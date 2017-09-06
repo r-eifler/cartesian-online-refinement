@@ -87,6 +87,12 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
          usefullnes_of_abstraction.push_back(0);
      }
      
+	//init threshold 
+	if(threshold == -1){
+		threshold = cost_saturation->compute_threshold();
+		cout << "Threshold: " << threshold << endl;
+	}
+		  
 }
 
 int AdditiveCartesianHeuristic::compute_heuristic(const GlobalState &global_state) {
@@ -654,7 +660,7 @@ static Heuristic *_parse(OptionParser &parser) {
         "threshold",
         "TODO",
         "0",
-        Bounds("0", "100"));
+        Bounds("-1", "100"));
 	parser.add_option<bool>(
         "local_minimum",
         "TODO",
