@@ -93,7 +93,6 @@ protected:
 	bool reorder(State state, int* current_max_h, std::vector<bool> &toRefine);
 	
 	bool prove_bellman_sum(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, int* current_h);
-	bool prove_bellman_individual(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h, bool* conflict);
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);

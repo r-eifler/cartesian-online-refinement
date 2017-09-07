@@ -509,8 +509,10 @@ void DFSPruning::refine_bellman(GlobalState expandedState){
 	
 	//ONLINE REFINEMENT  
 	Heuristic* h = (Heuristic*) pruning_heuristic;
-	h->online_Refine(expandedState, succStates, 0); //upperbound not used in bellman check version
-	num_refined_states++;
+	bool refined = h->online_Refine(expandedState, succStates, 0); //upperbound not used in bellman check version
+	if(refined){
+		num_refined_states++;
+	}
 	
 	total_refine_timer.stop();
 	//cout << "------------------------- ONLINE REFINEMENT END----------------------------------------" << endl;

@@ -369,6 +369,11 @@ bool AdditiveCartesianHeuristic::prove_bellman_sum(GlobalState global_state, std
 		provable_h_value = min(
 				provable_h_value,
 				(succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
+		
+		if(provable_h_value < *current_h){
+			prove_timer.stop();
+			return true;
+		}
 	}
 
 	//Check if sum could be refined
@@ -379,101 +384,7 @@ bool AdditiveCartesianHeuristic::prove_bellman_sum(GlobalState global_state, std
 	return !refine_sum;
 }
 	
-bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_state, vector<pair<GlobalState, int>> succStates, vector<bool> *toRefine, int* current_h, bool* conflict){
-	prove_timer.resume();
-	//cout << "---------------------------------------" << endl;
-	bool debug = false;
-	*current_h = 0;
-	toRefine->clear();
-	int infinity = EvaluationResult::INFTY;
-	//heuristc value of currently expanded state
-	vector<int> h_values = compute_individual_heuristics_of_order(global_state, current_order);
-	if(debug)
-		cout << "h value:       ";
-	for(int v : h_values){
-		if(debug)
-			cout << v << " ";
-		*current_h += v;   
-	}
-	if(debug){		
-		cout << " = " << *current_h << endl;
-	}
-	
-	
 
-	//Compute provable h values for all successor states
-	vector<int> provable_h_values;   
-	int provable_h_value = infinity;
-	//init
-	for(uint i = 0; i < h_values.size(); i++){
-		   provable_h_values.push_back(infinity);
-	}
-	for (pair<GlobalState, int> succ : succStates) {
-		string succ_h_values("succ h values: ");
-		vector<int> succ_values = compute_individual_heuristics_of_order(succ.first, current_order);
-		assert(succ_values.size() == heuristic_functions.size());
-		int succ_h_value = 0;
-		for(int v : succ_values){
-			succ_h_value += v;   
-		}
-		for(uint i = 0; i < provable_h_values.size(); i++){
-			succ_h_values += to_string(succ_values[i]) + " ";
-			provable_h_values[i] = min(
-				provable_h_values[i],
-				(succ_values[i] == infinity) ? infinity : succ_values[i] + succ.second);
-		}
-		provable_h_value = min(
-				provable_h_value,
-				(succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
-		if(debug)
-			cout << succ_h_values <<  " = " << succ_h_value << endl;
-	}
-
-	//Check if sum could be refined
-	bool refine_sum = provable_h_value > *current_h ? true : false;
-
-	if(!refine_sum){
-		if(debug)
-			cout << "---> not improvable" << endl;       
-		prove_timer.stop();
-		cout << "	BELLMAN TRUE" << endl;
-		return true;    
-	}
-
-	
-
-	if(false)
-		cout << "---> h(s) = " << *current_h << " improvable to " << provable_h_value << endl;
-
-	
-	
-	//Check which heuristic could be refined
-	string provable_h_values_s("provable h values: ");
-	for(uint i = 0; i < provable_h_values.size(); i++){
-		provable_h_values_s += to_string(provable_h_values[i]) + " ";
-		if(provable_h_values[i] > h_values[i]){
-			*conflict = false;
-			//toRefine->push_back(true);
-			provable_h_values_s += "r ";   
-		}
-		else{
-			//toRefine->push_back(false);
-			provable_h_values_s += "f ";
-		}
-	}
-	if(debug){
-		cout << provable_h_values_s << endl;
-		cout << "Refinment pathology: " << *conflict << endl;
-	}
-	prove_timer.stop();
-	//cout << "	BELLMAN FALSE" << endl;
-	
-	//TODO do I have to refine all abstractions to acheive  a convergence against h* ?
-	for(size_t i = 0; i < heuristic_functions.size(); i++){
-			toRefine->push_back(true);	
-	}
-	return false;
-}
 	
 bool AdditiveCartesianHeuristic::refine(State state, int* current_max_h, std::vector<bool> &toRefine){
 	refine_timer.resume();
