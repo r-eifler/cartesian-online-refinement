@@ -200,6 +200,7 @@ SearchStatus EagerSearch::step() {
 				total_refine_timer.stop();  
 			}
 			states_to_refine.clear();
+			refine_timer.reset();
 		}
     }
     //------------------------- ONLINE REFINEMENT ----------------------------------------
