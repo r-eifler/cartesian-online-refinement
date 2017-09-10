@@ -49,6 +49,7 @@ void DFSPruning::initialize() {
     //Stop Timer
 	total_refine_timer.reset();
     total_refine_timer.stop();
+	select_timer.reset();
     
     
     cout << "Conducting best first search"
@@ -355,15 +356,13 @@ pair<SearchNode, int> DFSPruning::fetch_next_node() {
 		if(!refine_online && last_key_removed[0]){
 			current_path.erase(current_path.end() - (current_path.size() - node.get_depth()), current_path.end());
 		}
-		
-		 if (node.is_closed())
-            continue;
-		
-		//cout << "Expanded node: " << node.get_state_id() << endl;		
-		//Refine the pruning heuristic such the state space area which did not lead to a better solution is pruned
-		if(refine_online){
+		else{
+			//Refine the pruning heuristic
 			refine(last_key_removed[0], node.get_depth(), s);
 		}
+		
+		if (node.is_closed())
+            continue;
 
 		//The value of the pruning heuristic could have changed since the node has been inserted in the open list 
 		//or a better solution could be found (-> also in offline version)
@@ -397,11 +396,25 @@ pair<SearchNode, int> DFSPruning::fetch_next_node() {
 }
 	
 void DFSPruning::refine(bool backtracked, int backtrack_depth, GlobalState expandedState){
+	
+	if(select_timer() < refinement_time){
+	//cout << "refinement selector " << statistics.get_expanded() % refinement_selector << " " << need_to_refine << endl;
+	//if(statistics.get_expanded() % refinement_selector != 0 && !need_to_refine){
+		current_path.erase(current_path.end() - (current_path.size() - backtrack_depth), current_path.end());
+		return;
+	}
 	total_refine_timer.resume();
 	
 	//Bellman refine is performed on evry expanded state
 	if(check_strategy == CheckStrategy::BELLMAN){
-		refine_bellman(expandedState);
+		bool refined = refine_bellman(expandedState);
+		if(refined){
+			select_timer.reset();	
+			need_to_refine = false;
+		}
+		else{
+			need_to_refine = true;	
+		}
 	}
 	
 	if(!backtracked ){
@@ -426,25 +439,32 @@ void DFSPruning::refine(bool backtracked, int backtrack_depth, GlobalState expan
 
 	//Bound refinemend is only performed on every expanded state
 	if(check_strategy == CheckStrategy::BOUND){
-		refine_bound(backtrackState);
+		bool refined = refine_bound(backtrackState);
+		if(refined){
+			select_timer.reset();
+			need_to_refine = false;
+		}
+		else{
+			need_to_refine = true;	
+		}
 	}
 	
 	total_refine_timer.stop();
 }
 	
-void DFSPruning::refine_bound(GlobalState backtrackedState){
+bool DFSPruning::refine_bound(GlobalState backtrackedState){
 	
 	if(upper_bound == EvaluationResult::INFTY){
-		return;	
+		return false;	
 	}
 
 	SearchNode backtracked_node = search_space.get_node(backtrackedState);
 	
 	//if the current node is contained in the current best solution it is not pruned
-	if(backtracked_node.get_solution()){ //|| statistics.get_expanded() % 1 != 0){
+	if(backtracked_node.get_solution()){
 		//cout << "Countained in current solution" << endl;
 		total_refine_timer.stop();
-		return;	
+		return false;	
 	}		
 
 	//cout << "------------------------- ONLINE REFINEMENT ----------------------------------------" << endl;
@@ -455,7 +475,7 @@ void DFSPruning::refine_bound(GlobalState backtrackedState){
 
 	if (state_h == infinity) {
 		total_refine_timer.stop();
-		return;
+		return false;
 	}
 	
 	 
@@ -463,7 +483,7 @@ void DFSPruning::refine_bound(GlobalState backtrackedState){
 	//cout << "Prune: " << backtracked_node.get_g() << " + " << state_h << " = " << (backtracked_node.get_g() + state_h) <<  " > " << upper_bound << endl; 	
 	if((backtracked_node.get_g() + state_h) > upper_bound){
 		total_refine_timer.stop();
-		return;	
+		return false;	
 	}
 	//upper_bound - backtracked_node.get_g() is the value the heuristic has to exceed such that the state can be pruned
 	//ONLINE REFINEMENT 
@@ -473,10 +493,11 @@ void DFSPruning::refine_bound(GlobalState backtrackedState){
 	num_refined_states++;
 	
 	total_refine_timer.stop();
-	//cout << "------------------------- ONLINE REFINEMENT END----------------------------------------" << endl;	
+	//cout << "------------------------- ONLINE REFINEMENT END----------------------------------------" << endl;
+	return true;
 }
 	
-void DFSPruning::refine_bellman(GlobalState expandedState){
+bool DFSPruning::refine_bellman(GlobalState expandedState){
 	//cout << "------------------------- ONLINE REFINEMENT ----------------------------------------" << endl;
 	
 	SearchNode expandedNode = search_space.get_node(expandedState);
@@ -487,14 +508,14 @@ void DFSPruning::refine_bellman(GlobalState expandedState){
 
 	if (state_h == infinity) {
 		total_refine_timer.stop();
-		return;
+		return false;
 	}
 	
 	
 	//cout << "Prune: " << expandedNode.get_g() << " + " << state_h << " = " << (expandedNode.get_g() + state_h) <<  " > " << upper_bound << endl; 	
 	if((expandedNode.get_g() + state_h) > upper_bound){
 		total_refine_timer.stop();
-		return;	
+		return false;	
 	}
 	
 	//Generate all succesor states 
@@ -516,6 +537,7 @@ void DFSPruning::refine_bellman(GlobalState expandedState){
 	
 	total_refine_timer.stop();
 	//cout << "------------------------- ONLINE REFINEMENT END----------------------------------------" << endl;
+	return refined;
 }
 
 void DFSPruning::reward_progress() {
@@ -602,7 +624,7 @@ static SearchEngine *_parse_dfs(OptionParser &parser) {
         "refinement_time",
         "only every refinement_times secondes a state is refined",
         "0",
-        Bounds("0", "60"));
+        Bounds("0", "1000"));
 	parser.add_option<int>(
         "collect_states",
         "TODO",

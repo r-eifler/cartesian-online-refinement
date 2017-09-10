@@ -70,6 +70,7 @@ class DFSPruning : public SearchEngine {
 	utils::Timer total_refine_timer;
 	utils::Timer print_timer;
 	utils::Timer refine_timer;
+	utils::Timer select_timer;
 	
 	int num_pruned_states = 0;
 	int num_refined_states = 0;
@@ -78,8 +79,8 @@ class DFSPruning : public SearchEngine {
 	
     std::pair<SearchNode, int> fetch_next_node();
 	void refine(bool backtracked, int backtrack_depth, GlobalState expandedState);
-	void refine_bound(GlobalState backtrackedState);
-	void refine_bellman(GlobalState expandedState);
+	bool refine_bound(GlobalState backtrackedState);
+	bool refine_bellman(GlobalState expandedState);
     void start_f_value_statistics(EvaluationContext &eval_context);
     void update_f_value_statistics(const SearchNode &node);
     void reward_progress();

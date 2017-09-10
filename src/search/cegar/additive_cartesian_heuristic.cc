@@ -281,17 +281,17 @@ bool AdditiveCartesianHeuristic::refine_check_bound(const GlobalState &global_st
 		refine_steps_total++;
 		//cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
 		//cout << "Bound: " << h_value << " <= " << bound << endl;
-		/*
-		if(refinement_steps == 10){
+		
+		if(refinement_steps == 100){
 			break;	
 		}
-		*/
+		
 	}
     	
 	if(h_value > bound){
 		num_reached_bound++;	
 	}
-
+	//cout << "--> Bound: " << h_value << " > " << bound << " steps: " << refinement_steps << endl;
    //cout << "--------------------------------------------------------------------------------" << endl;
    return true;
 }
