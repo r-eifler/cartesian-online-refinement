@@ -289,7 +289,8 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	bool still_refinable = true;
 	int refinement_steps = 0;
 	refined_states_total++;
-	while(!prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){
+	while(!prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){ // && refinement_steps >= max_iter){
+		//cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
 		//if not refinable merge 
 		if(!still_refinable){
 			merge_timer.resume();
@@ -303,8 +304,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 		}				
 		still_refinable = refine(state, &h_value, toRefine);
 		refinement_steps++;
-		refine_steps_total++;
-		//cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
+		refine_steps_total++;		
 	}
     	
    //cout << "--------------------------------------------------------------------------------" << endl;
@@ -633,7 +633,7 @@ static Heuristic *_parse(OptionParser &parser) {
     parser.add_option<int>(
         "max_iter",
         "maximum number of iterations of the refinement algorithm per state",
-        "1",
+        "infinity",
         Bounds("1", "infinity"));
 	parser.add_option<int>(
         "update_h_values",
@@ -658,12 +658,12 @@ static Heuristic *_parse(OptionParser &parser) {
         "true");
 	parser.add_option<int>(
         "threshold",
-        "TODO",
+        "threshold which the local error has to exceed to be refined",
         "0",
         Bounds("-1", "100"));
 	parser.add_option<bool>(
         "local_minimum",
-        "TODO",
+        "test of local minimum instead of bellman",
         "false");
 	
 	vector<string> refine_strategies;
@@ -678,7 +678,7 @@ static Heuristic *_parse(OptionParser &parser) {
 	merge_strategies.push_back("COMPATIBLE_PLANS");
 	merge_strategies.push_back("SMALLEST");
 	parser.add_enum_option(
-        "merge_strategy", merge_strategies, "TODO", "SMALLEST");
+        "merge_strategy", merge_strategies, "selection strategy to decide which abstractions are merged", "SMALLEST");
 		
 	//Different Order selection strategies
 	vector<string> order_strategies;
@@ -691,6 +691,7 @@ static Heuristic *_parse(OptionParser &parser) {
     order_strategies.push_back("ORDER_DESC");
 	order_strategies.push_back("ORDER_ORG_ASC");
     order_strategies.push_back("ORDER_ORG_DESC");
+	order_strategies.push_back("HILL_CLIMB");
     parser.add_enum_option(
         "order", order_strategies, "scp order strategy", "ORDER_ORG_ASC");
 	

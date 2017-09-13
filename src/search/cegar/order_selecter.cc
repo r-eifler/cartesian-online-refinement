@@ -11,7 +11,6 @@ OrderSelecter::OrderSelecter(CostOrder co, CostSaturation* cs, utils::RandomNumb
 	orderType(co),
 	cost_saturation(cs),
 	rng(r){
-
 	timer.stop();
 }
 
@@ -21,7 +20,6 @@ void OrderSelecter::set_heuristic_functions(std::vector<CartesianHeuristicFuncti
 
 	
 std::vector<int> OrderSelecter::compute(State state, int maxOrderId, std::vector<int> max_order, int start_value, std::vector<bool> toRefine, AdditiveCartesianHeuristic* heuristic){
-	
 	switch (orderType){
 		case CostOrder::SHUFFLE : 
 			return compute_new_order_random(max_order);
@@ -35,14 +33,16 @@ std::vector<int> OrderSelecter::compute(State state, int maxOrderId, std::vector
 			return compute_new_order_random_check(state, max_order, start_value, heuristic);
 		case CostOrder::ORDER_ASC :
 			return compute_order_heuristic_rev(state, maxOrderId, heuristic);
-		case CostOrder::ORDER_DESC :	
+		case CostOrder::ORDER_DESC :
 			return compute_order_heuristic(state, maxOrderId, heuristic);
-		case CostOrder::ORDER_ORG_ASC:
+		case CostOrder::ORDER_ORG_ASC :
 			return compute_order_org_heuristic_rev(state, heuristic);
-		case CostOrder::ORDER_ORG_DESC:
+		case CostOrder::ORDER_ORG_DESC :
 			return compute_order_org_heuristic(state, heuristic);
+		case CostOrder::HILL_CLIMB :
+			return compute_hill_climb(state, max_order, start_value, heuristic);
 	}
-	
+	cout << "no order" << endl;
 	return max_order;
 }
 	
@@ -276,6 +276,35 @@ std::vector<int> OrderSelecter::compute_order_org_heuristic_rev(State state, Add
     	
     new_order.insert( new_order.end(), sat_abs.begin(), sat_abs.end() );
 	return new_order;
+}
+	
+std::vector<int> OrderSelecter::compute_hill_climb(State state, std::vector<int> max_order, int start_value, AdditiveCartesianHeuristic* heuristic){
+	timer.resume();
+	vector<int> current_order(max_order);
+	int new_value = 0;
+	//swap the ith abstraction in the order with any other abstraction behinde it
+	int tries = 0;
+	while(true){
+		int p1 = (*rng)(current_order.size() - 1);
+		int p2 = (*rng)(current_order.size() - 1);
+		if(p1 == p2){
+			continue;	
+		}
+		
+		iter_swap(current_order.begin() + p1, current_order.begin() + p2);
+		cost_saturation->recompute_cost_partitioning(current_order);
+		new_value = heuristic->compute_current_order_heuristic(state);
+		//cout << "Hill climb old: " << start_value << " new: " << new_value << endl;
+		tries++;
+		
+		if(new_value < start_value || tries >= 100){
+			break;	
+		}
+		start_value = new_value;
+	}
+	
+	timer.stop();
+	return current_order;
 }
 
 void OrderSelecter::print_statistics(){

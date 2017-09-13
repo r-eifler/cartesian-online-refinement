@@ -269,6 +269,7 @@ int Merge::select_compatible_plan(std::vector<bool> toRefine, CartesianHeuristic
 }
 
 bool Merge::merge(vector<bool> toRefine){
+	//cout << "+++++++++++++++++ MERGE ++++++++++++++++" << endl;
 	//return false;
 	if(max_size_reached){
 		return false;	

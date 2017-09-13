@@ -286,11 +286,11 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
     if(!(utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0)){
      return 0;   
     }
+	
     refinement_calls++;
     int refined_states = 0;
     refine_timer.resume();
 	while((utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter > 0)){
-		
         AbstractState *start_state = NULL;
 		if(states.size() == 1){
 			start_state = *(states.begin());	
@@ -315,14 +315,21 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
         AbstractState *abstract_state = flaw->current_abstract_state;
         vector<Split> splits = flaw->get_possible_splits();
         if(splits.empty()){
-           // cout << "Split empty" << endl;
+            //cout << "Split empty" << endl;
             refine_timer.stop();
             refined = refined_states > 0;
             return refined_states;
         }
         
         const Split &split = split_selector.pick_split(*abstract_state, splits, rng);
-		
+		/*
+		cout << *abstract_state << endl;
+		cout << "Split: " << split.var_id << " = {" ;
+		for(int v : split.values){
+				cout << v << " ";
+		}
+		cout << "}" << endl;
+		*/
 		bool split_useful = split_usefull(abstract_state, split.var_id, split.values, unused_cost);
 		if(split_useful){	
 			usefull_splits++;	 

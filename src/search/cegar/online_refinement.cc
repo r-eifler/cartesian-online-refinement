@@ -35,6 +35,7 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 	}
 	assert(toRefine.size() == heuristic_functions->size());
 	for(size_t i = 0; i < toRefine.size(); i++){
+		//cout << "-------------------------------------------" << endl;
 		//cout << "Refine: " << (*heuristic_functions)[i]->id << " toRefine " << toRefine[i] << endl;
 		if(toRefine[i]){  		
 			

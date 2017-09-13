@@ -21,7 +21,8 @@ enum class CostOrder {
     ORDER_ASC,
     ORDER_DESC,
 	ORDER_ORG_ASC,
-	ORDER_ORG_DESC
+	ORDER_ORG_DESC,
+	HILL_CLIMB,
 };
 
 /*
@@ -56,7 +57,7 @@ protected:
 	std::vector<int> compute_order_org_heuristic(State state, AdditiveCartesianHeuristic* heuristic);
 	std::vector<int> compute_order_org_heuristic_rev(State state, AdditiveCartesianHeuristic* heuristic);
 	
-	
+	std::vector<int> compute_hill_climb(State state, std::vector<int> max_order, int start_value, AdditiveCartesianHeuristic* heuristic);
 
 };
 
