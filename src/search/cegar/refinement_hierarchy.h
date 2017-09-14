@@ -195,17 +195,20 @@ public:
 	
 	std::pair<int, std::vector<int>> get_wanted_vars(AbstractState* state, Node** lc, Node** rc){
 		std::pair<int, std::vector<int>> wanted;
+		//leaf reached 
 		if(! is_split()){
 			return wanted;	
 		}
 		//std::cout << "State: " << *state << std::endl;
 		//std::cout << "var " << var << " = " << value << std::endl;
+		//if the state still cantaines more than the value which needs to split
 		if(state->contains(var, value) && state->count(var) > 1){
-			//std::cout << "---> OK" << std::endl;
+			//collect all values of the left childs which have the same right child as the current node
 			std::vector<int> values;
 			values.push_back(value);
 			Node * cn = left_child;
 			while(cn->right_child == right_child){
+				//if a value is not contained in the state it can not bee split anymore 
 				if(state->contains(var, cn->value)){
 					values.push_back(cn->value);
 				}
@@ -224,11 +227,14 @@ public:
 			*/
 			wanted = make_pair(var, values);		
 			*lc = cn;
-			*rc = right_child;			
+			*rc = right_child;	
+			
+			return wanted;
 		}
 		if(state->contains(var, value) && state->count(var) == 1){
 			return right_child->get_wanted_vars(state, lc, rc);			
 		}
+		//if the value is not contained in the state the next split is defined by the left child
 		if(!state->contains(var, value)){
 			return left_child->get_wanted_vars(state, lc, rc);			
 		}

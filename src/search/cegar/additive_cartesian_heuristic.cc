@@ -294,7 +294,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 		//if not refinable merge 
 		if(!still_refinable){
 			merge_timer.resume();
-			if(heuristic_functions.size() == 1 || !merge.merge(toRefine)){
+			if(!use_merge || heuristic_functions.size() == 1 || !merge.merge(toRefine)){
 				merge_timer.stop();
 				break;	
 			}
