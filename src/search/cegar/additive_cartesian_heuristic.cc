@@ -693,7 +693,7 @@ static Heuristic *_parse(OptionParser &parser) {
     order_strategies.push_back("ORDER_ORG_DESC");
 	order_strategies.push_back("HILL_CLIMB");
     parser.add_enum_option(
-        "order", order_strategies, "scp order strategy", "ORDER_ORG_ASC");
+        "order", order_strategies, "scp order strategy", "ORDER_ORG_DESC");
 	
 
     
