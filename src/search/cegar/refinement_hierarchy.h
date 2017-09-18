@@ -206,7 +206,10 @@ public:
 			values.push_back(value);
 			Node * cn = left_child;
 			while(cn->right_child == right_child){
-				values.push_back(cn->value);
+				//if a value is not contained in the state it can not bee split anymore 
+				if(state->contains(var, cn->value)){
+					values.push_back(cn->value);
+				}
 				cn = cn->left_child;
 			}
 			//if the state only containes the wanted vars a split is not neccesary

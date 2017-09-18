@@ -25,7 +25,8 @@ enum class Strategy {
 	
 enum class CheckStrategy {
 	BOUND,
-	BELLMAN
+	BELLMAN,
+	BOUND_AND_BELLMAN
 };
 	
 
@@ -99,7 +100,7 @@ public:
 	
 	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, int bound) override;
 	
-	bool refine_check_bound(const GlobalState &global_state, int bound);
+	bool refine_check_bound(const GlobalState &global_state, int bound, std::vector<std::pair<GlobalState, int>> succStates);
 	bool refine_check_bellman(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates);
 	
 	std::vector<int> compute_original_individual_heuristics(State state);

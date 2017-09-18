@@ -27,7 +27,8 @@ namespace dfs_pruning {
 	
 enum class CheckStrategy {
 	BOUND,
-	BELLMAN
+	BELLMAN,
+	BOUND_AND_BELLMAN
 };	
 	
 class DFSPruning : public SearchEngine {
@@ -79,7 +80,7 @@ class DFSPruning : public SearchEngine {
 	
     std::pair<SearchNode, int> fetch_next_node();
 	void refine(bool backtracked, int backtrack_depth, GlobalState expandedState);
-	bool refine_bound(GlobalState backtrackedState);
+	bool refine_bound(GlobalState backtrackedState, GlobalState expandedState);
 	bool refine_bellman(GlobalState expandedState);
     void start_f_value_statistics(EvaluationContext &eval_context);
     void update_f_value_statistics(const SearchNode &node);

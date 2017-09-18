@@ -438,8 +438,8 @@ void DFSPruning::refine(bool backtracked, int backtrack_depth, GlobalState expan
 	current_path.erase(current_path.end());
 
 	//Bound refinemend is only performed on every expanded state
-	if(check_strategy == CheckStrategy::BOUND){
-		bool refined = refine_bound(backtrackState);
+	if(check_strategy == CheckStrategy::BOUND || check_strategy == CheckStrategy::BOUND_AND_BELLMAN){
+		bool refined = refine_bound(backtrackState, expandedState);
 		if(refined){
 			select_timer.reset();
 			need_to_refine = false;
@@ -452,7 +452,7 @@ void DFSPruning::refine(bool backtracked, int backtrack_depth, GlobalState expan
 	total_refine_timer.stop();
 }
 	
-bool DFSPruning::refine_bound(GlobalState backtrackedState){
+bool DFSPruning::refine_bound(GlobalState backtrackedState, GlobalState expandedState){
 	
 	if(upper_bound == EvaluationResult::INFTY){
 		return false;	
@@ -486,10 +486,25 @@ bool DFSPruning::refine_bound(GlobalState backtrackedState){
 		return false;	
 	}
 	//upper_bound - backtracked_node.get_g() is the value the heuristic has to exceed such that the state can be pruned
+	
+	//Generate all succesor states 
+	vector<pair<GlobalState, int>> succStates;
+	if(check_strategy == CheckStrategy::BOUND_AND_BELLMAN){
+		vector<const GlobalOperator *> applicable_ops;
+		g_successor_generator->generate_applicable_ops(expandedState, applicable_ops);
+		vector<pair<GlobalState, int>> succStates;
+
+		for (const GlobalOperator *op : applicable_ops) {
+			GlobalState succ_state = state_registry.get_successor_state(expandedState, *op);
+			succStates.push_back(make_pair(succ_state, op->get_cost()));
+		}
+	}
+	
+	
 	//ONLINE REFINEMENT 
 	Heuristic* h = (Heuristic*) pruning_heuristic;
-	vector<pair<GlobalState, int>> succStatesEmpty;
-	h->online_Refine(backtrackedState, succStatesEmpty, upper_bound - backtracked_node.get_g());
+	
+	h->online_Refine(backtrackedState, succStates, upper_bound - backtracked_node.get_g());
 	num_refined_states++;
 	
 	total_refine_timer.stop();
@@ -635,6 +650,7 @@ static SearchEngine *_parse_dfs(OptionParser &parser) {
 	vector<string> check_strategies;
 	check_strategies.push_back("BOUND");
 	check_strategies.push_back("BELLMAN");
+	check_strategies.push_back("BOUND_AND_BELLMAN");
 	parser.add_enum_option(
 		"check", check_strategies, "refinement strategy check", "BOUND");
 
