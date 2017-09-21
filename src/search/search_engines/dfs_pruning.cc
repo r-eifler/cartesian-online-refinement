@@ -356,7 +356,7 @@ pair<SearchNode, int> DFSPruning::fetch_next_node() {
 		if(!refine_online && last_key_removed[0]){
 			current_path.erase(current_path.end() - (current_path.size() - node.get_depth()), current_path.end());
 		}
-		else{
+		if(refine_online){
 			//Refine the pruning heuristic
 			refine(last_key_removed[0], node.get_depth(), s);
 		}
@@ -492,7 +492,6 @@ bool DFSPruning::refine_bound(GlobalState backtrackedState, GlobalState expanded
 	if(check_strategy == CheckStrategy::BOUND_AND_BELLMAN){
 		vector<const GlobalOperator *> applicable_ops;
 		g_successor_generator->generate_applicable_ops(expandedState, applicable_ops);
-		vector<pair<GlobalState, int>> succStates;
 
 		for (const GlobalOperator *op : applicable_ops) {
 			GlobalState succ_state = state_registry.get_successor_state(expandedState, *op);
@@ -503,7 +502,6 @@ bool DFSPruning::refine_bound(GlobalState backtrackedState, GlobalState expanded
 	
 	//ONLINE REFINEMENT 
 	Heuristic* h = (Heuristic*) pruning_heuristic;
-	
 	h->online_Refine(backtrackedState, succStates, upper_bound - backtracked_node.get_g());
 	num_refined_states++;
 	

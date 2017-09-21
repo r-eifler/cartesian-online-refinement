@@ -366,30 +366,24 @@ bool AdditiveCartesianHeuristic::prove_bellman_sum(GlobalState global_state, std
 	int infinity = EvaluationResult::INFTY;
 	//heuristc value of currently expanded state
 	*current_h = compute_heuristic(global_state);
-
 	//Compute provable h values for all successor states   
 	int provable_h_value = infinity;
-	
+
 	for (pair<GlobalState, int> succ : succStates) {
 		int succ_h_value = compute_heuristic(succ.first);
-
 		provable_h_value = min(
 				provable_h_value,
 				(succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
 		
-		if(provable_h_value < *current_h){
+		if(provable_h_value <= *current_h){
 			prove_timer.stop();
 			//cout << "BEllMAN OK" << endl;
 			return true;
 		}
 	}
-
-	//Check if sum could be refined
-	bool refine_sum = provable_h_value > *current_h ? true : false;
-     
 	prove_timer.stop();
-	//cout << "BEllMAN "<< !refine_sum << endl;
-	return !refine_sum;
+	//cout << "BEllMAN FAIL" << endl;
+	return false;
 }
 	
 
