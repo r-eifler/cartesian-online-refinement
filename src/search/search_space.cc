@@ -171,6 +171,10 @@ void SearchSpace::dump() const {
     }
 }
 
+void SearchSpace::reset(){
+	search_node_infos.reset();
+}
+
 void SearchSpace::print_statistics() const {
     cout << "Number of registered states: "
          << state_registry.size() << endl;
