@@ -51,6 +51,16 @@ SearchStatus SearchEngine::get_status() const {
     return status;
 }
 
+void SearchEngine::set_online_phase(bool online){
+	online_phase = online;	
+}
+
+void SearchEngine::reset(){
+	//cout << "reset Search Engine" << endl;
+	statistics = SearchStatistics();
+	search_space.reset();	
+}
+
 const SearchEngine::Plan &SearchEngine::get_plan() const {
     assert(solution_found);
     return plan;
@@ -72,6 +82,18 @@ void SearchEngine::search() {
             break;
         }
     }
+	
+	online_phase = false;
+	status = IN_PROGRESS;
+	while (status == IN_PROGRESS) {
+        status = step();
+        if (timer.is_expired()) {
+            cout << "Time limit reached. Abort search." << endl;
+            status = TIMEOUT;
+            break;
+        }
+    }
+	
     // TODO: Revise when and which search times are logged.
     cout << "Actual search time: " << timer
          << " [t=" << utils::g_timer << "]" << endl;

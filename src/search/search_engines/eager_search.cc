@@ -144,8 +144,51 @@ SearchStatus EagerSearch::step() {
     SearchNode node = n.first;
 
     GlobalState s = node.get_state();
-    if (check_goal_and_set_plan(s))
-        return SOLVED;
+	if(!online_phase){		
+		if (check_goal_and_set_plan(s)){
+			return SOLVED;
+		}
+	}
+    else{
+		//assert(heuristics.size() == 1);  // HACK
+		//Heuristic *heuristic = heuristics[0];  // HACK
+		if(check_goal_and_set_plan(s)){
+		//if(heuristic->state_limit_reached() || check_goal_and_set_plan(s)){
+			// Note: we consider the initial state as reached by a preferred
+			// operator.
+			cout << "State limit in online phase reached or solution found" << endl;
+			cout << "----------------- Offline Phase ---------------------" << endl;
+			reset();
+			const GlobalState &initial_state = state_registry.get_initial_state();
+			EvaluationContext eval_context(initial_state, 0, true, &statistics);
+
+			statistics.inc_evaluated_states();
+			
+			//reset openlist
+			std::unique_ptr<StateOpenList> new_open_list = open_list_factory->create_state_open_list();
+			open_list.reset(new_open_list.release());
+
+			if (open_list->is_dead_end(eval_context)) {
+				cout << "Initial state is a dead end." << endl;
+			} else {
+				if (search_progress.check_progress(eval_context))
+					print_checkpoint_line(0);
+				start_f_value_statistics(eval_context);
+				SearchNode node = search_space.get_node(initial_state);
+				node.open_initial();
+
+				ScalarEvaluator *heuristic = heuristics[0];
+				int h = eval_context.get_heuristic_value_or_infinity(heuristic);
+				//cout << "h=" << h << endl;
+				node.set_h_value(h);
+				open_list->insert(eval_context, initial_state.get_id());
+			}
+
+    		print_initial_h_values(eval_context);			
+			
+			return STATELIMIT;	
+		}
+	}
 
     vector<const GlobalOperator *> applicable_ops;
     g_successor_generator->generate_applicable_ops(s, applicable_ops);
@@ -154,7 +197,7 @@ SearchStatus EagerSearch::step() {
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
-    if(refine_online && ((wait_time && refine_timer() > refinement_waiting) || 
+    if(online_phase && refine_online && ((wait_time && refine_timer() > refinement_waiting) || 
 						 (!wait_time && statistics.get_expanded() % (int) refinement_waiting == 0) || 
 						 need_to_refine)){ 
 		refine_timer.reset();

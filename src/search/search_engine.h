@@ -22,7 +22,7 @@ template <typename T>
 class OrderedSet;
 }
 
-enum SearchStatus {IN_PROGRESS, TIMEOUT, FAILED, SOLVED};
+enum SearchStatus {IN_PROGRESS, TIMEOUT, FAILED, SOLVED, STATELIMIT};
 
 class SearchEngine {
 public:
@@ -39,6 +39,7 @@ protected:
     int bound;
     OperatorCost cost_type;
     double max_time;
+	bool online_phase;
 
     virtual void initialize() {}
     virtual SearchStatus step() = 0;
@@ -59,6 +60,8 @@ public:
     void set_bound(int b) {bound = b; }
     int get_bound() {return bound; }
     static void add_options_to_parser(options::OptionParser &parser);
+	void set_online_phase(bool online);
+	void reset();
 };
 
 /*
