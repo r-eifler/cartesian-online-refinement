@@ -176,6 +176,11 @@ public:
             delete it->second;
         }
     }
+	
+	void reset(){
+        cached_registry = NULL;
+        entries_by_registry.clear();
+    }
 
     Entry &operator[](const GlobalState &state) {
         const StateRegistry *registry = &state.get_registry();

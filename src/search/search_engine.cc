@@ -82,19 +82,21 @@ void SearchEngine::search() {
             break;
         }
     }
-	
+	cout << "Search time offline: " << timer << endl;
+	utils::CountdownTimer timer2(max_time);
 	online_phase = false;
 	status = IN_PROGRESS;
 	while (status == IN_PROGRESS) {
         status = step();
-        if (timer.is_expired()) {
+        if (timer2.is_expired()) {
             cout << "Time limit reached. Abort search." << endl;
             status = TIMEOUT;
             break;
         }
     }
-	
+	cout << "------------------------------------------------" << endl;
     // TODO: Revise when and which search times are logged.
+	cout << "Search time online: " << timer2 << endl;
     cout << "Actual search time: " << timer
          << " [t=" << utils::g_timer << "]" << endl;
 }
