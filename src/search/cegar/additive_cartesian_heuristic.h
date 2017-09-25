@@ -102,6 +102,7 @@ public:
 	
 	bool refine_check_bound(const GlobalState &global_state, int bound, std::vector<std::pair<GlobalState, int>> succStates);
 	bool refine_check_bellman(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates);
+	bool refine_check_until_improve(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates);
 	
 	std::vector<int> compute_original_individual_heuristics(State state);
 	
