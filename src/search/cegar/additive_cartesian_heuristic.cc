@@ -292,7 +292,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 		case Strategy::ONLY_REFINE:
 			return refine(state, &h_value, toRefine);
 		case Strategy::ONLY_ORDER:
-			reorder(state, &h_value, toRefine);			
+			return reorder(state, &h_value, toRefine);			
 	}
 	
    //cout << "--------------------------------------------------------------------------------" << endl;
