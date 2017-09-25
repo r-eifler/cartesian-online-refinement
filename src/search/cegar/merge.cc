@@ -296,13 +296,13 @@ bool Merge::merge(vector<bool> toRefine){
 		
 	}
 		
-	if(max_size == -1 ){ //|| max_size > max_merge_size){
+	if(max_size == -1 || max_size > max_merge_size){
 		//cout << "MAX SIZE MERGE: " << max_size << " < " << max_merge_size << endl;
-		/*
+		
 		if(max_size > max_merge_size){
 			max_size_reached = true;	
 		}
-		*/
+		
 		merge_timer.stop();
 		return false;
 	}
