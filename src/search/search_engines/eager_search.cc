@@ -390,7 +390,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 			}
         }
         open_list_timer.stop();
-        
+        /*
         if(print_timer() > 10){
             cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
             cout << "Num reeval states " << num_reeval_states  << endl;
@@ -398,7 +398,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             print_statistics();
 			print_timer.reset();
         }
-		
+		*/
 
         if (use_multi_path_dependence) {
             assert(last_key_removed.size() == 2);
