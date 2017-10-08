@@ -61,6 +61,10 @@ void SearchEngine::reset(){
 	search_space.reset();	
 }
 
+void SearchEngine::reset_search(){
+	cout << "reset Search Engine" << endl;	
+}
+
 const SearchEngine::Plan &SearchEngine::get_plan() const {
     assert(solution_found);
     return plan;
@@ -82,6 +86,7 @@ void SearchEngine::search() {
             break;
         }
     }
+	reset_search();
 	cout << "Search time offline: " << timer << endl;
 	utils::CountdownTimer timer2(max_time);
 	online_phase = false;
@@ -97,7 +102,7 @@ void SearchEngine::search() {
 	cout << "------------------------------------------------" << endl;
     // TODO: Revise when and which search times are logged.
 	cout << "Search time online: " << timer2 << endl;
-    cout << "Actual search time: " << timer
+    cout << "Search time offline: " << timer
          << " [t=" << utils::g_timer << "]" << endl;
 }
 

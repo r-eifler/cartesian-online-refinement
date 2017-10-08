@@ -62,6 +62,7 @@ public:
     static void add_options_to_parser(options::OptionParser &parser);
 	void set_online_phase(bool online);
 	void reset();
+	virtual void reset_search();
 };
 
 /*
