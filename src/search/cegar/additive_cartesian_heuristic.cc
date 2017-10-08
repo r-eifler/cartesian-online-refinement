@@ -80,7 +80,6 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
           merge.set_heuristic_functions(&heuristic_functions);
           
           
-          
      usefullnes_of_order.push_back(0);
      lifetime_of_order.push_back(0);
      for(size_t i = 0; i < heuristic_functions.size(); i++){
@@ -271,13 +270,6 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
        return true; 
     }
 	
-
-	//First find a new order
-	bool order_improved = reorder(state, &h_value, toRefine);
-	if(order_improved){
-		return true;	
-	}
-	
 	switch (strategy){
 		case Strategy::ORDER_REFINE : 
 			if(reorder(state, &h_value, toRefine)){
@@ -435,7 +427,6 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 }
 	
 bool AdditiveCartesianHeuristic::refine(State state, int* current_max_h, std::vector<bool> &toRefine){
-	
 	bool still_refinable = true;
 	int refinement_steps = 0;
 	refined_states_total++;
