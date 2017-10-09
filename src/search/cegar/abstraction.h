@@ -179,7 +179,7 @@ public:
 	void print_end_statistics();
       
     //Onlie refinement
-    Node *get_node(const State &state) const;
+    Node *get_node(const State &state);
     const TaskProxy* get_Task();
     int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine, std::vector<std::vector<int>> *unused_cost);
 	//checks if the state satisfis the abstraction (not equals to h(s) = 0)

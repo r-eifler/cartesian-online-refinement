@@ -39,7 +39,9 @@ protected:
     int bound;
     OperatorCost cost_type;
     double max_time;
+	double max_online_time;
 	bool online_phase;
+	bool learn_online;
 
     virtual void initialize() {}
     virtual SearchStatus step() = 0;

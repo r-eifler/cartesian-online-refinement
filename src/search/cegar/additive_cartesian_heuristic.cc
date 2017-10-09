@@ -225,6 +225,12 @@ vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics(const Glob
     assert(sum_h >= 0);
     return values;
 }
+	
+void AdditiveCartesianHeuristic::reset_heuristic(){
+	cout << "----------------- reset heuristic ---------------------" << endl;
+	cost_saturation->reset_abs();
+	heuristic_functions = cost_saturation->generate_heuristic_functions(cost_saturation->get_abs_task());
+}
     
 void AdditiveCartesianHeuristic::print_order(){
     for (const CartesianHeuristicFunction *function : heuristic_functions) {
@@ -234,8 +240,8 @@ void AdditiveCartesianHeuristic::print_order(){
 }
     
 bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
-   //cout << "--------------------------------------------------------------------------------" << endl;
-       
+   //cout << "-------------------------------------REFINE-------------------------------------------" << endl;
+	
     State state = convert_global_state(global_state);
 	
     
@@ -504,6 +510,7 @@ void AdditiveCartesianHeuristic::print_statistics(){
         cout << endl << "Times: " << endl;
         cout << "Heuristic evaluation time: " << update_timer << endl;
         cout << "Get values time: " << values_timer << endl;
+		cout << "Average evaluation time: " << (update_timer() / usefullnes_of_order[0]) << endl;
     	cout << endl;
 	
 		cout << "---------------- BELLMAN ----------------- " << endl;
@@ -512,10 +519,12 @@ void AdditiveCartesianHeuristic::print_statistics(){
 		cout << "States not satisfied bellman equation: " << bellman_not_sat << endl;
 		cout << endl;
 	
+		/*
 		orderSelecter->print_statistics();
 		cout << "Reorder time: " << cost_timer << endl;
 		cout << "Improved States order: " << improved_order << endl;
 		cout << endl;
+		*/
 	
 		onlineRefinement.print_statistics();
 		cout << "Refine time: " << refine_timer << endl;
@@ -523,6 +532,7 @@ void AdditiveCartesianHeuristic::print_statistics(){
 		cout << "Average number of refine steps per state: " << (refine_steps_total / (double) refined_states_total) << endl;
 		cout << endl;
 	
+		/*
         merge.print_statistics();
 		cout << "Merge time: " << merge_timer << endl;
 		cout << "Improved States merge: " << improved_merge << endl;	
@@ -555,7 +565,7 @@ void AdditiveCartesianHeuristic::print_statistics(){
     	
         cout << endl;
         cost_saturation->print_statistics_end();
-		
+		*/
 }
 
 static Heuristic *_parse(OptionParser &parser) {

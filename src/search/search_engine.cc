@@ -27,7 +27,9 @@ SearchEngine::SearchEngine(const Options &opts)
       search_space(state_registry,
                    static_cast<OperatorCost>(opts.get_enum("cost_type"))),
       cost_type(static_cast<OperatorCost>(opts.get_enum("cost_type"))),
-      max_time(opts.get<double>("max_time")) {
+      max_time(opts.get<double>("max_time")),
+	  max_online_time(opts.get<double>("max_online_time")),
+	  learn_online(opts.get<bool>("learn_online")){
     if (opts.get<int>("bound") < 0) {
         cerr << "error: negative cost bound " << opts.get<int>("bound") << endl;
         utils::exit_with(ExitCode::INPUT_ERROR);
@@ -77,7 +79,8 @@ void SearchEngine::set_plan(const Plan &p) {
 
 void SearchEngine::search() {
     initialize();
-    utils::CountdownTimer timer(max_time);
+	online_phase = true;
+    utils::CountdownTimer timer(max_online_time);
     while (status == IN_PROGRESS) {
         status = step();
         if (timer.is_expired()) {
@@ -86,8 +89,8 @@ void SearchEngine::search() {
             break;
         }
     }
+	cout << "Search time online: " << timer << endl;
 	reset_search();
-	cout << "Search time offline: " << timer << endl;
 	utils::CountdownTimer timer2(max_time);
 	online_phase = false;
 	status = IN_PROGRESS;
@@ -101,9 +104,8 @@ void SearchEngine::search() {
     }
 	cout << "------------------------------------------------" << endl;
     // TODO: Revise when and which search times are logged.
-	cout << "Search time online: " << timer2 << endl;
-    cout << "Search time offline: " << timer
-         << " [t=" << utils::g_timer << "]" << endl;
+	cout << "Search time offline: " << timer2
+    << " [t=" << utils::g_timer << "]" << endl;
 }
 
 bool SearchEngine::check_goal_and_set_plan(const GlobalState &state) {
@@ -141,6 +143,14 @@ void SearchEngine::add_options_to_parser(OptionParser &parser) {
         "experiments. Timed-out searches are treated as failed searches, "
         "just like incomplete search algorithms that exhaust their search space.",
         "infinity");
+	parser.add_option<double>(
+		"max_online_time",
+		"TODO",
+		"infinity");
+	parser.add_option<bool>(
+		"learn_online",
+		"TODO",
+		"true");
 }
 
 void print_initial_h_values(const EvaluationContext &eval_context) {

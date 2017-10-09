@@ -54,6 +54,9 @@ void Heuristic::change_to_order(int id){
 	cout << "Change to order: " << id ;
 }
 
+void Heuristic::reset_heuristic(){
+}
+
 bool Heuristic::notify_state_transition(
     const GlobalState & /*parent_state*/,
     const GlobalOperator & /*op*/,

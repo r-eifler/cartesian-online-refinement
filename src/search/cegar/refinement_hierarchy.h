@@ -2,12 +2,14 @@
 #define CEGAR_REFINEMENT_HIERARCHY_H
 
 #include "abstract_state.h"  //new
+#include "../utils/timer.h"
 
 #include <cassert>
 #include <memory>
 #include <utility>
 #include <vector>
 #include <iostream>
+#include <vector>
 
 
 class State;
@@ -29,6 +31,15 @@ class Node;
 */
 class RefinementHierarchy {
     std::unique_ptr<Node> root;
+	
+	std:vector<Node> nodes;
+	double eval = 0;
+	int depth = 0;
+	
+	std::vector<int> depth_dest;
+	
+	utils::Timer eval_timer;
+	utils::Timer eval_timer_once;
 
 public:
     RefinementHierarchy();
@@ -38,13 +49,14 @@ public:
         : root(std::move(other.root)) {
     }
 
-    Node *get_node(const State &state) const;
+    Node *get_node(const State &state);
 
     Node *get_root() const {
         return root.get();
     }
 	
 	std::vector<std::pair<int, std::vector<int>>> get_split_vars(AbstractState* state);
+	void print_average_depth();
 };
 
 
@@ -156,6 +168,7 @@ public:
     AbstractState *get_AbstractState(){
       return  abstract_state;
     }
+	
 	
 	void get_split_vars(AbstractState* state, std::vector<std::pair<int, std::vector<int>>>* splits){
 		//std::cout << "..................................." << std::endl;

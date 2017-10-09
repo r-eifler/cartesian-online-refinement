@@ -23,14 +23,6 @@ Node::~Node() {
 }
 
 pair<Node *, Node *> Node::split(int var, const vector<int> &values) {
-	/*
-	cout << "Valus:";
-	for(int v : values){
-		cout << v << " ";	
-	}
-	cout << endl;
-	*/
-	//assert(values.size() == 1);
     Node *helper = this;
     right_child = new Node();
     for (int value : values) {
@@ -56,14 +48,43 @@ Node *Node::get_child(int value) const {
 
 RefinementHierarchy::RefinementHierarchy()
     : root(new Node()) {
+	eval_timer.reset();
+	eval_timer.stop();
+		
+	for(int i = 0; i < 100; i++){
+		depth_dest.push_back(0);	
+	}
+}
+	
+void RefinementHierarchy::print_average_depth(){
+		cout << "RH average depth: " << (depth / eval) << std::endl;
+		cout << "eval time: " << eval_timer << std::endl;
+		cout << "average EVAL time: " << (eval_timer() / eval) << std::endl;
+	
+		cout << "depth: ";
+		for(int d : depth_dest){
+			cout << d << " ";
+		}
+		cout << std::endl;
 }
 
-Node *RefinementHierarchy::get_node(const State &state) const {
+Node *RefinementHierarchy::get_node(const State &state){
     assert(root);
+	eval++;
+	int d = 0;
+	eval_timer.resume();
+	eval_timer_once.reset();
+	eval_timer_once.resume();
     Node *current = root.get();
     while (current->is_split()) {
         current = current->get_child(state[current->get_var()].get_value());
+		depth++;
+		d++;
     }
+	eval_timer_once.stop();
+	eval_timer.stop();
+	depth_dest[d]++;
+	//cout << d << " --> " << eval_timer_once() << endl;
     return current;
 }
 	

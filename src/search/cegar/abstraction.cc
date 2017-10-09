@@ -116,13 +116,13 @@ Abstraction::Abstraction(
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
     */
        
-          
+     /*     
      cout << "+++++++++++++++++++ Goals ++++++++++++++++++" << endl;
      GoalsProxy goals = task_proxy.get_goals();
      for(uint i = 0; i < goals.size(); i++){
 		cout << goals[i].get_variable().get_name() <<  " = " << goals[i].get_value() << endl;	
 	}
-    
+    */
           
     assert(max_states >= 1);
     g_log << "Start building abstraction." << endl;
@@ -258,7 +258,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
     cout << "Concrete solution found: " << found_concrete_solution << endl;
 }
     
-Node* Abstraction::get_node(const State &state) const {
+Node* Abstraction::get_node(const State &state){
     return refinement_hierarchy.get_node(state);   
 }
     
@@ -1105,6 +1105,7 @@ void Abstraction::print_end_statistics() {
     cout << endl;
     }
     */
+	refinement_hierarchy.print_average_depth();
     cout << "-------------------------------------------------------" << endl;
 }
     

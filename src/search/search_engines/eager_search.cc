@@ -141,6 +141,12 @@ void EagerSearch::reset_search(){
 	// operator.
 	//cout << "State limit in online phase reached or solution found" << endl;
 	cout << "----------------- Offline Phase ---------------------" << endl;
+	if(!learn_online){
+		Heuristic* h = heuristics[0];
+		h->reset_heuristic();
+	}
+	
+	
 	reset();
 	const GlobalState &initial_state = state_registry.get_initial_state();
 	EvaluationContext eval_context(initial_state, 0, true, &statistics);
@@ -200,16 +206,17 @@ SearchStatus EagerSearch::step() {
     
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
-    
+    //cout << "---> check REFINE " << online_phase << endl;
     if(online_phase && refine_online && ((wait_time && refine_timer() > refinement_waiting) || 
 						 (!wait_time && statistics.get_expanded() % (int) refinement_waiting == 0) || 
 						 need_to_refine)){ 
+		//cout << "---> REFINE" << endl;
 		refine_timer.reset();
 		//store state
 		states_to_refine.push_back(make_pair(s, node.get_g()));
 		//cout << "States: " << states_to_refine.size() << " <= " << collect_states << endl;
 		if(collect_states == 1 || (int) states_to_refine.size() >= collect_states){
-			//cout << "---> REFINE" << endl;
+			
 			for(pair<GlobalState, int> gs : states_to_refine){	
 				total_refine_timer.resume();
 				Heuristic* h = heuristics[0];        
@@ -410,7 +417,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         
         
         //------------ Check if state needs to be reevaluated ------------
-        if(true){
+        if(online_phase){
 			//h value of the last evaluation
 			int old_h = node.get_h_value();
 
