@@ -345,6 +345,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
             // HACK! HACK! we do this because SearchNode has no default/copy constructor
             const GlobalState &initial_state = state_registry.get_initial_state();
             SearchNode dummy_node = search_space.get_node(initial_state);
+			open_list_timer.stop();
             return make_pair(dummy_node, false);
         }
         vector<int> last_key_removed;

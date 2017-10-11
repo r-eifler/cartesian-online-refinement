@@ -462,6 +462,7 @@ bool AdditiveCartesianHeuristic::refine(State state, int* current_max_h, std::ve
 					cout << "Refine Heuristic with order " << current_order << " has been improved h_old(s) = " << *current_max_h << " --> h_new(s) = " << new_h_value << endl;
 			   }
 			   *current_max_h = new_h_value;
+			   refine_timer.stop();
 			   return true;
 		   }
 		}
