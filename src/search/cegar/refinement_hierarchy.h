@@ -32,7 +32,6 @@ class Node;
 class RefinementHierarchy {
     std::unique_ptr<Node> root;
 	
-	std:vector<Node> nodes;
 	double eval = 0;
 	int depth = 0;
 	

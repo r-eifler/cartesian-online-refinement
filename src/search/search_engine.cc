@@ -91,6 +91,7 @@ void SearchEngine::search() {
     }
 	cout << "Search time online: " << timer << endl;
 	reset_search();
+	cout << "---------------------Start Offline Search---------------------------" << endl;
 	utils::CountdownTimer timer2(max_time);
 	online_phase = false;
 	status = IN_PROGRESS;

@@ -227,7 +227,7 @@ vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics(const Glob
 }
 	
 void AdditiveCartesianHeuristic::reset_heuristic(){
-	cout << "----------------- reset heuristic ---------------------" << endl;
+	cout << "----------------- Reset Heuristic ---------------------" << endl;
 	cost_saturation->reset_abs();
 	heuristic_functions = cost_saturation->generate_heuristic_functions(cost_saturation->get_abs_task());
 }

@@ -1105,7 +1105,7 @@ void Abstraction::print_end_statistics() {
     cout << endl;
     }
     */
-	refinement_hierarchy.print_average_depth();
+	//refinement_hierarchy.print_average_depth();
     cout << "-------------------------------------------------------" << endl;
 }
     
