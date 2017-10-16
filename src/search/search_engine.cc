@@ -27,7 +27,8 @@ SearchEngine::SearchEngine(const Options &opts)
       search_space(state_registry,
                    static_cast<OperatorCost>(opts.get_enum("cost_type"))),
       cost_type(static_cast<OperatorCost>(opts.get_enum("cost_type"))),
-      max_time(opts.get<double>("max_time")) {
+      max_time(opts.get<double>("max_time")),
+	  max_online_time(opts.get<double>("max_online_time")) {
     if (opts.get<int>("bound") < 0) {
         cerr << "error: negative cost bound " << opts.get<int>("bound") << endl;
         utils::exit_with(ExitCode::INPUT_ERROR);
@@ -56,14 +57,25 @@ const SearchEngine::Plan &SearchEngine::get_plan() const {
     return plan;
 }
 
+void SearchEngine::reset(){
+	//cout << "reset Search Engine" << endl;
+	statistics = SearchStatistics();
+	search_space.reset();	
+}
+
+void SearchEngine::reset_search(){
+	cout << "reset Search Engine" << endl;	
+}
+
 void SearchEngine::set_plan(const Plan &p) {
     solution_found = true;
     plan = p;
 }
 
 void SearchEngine::search() {
+	online_phase=true;
     initialize();
-    utils::CountdownTimer timer(max_time);
+    utils::CountdownTimer timer(max_online_time);
     while (status == IN_PROGRESS) {
         status = step();
         if (timer.is_expired()) {
@@ -72,7 +84,25 @@ void SearchEngine::search() {
             break;
         }
     }
+	cout << "Online search time: " << timer << endl;
+	online_phase=false;
+	reset_search();
+	cout << "---------------------Start Offline Search---------------------------" << endl;
+	utils::CountdownTimer timer2(max_time);
+	online_phase = false;
+	status = IN_PROGRESS;
+	while (status == IN_PROGRESS) {
+        status = step();
+        if (timer2.is_expired()) {
+            cout << "Time limit reached. Abort search." << endl;
+            status = TIMEOUT;
+            break;
+        }
+    }
+	
+	
     // TODO: Revise when and which search times are logged.
+	cout << "Offline search time: " << timer2 << endl;
     cout << "Actual search time: " << timer
          << " [t=" << utils::g_timer << "]" << endl;
 }
@@ -112,6 +142,7 @@ void SearchEngine::add_options_to_parser(OptionParser &parser) {
         "experiments. Timed-out searches are treated as failed searches, "
         "just like incomplete search algorithms that exhaust their search space.",
         "infinity");
+	parser.add_option<double>("max_online_time", "TODO", "infinity");
 }
 
 void print_initial_h_values(const EvaluationContext &eval_context) {

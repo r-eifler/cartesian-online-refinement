@@ -39,6 +39,9 @@ protected:
     int bound;
     OperatorCost cost_type;
     double max_time;
+	double max_online_time;
+	bool online_phase;
+	bool learn_online;
 
     virtual void initialize() {}
     virtual SearchStatus step() = 0;
@@ -59,6 +62,8 @@ public:
     void set_bound(int b) {bound = b; }
     int get_bound() {return bound; }
     static void add_options_to_parser(options::OptionParser &parser);
+	void reset();
+	virtual void reset_search();
 };
 
 /*

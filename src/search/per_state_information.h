@@ -203,6 +203,11 @@ public:
         }
         return (*entries)[state_id];
     }
+	
+	void reset(){
+        cached_registry = NULL;
+        entries_by_registry.clear();
+    }
 
     void remove_state_registry(StateRegistry *registry) {
         delete entries_by_registry[registry];

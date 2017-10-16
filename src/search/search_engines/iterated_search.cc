@@ -54,6 +54,7 @@ SearchEngine *IteratedSearch::create_phase(int phase) {
 }
 
 SearchStatus IteratedSearch::step() {
+	cout << "******************************* SEARCH PHASE " << phase << "****************************" << endl;
     SearchEngine *current_search = create_phase(phase);
     if (!current_search) {
         return found_solution() ? SOLVED : FAILED;
