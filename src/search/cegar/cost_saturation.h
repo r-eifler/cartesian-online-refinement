@@ -25,7 +25,7 @@ class SubtaskGenerator;
 */
 class CostSaturation {
     const std::vector<std::shared_ptr<SubtaskGenerator>> subtask_generators;
-    const int max_states;
+    int max_states;
     const int max_non_looping_transitions;
     const double max_time;
     const bool use_general_costs;
@@ -93,6 +93,8 @@ public:
     void delete_order(int order_id);
 	
 	int compute_threshold();
+	const std::shared_ptr<AbstractTask> get_abs_task();
+	void reset_abs();
 };
 }
 

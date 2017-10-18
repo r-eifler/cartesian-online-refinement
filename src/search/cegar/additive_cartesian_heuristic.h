@@ -107,6 +107,8 @@ public:
 	void print_order();
 	//computes the heuristic based on the last scp order which has been used
 	int compute_current_order_heuristic(const State state);
+	
+	virtual void reset_heuristic() override;
 };
 }
 

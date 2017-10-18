@@ -116,13 +116,13 @@ Abstraction::Abstraction(
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
     */
        
-          
+     /*
      cout << "+++++++++++++++++++ Goals ++++++++++++++++++" << endl;
      GoalsProxy goals = task_proxy.get_goals();
      for(uint i = 0; i < goals.size(); i++){
 		cout << goals[i].get_variable().get_name() <<  " = " << goals[i].get_value() << endl;	
 	}
-    
+    */
           
     assert(max_states >= 1);
     g_log << "Start building abstraction." << endl;

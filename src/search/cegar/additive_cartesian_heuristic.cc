@@ -43,6 +43,8 @@ vector<CartesianHeuristicFunction*> AdditiveCartesianHeuristic::generate_heurist
     return cost_saturation->generate_heuristic_functions(
         opts.get<shared_ptr<AbstractTask>>("transform"));
 }
+	
+
 
 AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
     const options::Options &opts)
@@ -93,6 +95,12 @@ AdditiveCartesianHeuristic::AdditiveCartesianHeuristic(
 		cout << "Threshold: " << threshold << endl;
 	}
 		  
+}
+	
+void AdditiveCartesianHeuristic::reset_heuristic(){
+	cout << "----------------- Reset Heuristic ---------------------" << endl;
+	cost_saturation->reset_abs();
+	heuristic_functions = cost_saturation->generate_heuristic_functions(cost_saturation->get_abs_task());	
 }
 
 int AdditiveCartesianHeuristic::compute_heuristic(const GlobalState &global_state) {

@@ -55,6 +55,30 @@ CostSaturation::CostSaturation(
       num_states(0),
       num_non_looping_transitions(0) {
 }
+	
+void CostSaturation::reset_abs(){
+	cout << "************************************* RESET ABS ******************************" << endl;
+	//set the state limit to the number of states in the online phase
+	max_states = abstractions[0]->get_num_states();
+	cout << "--> max number of offline states: " << max_states << endl;
+	
+	for(Abstraction* abs : abstractions){
+		delete abs;	
+	}
+	abstractions.clear();
+	
+	scp_orders.clear();
+	remaining_costs_order.clear();
+	remaining_costs.clear();
+	heuristic_functions.clear();
+	
+	num_abstractions = 0;
+    num_states = 0;
+    num_non_looping_transitions = 0;
+	
+	if (utils::extra_memory_padding_is_reserved())
+        utils::release_extra_memory_padding();
+}
 
 //Builds heuristics functions
 vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions(
@@ -133,9 +157,9 @@ vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions
 	
 	
 	vector<int> order;
-	cout << "Initial ORDER: ";
+	//cout << "Initial ORDER: ";
 	for(uint i = 0; i < heuristic_functions.size(); i++){
-		cout << i << " ";	
+		//cout << i << " ";	
 		order.push_back(i);
 	}
 	cout << endl;
@@ -158,12 +182,13 @@ vector<CartesianHeuristicFunction*> CostSaturation::generate_heuristic_functions
 	}
 	
 	//Compute average abstraction size
+	/*
 	int abs_size_total = 0;
 	for(Abstraction* abs : abstractions){
 		abs_size_total += abs->get_num_states();
 	}
 	cout << "Average abstratcion size begin: " << (abs_size_total / abstractions.size()) << endl;
-	
+	*/
     //swap(heuristic_functions, functions);
 	/*
 	for(Abstraction* abs : abstractions){
@@ -198,6 +223,10 @@ void CostSaturation::reset(const TaskProxy &task_proxy) {
     remaining_costs = get_operator_costs(task_proxy);
     num_abstractions = 0;
     num_states = 0;
+}
+	
+const shared_ptr<AbstractTask> CostSaturation::get_abs_task() {
+    return abstask;
 }
 	
 void CostSaturation::add_cost_partitioning(std::vector<int>* cost1, std::vector<int>* cost2){
@@ -293,7 +322,7 @@ void CostSaturation::build_abstractions(
 		}
 		*/
 		cout << "-----------------ABSTRACTION " << abstractions.size() << "--------------------------" << endl;
-		cout << "MEMORY: " << utils::extra_memory_padding_is_reserved() << endl;
+		//cout << "MEMORY: " << utils::extra_memory_padding_is_reserved() << endl;
 		
         subtask = get_remaining_costs_task(subtask);
         assert(num_states < max_states);
@@ -682,7 +711,7 @@ void CostSaturation::print_statistics() const {
     cout << "Total number of non-looping transitions: "
          << num_non_looping_transitions << endl;
     cout << endl;
-	
+	/*
 	cout << "Orders: " << endl;
 	for(vector<int> o : scp_orders){
 		for(int pos : o){
@@ -691,6 +720,7 @@ void CostSaturation::print_statistics() const {
 		cout << endl;
 	}
 	cout << endl;
+	*/
 	/*
 	for(Abstraction* abs : abstractions){
 		abs->print_cost();	

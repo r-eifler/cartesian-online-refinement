@@ -114,12 +114,10 @@ void EagerSearch::reset_search(){
 	// Note: we consider the initial state as reached by a preferred
 	// operator.
 	//cout << "State limit in online phase reached or solution found" << endl;
-	/*
-	if(!learn_online){
-		Heuristic* h = heuristics[0];
-		h->reset_heuristic();
-	}
-	*/
+
+	//offline learining reset abstract state space
+	Heuristic* h = heuristics[0];
+	h->reset_heuristic();
 	
 	cout << "----------------- Rest Search ---------------------" << endl;
 	reset();
