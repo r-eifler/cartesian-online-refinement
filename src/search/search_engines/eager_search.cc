@@ -32,6 +32,7 @@ EagerSearch::EagerSearch(const Options &opts)
 	  refinement_waiting(opts.get<double>("refinement_waiting")),
 	  wait_time(opts.get<bool>("wait_time")),
 	  collect_states(opts.get<int>("collect_states")),
+	  refine_search_ratio(opts.get<double>("refine_search_ratio")),
       //Store open list factory to create new open lists during search
       open_list_factory(opts.get<shared_ptr<OpenListFactory>>("open")),  
       open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
@@ -153,7 +154,9 @@ SearchStatus EagerSearch::step() {
     
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
-    
+	double ratio = total_refine_timer() /  utils::g_timer();
+	//cout << "--------> Refine-search ratio: " << ratio <<  " max: " << refine_search_ratio << endl;
+   	if( ratio < refine_search_ratio){
     if(refine_online && ((wait_time && refine_timer() > refinement_waiting) || 
 						 (!wait_time && statistics.get_expanded() % (int) refinement_waiting == 0) || 
 						 need_to_refine)){ 
@@ -203,6 +206,7 @@ SearchStatus EagerSearch::step() {
 			refine_timer.reset();
 		}
     }
+	}
     //------------------------- ONLINE REFINEMENT ----------------------------------------
     
     
@@ -550,6 +554,11 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "TODO",
         "1",
         Bounds("1", "100"));
+	parser.add_option<double>(
+        "refine_search_ratio",
+        "TODO",
+        "0.5",
+        Bounds("0", "1"));
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);
