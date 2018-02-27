@@ -235,7 +235,11 @@ void AdditiveCartesianHeuristic::print_order(){
     
 bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
    //cout << "--------------------------------------------------------------------------------" << endl;
-       
+
+	//Refine at most 10 sec
+	utils::Timer timer;
+	timer.resume();
+
     State state = convert_global_state(global_state);
 	
     
@@ -289,7 +293,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	bool still_refinable = true;
 	int refinement_steps = 0;
 	refined_states_total++;
-	while(!prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){ // && refinement_steps >= max_iter){
+	while(!prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict) && timer() < 0.2){ // && refinement_steps >= max_iter){
 		//cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
 		//if not refinable merge 
 		if(!still_refinable){
@@ -305,6 +309,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 		still_refinable = refine(state, &h_value, toRefine);
 		refinement_steps++;
 		refine_steps_total++;		
+		//cout << "Timer: " << timer << endl;
 	}
     	
    //cout << "--------------------------------------------------------------------------------" << endl;
