@@ -553,7 +553,7 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "collect_states",
         "TODO",
         "1",
-        Bounds("1", "100"));
+        Bounds("1", "10000"));
 	parser.add_option<double>(
         "refine_search_ratio",
         "TODO",
