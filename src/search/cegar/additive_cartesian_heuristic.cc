@@ -489,7 +489,16 @@ bool AdditiveCartesianHeuristic::reorder(State state, int* current_max_h, std::v
 	}
 	return false;
 }
-    	
+
+
+void AdditiveCartesianHeuristic::print_time_statistics(){
+
+		cout << "Bellman proof time: " << prove_timer << endl;
+		cout << "Reorder time: " << cost_timer << endl;
+		cout << "Refine time: " << refine_timer << endl;
+		cout << "Merge time: " << merge_timer << endl;
+}
+
 void AdditiveCartesianHeuristic::print_statistics(){
         cout << "Order: ";
         print_order();

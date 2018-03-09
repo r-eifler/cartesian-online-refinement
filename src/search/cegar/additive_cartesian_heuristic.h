@@ -104,6 +104,7 @@ public:
 	std::vector<int> compute_individual_heuristics_of_order(const State state, int order);
 	
 	virtual void print_statistics() override;
+	virtual void print_time_statistics() override;
 	void print_order();
 	//computes the heuristic based on the last scp order which has been used
 	int compute_current_order_heuristic(const State state);

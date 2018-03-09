@@ -136,6 +136,16 @@ void EagerSearch::print_statistics() const {
     
 }
 
+void EagerSearch::print_time_statistics(){
+	cout << "openlist time: " << open_list_timer << endl;
+
+    Heuristic *h = heuristics[0]; 
+    h->print_time_statistics();
+
+    cout << "total refine time: " << total_refine_timer << endl;
+	cout << "Search time: " << utils::g_timer << endl;
+}
+
 SearchStatus EagerSearch::step() {
     pair<SearchNode, bool> n = fetch_next_node();
     if (!n.second) {
@@ -330,6 +340,14 @@ SearchStatus EagerSearch::step() {
 }
 
 pair<SearchNode, bool> EagerSearch::fetch_next_node() {
+
+	if(print_timer() > 60){
+		cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
+		//cout << "Num reeval states " << num_reeval_states  << endl;
+		//cout << "OpenList Timer: " << open_list_timer << endl << endl;   
+		print_time_statistics();
+		print_timer.reset();
+	}
     /* TODO: The bulk of this code deals with multi-path dependence,
        which is a bit unfortunate since that is a special case that
        makes the common case look more complicated than it would need
@@ -390,15 +408,8 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 			}
         }
         open_list_timer.stop();
-        /*
-        if(print_timer() > 30){
-            cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
-            cout << "Num reeval states " << num_reeval_states  << endl;
-			cout << "OpenList Timer: " << open_list_timer << endl << endl;   
-            print_statistics();
-			print_timer.reset();
-        }
-		*/
+        
+		
 
         if (use_multi_path_dependence) {
             assert(last_key_removed.size() == 2);
@@ -549,7 +560,7 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "collect_states",
         "TODO",
         "1",
-        Bounds("1", "100"));
+        Bounds("1", "10000"));
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);

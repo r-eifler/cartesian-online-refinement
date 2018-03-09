@@ -1,2 +1,6 @@
 builds/
 *.pyc
+*.sw*
+output.sas
+src/search/pruning/refine_pruning.cc
+src/search/pruning/refine_pruning.h
