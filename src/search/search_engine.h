@@ -32,8 +32,8 @@ private:
     bool solution_found;
     Plan plan;
 protected:
-    StateRegistry state_registry;
-    SearchSpace search_space;
+    StateRegistry* state_registry;
+    SearchSpace* search_space;
     SearchProgress search_progress;
     SearchStatistics statistics;
     int bound;

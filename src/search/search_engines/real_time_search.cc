@@ -1,4 +1,4 @@
-#include "iterated_search.h"
+#include "real_time_search.h"
 
 #include "../option_parser.h"
 #include "../plugin.h"
@@ -7,10 +7,10 @@
 
 using namespace std;
 
-namespace iterated_search {
-IteratedSearch::IteratedSearch(const Options &opts)
+namespace real_time_search {
+RealTimeSearch::RealTimeSearch(const Options &opts)
     : SearchEngine(opts),
-      engine_configs(opts.get_list<ParseTree>("engine_configs")),
+      //engine_configs(opts.get_list<ParseTree>("engine_configs")),
       pass_bound(opts.get<bool>("pass_bound")),
       repeat_last_phase(opts.get<bool>("repeat_last")),
       continue_on_fail(opts.get<bool>("continue_on_fail")),
@@ -21,20 +21,21 @@ IteratedSearch::IteratedSearch(const Options &opts)
       iterated_found_solution(false) {
 }
 
-SearchEngine *IteratedSearch::get_search_engine(
+SearchEngine *RealTimeSearch::get_search_engine(
     int engine_configs_index) {
     OptionParser parser(engine_configs[engine_configs_index], false);
     SearchEngine *engine = parser.start_parsing<SearchEngine *>();
 
     cout << "Starting search: ";
-    kptree::print_tree_bracketed(engine_configs[engine_configs_index], cout);
+    //kptree::print_tree_bracketed(engine_configs[engine_configs_index], cout);
     cout << endl;
 
     return engine;
 }
 
-SearchEngine *IteratedSearch::create_phase(int phase) {
+SearchEngine *RealTimeSearch::create_phase(int phase) {
     int num_phases = engine_configs.size();
+	cout << "Number of engines: " << num_phases << endl;
     if (phase >= num_phases) {
         /* We've gone through all searches. We continue if
            repeat_last_phase is true, but *not* if we didn't find a
@@ -53,9 +54,11 @@ SearchEngine *IteratedSearch::create_phase(int phase) {
     return get_search_engine(phase);
 }
 
-SearchStatus IteratedSearch::step() {
+SearchStatus RealTimeSearch::step() {
+	cout << "Phase: " << phase << endl;
     SearchEngine *current_search = create_phase(phase);
     if (!current_search) {
+		cout << "no current search" << endl;
         return found_solution() ? SOLVED : FAILED;
     }
     if (pass_bound) {
@@ -73,14 +76,12 @@ SearchStatus IteratedSearch::step() {
         found_plan = current_search->get_plan();
         plan_cost = calculate_plan_cost(found_plan);
         if (plan_cost < best_bound) {
-            save_plan(found_plan, true);
+            //save_plan(found_plan, true);
             best_bound = plan_cost;
             set_plan(found_plan);
         }
     }
     current_search->print_statistics();
-
-	//one action chosen
 
     const SearchStatistics &current_stats = current_search->get_statistics();
     statistics.inc_expanded(current_stats.get_expanded());
@@ -93,7 +94,7 @@ SearchStatus IteratedSearch::step() {
     return step_return_value();
 }
 
-SearchStatus IteratedSearch::step_return_value() {
+SearchStatus RealTimeSearch::step_return_value() {
     if (iterated_found_solution)
         cout << "Best solution cost so far: " << best_bound << endl;
 
@@ -116,18 +117,13 @@ SearchStatus IteratedSearch::step_return_value() {
     }
 }
 
-void IteratedSearch::print_statistics() const {
+void RealTimeSearch::print_statistics() const {
     cout << "Cumulative statistics:" << endl;
     statistics.print_detailed_statistics();
 }
 
-void IteratedSearch::save_plan_if_necessary() const {
-    // We don't need to save here, as we automatically save after
-    // each successful search iteration.
-}
-
 static SearchEngine *_parse(OptionParser &parser) {
-    parser.document_synopsis("Iterated search", "");
+    parser.document_synopsis("Real time search", "");
     parser.document_note(
         "Note 1",
         "We don't cache heuristic values between search iterations at"
@@ -172,9 +168,9 @@ static SearchEngine *_parse(OptionParser &parser) {
     SearchEngine::add_options_to_parser(parser);
     Options opts = parser.parse();
 
-    opts.verify_list_non_empty<ParseTree>("engine_configs");
+    //opts.verify_list_non_empty<ParseTree>("engine_configs");
 
-    if (parser.help_mode()) {
+    /*if (parser.help_mode()) {
         return nullptr;
     } else if (parser.dry_run()) {
         //check if the supplied search engines can be parsed
@@ -183,10 +179,10 @@ static SearchEngine *_parse(OptionParser &parser) {
             test_parser.start_parsing<SearchEngine *>();
         }
         return nullptr;
-    } else {
-        return new IteratedSearch(opts);
-    }
+    } else {*/
+        return new RealTimeSearch(opts);
+    //}
 }
 
-static Plugin<SearchEngine> _plugin("iterated", _parse);
+static Plugin<SearchEngine> _plugin("realtime", _parse);
 }

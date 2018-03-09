@@ -245,26 +245,19 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
-    NAME ENFORCED_HILL_CLIMBING_SEARCH
-    HELP "Lazy enforced hill-climbing search algorithm"
+	NAME REAL_TIME_SEARCH
+    HELP "real time search algorithm"
     SOURCES
-        search_engines/enforced_hill_climbing_search
-    DEPENDS SEARCH_COMMON PREF_EVALUATOR G_EVALUATOR
+        search_engines/real_time_search
+    DEPENDENCY_ONLY
 )
 
 fast_downward_plugin(
-    NAME ITERATED_SEARCH
-    HELP "Iterated search algorithm"
+	NAME ITERATED_SEARCH
+    HELP "iterated search algorithm"
     SOURCES
         search_engines/iterated_search
-)
-
-fast_downward_plugin(
-    NAME LAZY_SEARCH
-    HELP "Lazy search algorithm"
-    SOURCES
-        search_engines/lazy_search
-    DEPENDS SEARCH_COMMON
+    DEPENDENCY_ONLY
 )
 
 fast_downward_plugin(
@@ -297,6 +290,13 @@ fast_downward_plugin(
     HELP "The 'blind search' heuristic"
     SOURCES
         heuristics/blind_search_heuristic
+)
+
+fast_downward_plugin(
+	NAME BELLMAN_UPDATE_HEURISTIC
+    HELP "The 'bellman update' heuristic"
+    SOURCES
+        heuristics/bellman_update_heuristic
 )
 
 fast_downward_plugin(

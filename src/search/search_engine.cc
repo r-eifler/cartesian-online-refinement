@@ -22,10 +22,10 @@ using utils::ExitCode;
 SearchEngine::SearchEngine(const Options &opts)
     : status(IN_PROGRESS),
       solution_found(false),
-      state_registry(
-          *g_root_task(), *g_state_packer, *g_axiom_evaluator, g_initial_state_data),
-      search_space(state_registry,
-                   static_cast<OperatorCost>(opts.get_enum("cost_type"))),
+     // state_registry(
+         // *g_root_task(), *g_state_packer, *g_axiom_evaluator, g_initial_state_data),
+      //search_space(state_registry,
+      //             static_cast<OperatorCost>(opts.get_enum("cost_type"))),
       cost_type(static_cast<OperatorCost>(opts.get_enum("cost_type"))),
       max_time(opts.get<double>("max_time")) {
     if (opts.get<int>("bound") < 0) {
@@ -33,6 +33,8 @@ SearchEngine::SearchEngine(const Options &opts)
         utils::exit_with(ExitCode::INPUT_ERROR);
     }
     bound = opts.get<int>("bound");
+	state_registry = new StateRegistry(*g_root_task(), *g_state_packer, *g_axiom_evaluator, g_initial_state_data);
+	search_space = new SearchSpace(*state_registry, cost_type);
 }
 
 SearchEngine::~SearchEngine() {
@@ -40,7 +42,7 @@ SearchEngine::~SearchEngine() {
 
 void SearchEngine::print_statistics() const {
     cout << "Bytes per state: "
-         << state_registry.get_state_size_in_bytes() << endl;
+         << state_registry->get_state_size_in_bytes() << endl;
 }
 
 bool SearchEngine::found_solution() const {
@@ -81,7 +83,7 @@ bool SearchEngine::check_goal_and_set_plan(const GlobalState &state) {
     if (test_goal(state)) {
         cout << "Solution found!" << endl;
         Plan plan;
-        search_space.trace_path(state, plan);
+        search_space->trace_path(state, plan);
         set_plan(plan);
         return true;
     }

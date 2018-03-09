@@ -32,9 +32,15 @@ class EagerSearch : public SearchEngine {
 	bool wait_time = false;
 	int collect_states;
 	double refine_search_ratio = 0;
+	double step_time = 0;
+	int lookahead = 2;
+	int actions_per_step = 1;
+	int lookahead_size = 0;
 	
 	bool need_to_refine = false;
 	std::vector<std::pair<GlobalState, int>> states_to_refine;
+	std::vector<GlobalState> current_state_v;
+	std::vector<const GlobalOperator*> path_actions; 
     
     //create new openlists
     std::shared_ptr<OpenListFactory> open_list_factory;
@@ -55,6 +61,7 @@ class EagerSearch : public SearchEngine {
 	utils::Timer total_refine_timer;
 	utils::Timer print_timer;
 	utils::Timer refine_timer;
+	utils::Timer step_timer;
 	
 	// number of stets whose heuristic value increased since the last evaluation
 	// need to be put back into the open list

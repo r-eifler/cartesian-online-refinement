@@ -33,6 +33,9 @@ EagerSearch::EagerSearch(const Options &opts)
 	  wait_time(opts.get<bool>("wait_time")),
 	  collect_states(opts.get<int>("collect_states")),
 	  refine_search_ratio(opts.get<double>("refine_search_ratio")),
+	  step_time(opts.get<double>("step_time")),
+	  lookahead(opts.get<int>("lookahead")),
+	  actions_per_step(opts.get<int>("actions_per_step")),
       //Store open list factory to create new open lists during search
       open_list_factory(opts.get<shared_ptr<OpenListFactory>>("open")),  
       open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
@@ -78,7 +81,7 @@ void EagerSearch::initialize() {
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
 
-    const GlobalState &initial_state = state_registry.get_initial_state();
+    const GlobalState &initial_state = state_registry->get_initial_state();
     for (Heuristic *heuristic : heuristics) {
         heuristic->notify_initial_state(initial_state);
     }
@@ -95,8 +98,9 @@ void EagerSearch::initialize() {
         if (search_progress.check_progress(eval_context))
             print_checkpoint_line(0);
         start_f_value_statistics(eval_context);
-        SearchNode node = search_space.get_node(initial_state);
+        SearchNode node = search_space->get_node(initial_state);
         node.open_initial();
+		current_state_v.push_back(node.get_state());
         
         //Initialize the heuristc value of the serach node such that it can be checked in the 
 		//fetch_next_node function
@@ -119,7 +123,7 @@ void EagerSearch::print_checkpoint_line(int g) const {
 
 void EagerSearch::print_statistics() const {
     statistics.print_detailed_statistics();
-    search_space.print_statistics();
+    search_space->print_statistics();
     pruning_method->print_statistics();
     
     cout << endl;
@@ -138,6 +142,7 @@ void EagerSearch::print_statistics() const {
 }
 
 SearchStatus EagerSearch::step() {
+
     pair<SearchNode, bool> n = fetch_next_node();
     if (!n.second) {
         return FAILED;
@@ -145,16 +150,108 @@ SearchStatus EagerSearch::step() {
     SearchNode node = n.first;
 
     GlobalState s = node.get_state();
-    if (check_goal_and_set_plan(s))
-        return SOLVED;
+	/*
+	if (check_goal_and_set_plan(s)){
+		//cout << "PLAN LENGTH: " << path_actions.size() << endl;
+		return SOLVED;
+	}*/
+	/*
+	cout << "current state: ";
+	for(uint i = 0; i < s.get_values().size(); i++){
+		cout << "v" << i << "=" << s.get_values()[i] << " ";
+	}
+	cout << endl;
+	*/
 
+	//Check size of lookahead is reached
+	bool solution_found = check_goal_and_set_plan(s);
+	if(lookahead == lookahead_size || solution_found){
+		cout << "------------------ LH " << lookahead_size << " -----------------" << endl;
+		//cout << "----> Step finished" << endl;
+		//find next action to execute
+        Plan plan;
+        search_space->trace_path(s, plan);
+		const GlobalOperator* next_action = NULL;
+
+		/*
+		cout << "current state: ";
+		for(uint i = 0; i < (path.end()-1)->get_values().size(); i++){
+			cout << "v" << i << " = " << current_state_v.get_values()[i] << " ";
+		}
+		cout << endl;
+		*/
+
+		//cout << "Length of plan part: " << plan.size() << " Length of path: " << path.size() << endl;
+		for(uint i = 0; (i < plan.size()) && ((i < (uint) actions_per_step) || solution_found); i++){
+			//NEXT ACTION
+			next_action = plan[i];
+			path_actions.push_back(next_action);
+			//cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
+			
+			//NEXT STATE
+			GlobalState current_state = current_state_v.front();
+			current_state_v.clear();
+			GlobalState next_state = state_registry->get_successor_state(current_state, *next_action);
+			current_state_v.push_back(next_state);
+		}
+
+		//if goal was reached terminate the search and print the solution
+		if(solution_found){
+			for(uint j = 0; j < path_actions.size(); j++){
+				cout << path_actions[j]->get_name() << endl;
+			}
+			cout << "PLAN LENGTH: " << path_actions.size() << endl;
+			return SOLVED;
+		}
+
+		//refine heuristic on the next state (new current state)
+		vector<const GlobalOperator *> applicable_ops;
+		g_successor_generator->generate_applicable_ops(current_state_v.front(), applicable_ops);
+		vector<pair<GlobalState, int>> succStates;
+		for (const GlobalOperator *op : applicable_ops) {
+			GlobalState succ_state = state_registry->get_successor_state(current_state_v.front(), *op);
+			succStates.push_back(make_pair(succ_state, op->get_cost()));
+		}
+		Heuristic* h = heuristics[0];        
+		cout << "REFINE" << endl;
+		h->online_Refine(current_state_v.front(), succStates);
+		cout << "REFINE" << endl;
+
+		//Reset search 
+		//cout << "********Reset Search******" << endl;
+		//state_registry = new StateRegistry(*g_root_task(), *g_state_packer, *g_axiom_evaluator, g_initial_state_data);
+		search_space = new SearchSpace(*state_registry, cost_type);
+
+		//next_state is the new start state for the next search
+		open_list = open_list_factory->create_state_open_list();
+        SearchNode node = search_space->get_node(current_state_v.front());       
+        node.open_initial();
+        
+		EvaluationContext eval_context(current_state_v.front(), 0, true, &statistics);
+        open_list->insert(eval_context, current_state_v.front().get_id());
+
+		/*
+		cout << "Refine state: ";
+		for(uint i = 0; i < node.get_state().get_values().size(); i++){
+			cout << "v" << i << " = " << node.get_state().get_values()[i] << " ";
+		}
+		cout << endl;
+		*/
+
+		//reset lookahead
+		lookahead_size = 0;
+		return IN_PROGRESS;
+	}
+
+
+	//cout << "++++++++++Generate Successors++++++++++++++++" << endl;
     vector<const GlobalOperator *> applicable_ops;
     g_successor_generator->generate_applicable_ops(s, applicable_ops);
 
     
     
     //------------------------- ONLINE REFINEMENT ----------------------------------------
-	double ratio = total_refine_timer() /  utils::g_timer();
+	/*double ratio = total_refine_timer() /  utils::g_timer();
 	//cout << "--------> Refine-search ratio: " << ratio <<  " max: " << refine_search_ratio << endl;
    	if( ratio < refine_search_ratio){
     if(refine_online && ((wait_time && refine_timer() > refinement_waiting) || 
@@ -208,7 +305,7 @@ SearchStatus EagerSearch::step() {
     }
 	}
     //------------------------- ONLINE REFINEMENT ----------------------------------------
-    
+    */
     
     /*
       TODO: When preferred operators are in use, a preferred operator will be
@@ -221,15 +318,27 @@ SearchStatus EagerSearch::step() {
     algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
         collect_preferred_operators(eval_context, preferred_operator_heuristics);
 
+	//cout << "Succ: " << endl;
     for (const GlobalOperator *op : applicable_ops) {
-        if ((node.get_real_g() + op->get_cost()) >= bound)
-            continue;
 
-        GlobalState succ_state = state_registry.get_successor_state(s, *op);
+		/*
+		cout << op->get_name() << ": ";
+		for(uint i = 0; i < s.get_values().size(); i++){
+			cout << "v" << i << "=" << succ_state.get_values()[i] << " ";
+		}
+		cout << endl;
+		*/
+
+        if ((node.get_real_g() + op->get_cost()) >= bound){
+            cout << "larger than bound" << endl;
+			continue;
+		}
+
         statistics.inc_generated();
         bool is_preferred = preferred_operators.contains(op);
-
-        SearchNode succ_node = search_space.get_node(succ_state);
+		
+        GlobalState succ_state = state_registry->get_successor_state(s, *op);
+        SearchNode succ_node = search_space->get_node(succ_state);
 
         // Previously encountered dead end. Don't re-evaluate.
         if (succ_node.is_dead_end())
@@ -347,8 +456,8 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         if (open_list->empty()) {
             cout << "Completely explored state space -- no solution!" << endl;
             // HACK! HACK! we do this because SearchNode has no default/copy constructor
-            const GlobalState &initial_state = state_registry.get_initial_state();
-            SearchNode dummy_node = search_space.get_node(initial_state);
+            const GlobalState &initial_state = state_registry->get_initial_state();
+            SearchNode dummy_node = search_space->get_node(initial_state);
             return make_pair(dummy_node, false);
         }
         vector<int> last_key_removed;
@@ -359,14 +468,15 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         //      recreate it outside of this function with node.get_state()?
         //      One way would be to store GlobalState objects inside SearchNodes
         //      instead of StateIDs
-        GlobalState s = state_registry.lookup_state(id);
-        SearchNode node = search_space.get_node(s);       
+        GlobalState s = state_registry->lookup_state(id);
+        SearchNode node = search_space->get_node(s);       
         
         if (node.is_closed())
             continue;
         
         
         //------------ Check if state needs to be reevaluated ------------
+		/*
         if(true){
 			//h value of the last evaluation
 			int old_h = node.get_h_value();
@@ -392,7 +502,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 				//std::cout << "Fetch next Node: " << old_h + node.get_g() << " old h: " << old_h << " new h: " << new_h << " state: " << num_reeval_states << std::endl;
 				continue;  
 			}
-        }
+        }*/
         open_list_timer.stop();
         /*
         if(print_timer() > 30){
@@ -432,6 +542,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         assert(!node.is_dead_end());
         update_f_value_statistics(node);
         statistics.inc_expanded();
+		lookahead_size++;
         return make_pair(node, true);
     }
 }
@@ -443,7 +554,7 @@ void EagerSearch::reward_progress() {
 }
 
 void EagerSearch::dump_search_space() const {
-    search_space.dump();
+    search_space->dump();
 }
 
 void EagerSearch::start_f_value_statistics(EvaluationContext &eval_context) {
@@ -559,6 +670,21 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
         "TODO",
         "0.5",
         Bounds("0", "1"));
+	parser.add_option<double>(
+        "step_time",
+        "TODO",
+        "1",
+        Bounds("1", "60"));
+	parser.add_option<int>(
+        "lookahead",
+        "TODO",
+        "2",
+        Bounds("2", "10000"));
+	parser.add_option<int>(
+        "actions_per_step",
+        "TODO",
+        "1",
+        Bounds("1", "10"));
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);

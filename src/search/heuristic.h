@@ -64,8 +64,6 @@ protected:
 
     enum {DEAD_END = -1, NO_VALUE = -2};
 
-    // TODO: Call with State directly once all heuristics support it.
-    virtual int compute_heuristic(const GlobalState &state) = 0;
 	
 
     /*
@@ -87,6 +85,9 @@ public:
 
     virtual void notify_initial_state(const GlobalState & /*initial_state*/) {
     }
+
+    // TODO: Call with State directly once all heuristics support it.
+    virtual int compute_heuristic(const GlobalState &state) = 0;
 
     virtual bool notify_state_transition(
         const GlobalState &parent_state, const GlobalOperator &op,

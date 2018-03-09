@@ -1,2 +1,6 @@
 builds/
 *.pyc
+*.swp
+output.sas
+sas_plan
+*.swo

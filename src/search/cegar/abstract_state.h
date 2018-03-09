@@ -180,6 +180,8 @@ public:
     // Create the Cartesian set that corresponds to the given fact conditions.
     static AbstractState get_abstract_state(
         const TaskProxy &task_proxy, const ConditionsProxy &conditions);
+    static AbstractState get_abstract_state_vector(
+        const TaskProxy &task_proxy, std::vector<std::pair<int,int>> vars);
 };
 }
 

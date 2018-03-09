@@ -115,7 +115,13 @@ Abstraction::Abstraction(
 	c_graph.dump(task_proxy);
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
     */
-       
+
+	/*
+	for(uint i = 0; i < task_proxy.get_operators().size(); i++){
+		cout << task_proxy.get_operators()[i].get_name() << endl;
+		cout << "		pre v0=" << task_proxy.get_operators()[i].get_preconditions()[0].get_value() << endl;
+	}
+	*/	
           
      cout << "+++++++++++++++++++ Goals ++++++++++++++++++" << endl;
      GoalsProxy goals = task_proxy.get_goals();
@@ -249,6 +255,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
             break;
         }
         AbstractState *abstract_state = flaw->current_abstract_state;
+		//cout << "SPLIT: " << *abstract_state << endl;
 
         vector<Split> splits = flaw->get_possible_splits();
         const Split &split = split_selector.pick_split(*abstract_state, splits, rng);
@@ -322,6 +329,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
         }
         
         const Split &split = split_selector.pick_split(*abstract_state, splits, rng);
+	
 		/*
 		cout << *abstract_state << endl;
 		cout << "Split: " << split.var_id << " = {" ;
@@ -330,6 +338,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
 		}
 		cout << "}" << endl;
 		*/
+	
 		bool split_useful = split_usefull(abstract_state, split.var_id, split.values, unused_cost);
 		if(split_useful){	
 			usefull_splits++;	 
@@ -763,7 +772,7 @@ bool Abstraction::are_plans_compatible(Abstraction* abs){
 
 
 std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *state, int var, const vector<int> &wanted) {
-    if (debug){
+    if (false){
 		cout << "---------------------------------------" << endl;
         cout << "Refine " << *state << " for " << var << "=" << wanted << endl;
 	}
@@ -772,13 +781,14 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *sta
     AbstractState *v1 = new_states.first;
     AbstractState *v2 = new_states.second;
 
-    /*
+   /* 
     cout << "-----------------------" << endl;
     cout << "Split " << *state << " h = " << state->get_h_value() << " in " << endl;
     cout << *v1 << " h = " << v1->get_h_value() << " and " << endl;
     cout << *v2 << " h = " << v2->get_h_value() << endl;
     cout << "-----------------------" << endl;
     */
+
     transition_updater.rewire(state, v1, v2, var);
 
     states.erase(state);
@@ -871,12 +881,12 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
         //cout << "operator " << op.get_name() << endl;       
         AbstractState *next_abstract_state = step.target;
         if (is_applicable(op, concrete_state)) {
-            if (debug)
+            if (false)
                 cout << "  Move to " << *next_abstract_state << " with "
                      << op.get_name() << endl;
             State next_concrete_state = concrete_state.get_successor(op);
             if (!next_abstract_state->includes(next_concrete_state)) {
-                if (debug)
+                if (false)
                     cout << "  Paths deviate." << endl;
                 ++deviations;
                 //cout << "path deviate: " << length_correct_trace << "/" << solution.size() << endl;
@@ -889,7 +899,7 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
             concrete_state = move(next_concrete_state);
             //length_correct_trace++;
         } else {
-            if (debug)
+            if (false)
                 cout << "  Operator not applicable: " << op.get_name() << endl;
             ++unmet_preconditions;
             //cout << "not app: " << length_correct_trace << "/" << solution.size() << endl;
@@ -898,6 +908,25 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
                 abstract_state,
                 AbstractState::get_abstract_state(
                     task_proxy, op.get_preconditions()));
+			//cout << "FIND FLAW: " << endl;
+			/*
+			cout << *abstract_state << endl;
+			cout << *next_abstract_state << endl;
+			*/
+			/*
+			vector<pair<int,int>> vars;
+			for(uint i = 0; i < op.get_preconditions().size(); i++){
+				int id = op.get_preconditions()[i].get_variable().get_id();
+				int value = concrete_state[id].get_value();
+				cout << "v" << id << " = " << value << endl;
+				vars.push_back(make_pair(id, value));
+			}
+            return utils::make_unique_ptr<Flaw>(
+                move(concrete_state),
+                abstract_state,
+                AbstractState::get_abstract_state_vector(
+                    task_proxy, vars));
+			*/
         }
     }
     assert(is_goal(abstract_state));
@@ -905,7 +934,7 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
         // We found a concrete solution.
         return nullptr;
     } else {
-        if (debug)
+        if (false)
             cout << "  Goal test failed." << endl;
         ++unmet_goals;
         //cout << "goal: " << length_correct_trace << "/" << solution.size() << endl;

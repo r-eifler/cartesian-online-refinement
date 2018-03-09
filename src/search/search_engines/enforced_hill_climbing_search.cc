@@ -121,7 +121,7 @@ void EnforcedHillClimbingSearch::initialize() {
             utils::exit_with(ExitCode::UNSOLVED_INCOMPLETE);
     }
 
-    SearchNode node = search_space.get_node(current_eval_context.get_state());
+    SearchNode node = search_space->get_node(current_eval_context.get_state());
     node.open_initial();
 
     current_phase_start_g = 0;
@@ -142,7 +142,7 @@ void EnforcedHillClimbingSearch::insert_successor_into_open_list(
 }
 
 void EnforcedHillClimbingSearch::expand(EvaluationContext &eval_context) {
-    SearchNode node = search_space.get_node(eval_context.get_state());
+    SearchNode node = search_space->get_node(eval_context.get_state());
     int node_g = node.get_g();
 
     algorithms::OrderedSet<const GlobalOperator *> preferred_operators;
@@ -192,7 +192,7 @@ SearchStatus EnforcedHillClimbingSearch::ehc() {
         const GlobalOperator *last_op = &g_operators[entry.second];
 
         GlobalState parent_state = state_registry.lookup_state(parent_state_id);
-        SearchNode parent_node = search_space.get_node(parent_state);
+        SearchNode parent_node = search_space->get_node(parent_state);
 
         // d: distance from initial node in this EHC phase
         int d = parent_node.get_g() - current_phase_start_g +
@@ -204,7 +204,7 @@ SearchStatus EnforcedHillClimbingSearch::ehc() {
         GlobalState state = state_registry.get_successor_state(parent_state, *last_op);
         statistics.inc_generated();
 
-        SearchNode node = search_space.get_node(state);
+        SearchNode node = search_space->get_node(state);
 
         if (node.is_new()) {
             EvaluationContext eval_context(state, &statistics);
