@@ -8,8 +8,8 @@ namespace bellman_update_heuristic {
 class BellmanUpdateHeuristic : public Heuristic {
 
     int min_operator_cost;
-	std::map<StateID, int> h_values;
-	Heuristic* base_heuristic;
+	std::map<int, int> h_values;
+	ScalarEvaluator* base_heuristic;
 
 protected:
     virtual int compute_heuristic(const GlobalState &global_state);

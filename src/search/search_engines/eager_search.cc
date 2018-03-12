@@ -186,7 +186,7 @@ SearchStatus EagerSearch::step() {
 			//NEXT ACTION
 			next_action = plan[i];
 			path_actions.push_back(next_action);
-			//cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
+			cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
 			
 			//NEXT STATE
 			GlobalState current_state = current_state_v.front();
@@ -678,8 +678,8 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
 	parser.add_option<int>(
         "lookahead",
         "TODO",
-        "2",
-        Bounds("2", "10000"));
+        "10",
+        Bounds("1", "10000"));
 	parser.add_option<int>(
         "actions_per_step",
         "TODO",
