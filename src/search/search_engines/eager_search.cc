@@ -125,6 +125,7 @@ void EagerSearch::print_statistics() const {
     cout << "Nodes which have been refined: " << num_refined_nodes << endl;
     cout << "Number of  reevaluated states: " << num_reeval_states << endl;
 	
+	cout << "Search time: " << utils::g_timer << endl;
 	cout << "openlist time: " << open_list_timer << endl;
     cout << "total refine time: " << total_refine_timer << endl;
     cout << endl;	
@@ -345,7 +346,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 		cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
 		//cout << "Num reeval states " << num_reeval_states  << endl;
 		//cout << "OpenList Timer: " << open_list_timer << endl << endl;   
-		print_time_statistics();
+		print_statistics();
 		print_timer.reset();
 	}
     /* TODO: The bulk of this code deals with multi-path dependence,
