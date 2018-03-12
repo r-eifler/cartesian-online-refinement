@@ -200,7 +200,12 @@ std::vector<int> AdditiveCartesianHeuristic::compute_original_individual_heurist
         int value = function->get_original_value(state);
         assert(value >= 0);
         values.push_back(value);
-        sum_h += value;
+		if(sum_h == EvaluationResult::INFTY || value == EvaluationResult::INFTY){
+			sum_h = EvaluationResult::INFTY;
+		}
+		else{
+			sum_h += value;
+		}
     }
     assert(sum_h >= 0);
     return values;

@@ -90,8 +90,6 @@ protected:
 	bool refine(State state, int* current_max_h, std::vector<bool> &toRefine);
 	bool reorder(State state, int* current_max_h, std::vector<bool> &toRefine);
 	
-	//bool prove_bellman_sum(State state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h);
-	bool prove_bellman_individual(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h, bool* conflict);
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
@@ -102,6 +100,8 @@ public:
 	
 	std::vector<int> compute_individual_heuristics_of_order(const GlobalState &global_state, int order);
 	std::vector<int> compute_individual_heuristics_of_order(const State state, int order);
+
+	bool prove_bellman_individual(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h, bool* conflict);
 	
 	virtual void print_statistics() override;
 	void print_order();

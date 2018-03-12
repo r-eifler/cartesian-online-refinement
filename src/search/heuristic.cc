@@ -50,6 +50,33 @@ std::vector<int> Heuristic::compute_individual_heuristics(const GlobalState &glo
 	return v;
 }
 
+bool Heuristic::prove_bellman(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates){
+	int infinity = EvaluationResult::INFTY;
+
+	//heuristc value of currently expanded state
+	int h_value = compute_heuristic(global_state);
+	if(h_value == infinity){
+		return true;
+	}
+	int min_h = infinity;
+
+	for (pair<GlobalState, int> succ : succStates) {
+		int suc_h = compute_heuristic(succ.first);
+
+		int new_min = suc_h + succ.second;
+		if(new_min < min_h){
+			min_h = new_min;
+		}
+		if(h_value ==  new_min){
+			return true;
+		}
+	}
+	
+	return false;
+
+}
+
+
 void Heuristic::change_to_order(int id){
 	cout << "Change to order: " << id ;
 }
