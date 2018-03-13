@@ -584,6 +584,10 @@ bool Abstraction::merge(Abstraction* abs){
 }
 	
 std::pair<AbstractState*, AbstractState*> Abstraction::refineMerge(AbstractState *state, int var, const std::vector<int> &wanted){
+
+	
+
+
 	if (debug){
 		cout << "---------------------------------------" << endl;
         cout << "MergeRefine " << *state << " for " << var << "=" << wanted << endl;

@@ -31,6 +31,9 @@ class EagerSearch : public SearchEngine {
 	double refinement_waiting = 0;
 	bool wait_time = false;
 	int collect_states;
+
+	int learn_threshold = 1000;
+
 	
 	bool need_to_refine = false;
 	std::vector<std::pair<GlobalState, int>> states_to_refine;

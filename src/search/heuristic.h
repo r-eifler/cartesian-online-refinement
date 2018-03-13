@@ -109,6 +109,7 @@ public:
 
 	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates);
 	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state);
+	bool prove_bellman(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates);
 	virtual void print_statistics();
 	virtual void print_time_statistics();
 	virtual void change_to_order(int id);
