@@ -286,10 +286,10 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	}
 	
 	//refine until bellman equation is satiesfied
-	bool still_refinable = true;
+	//bool still_refinable = true;
 	int refinement_steps = 0;
 	refined_states_total++;
-	while(!prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict) && refinement_steps <= max_iter){
+	//while(!prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict) && refinement_steps <= max_iter){
 		//cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
 		//if not refinable merge 
 		/*	
@@ -299,6 +299,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 			print_timer.reset();
 		}
 		*/
+		/*
 		if(!still_refinable){
 			merge_timer.resume();
 			if(!use_merge || heuristic_functions.size() == 1 || !merge.merge(toRefine)){
@@ -308,11 +309,13 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 			still_refinable = true;
 			merge_timer.stop();
 			continue;
-		}				
-		still_refinable = refine(state, &h_value, toRefine);
+		}	
+		*/
+		//still_refinable = 
+			refine(state, &h_value, toRefine);
 		refinement_steps++;
 		refine_steps_total++;		
-	}
+	//}
     	
    //cout << "--------------------------------------------------------------------------------" << endl;
    return true;  
