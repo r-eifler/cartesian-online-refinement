@@ -623,12 +623,13 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refineMerge(AbstractState
 		cout << "New/additional goal state: " << *v2 << endl;
 	}
     int num_states = get_num_states();
-    if (num_states % 1000 == 0) {
+    if (num_states % 10000 == 0) {
         g_log << num_states << "/" << max_states << " states, "
               << transition_updater.get_num_non_loops() << "/"
               << max_non_looping_transitions << " transitions"        
-                << " update Time: " << update_timer
-                << " refine Time: " << refine_timer << endl;
+			  << endl;
+                //<< " update Time: " << update_timer
+                //<< " refine Time: " << refine_timer << endl;
     }
 
     delete state;
