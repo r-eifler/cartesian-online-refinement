@@ -131,6 +131,7 @@ void DFSPruning::print_statistics() const {
 	cout << endl << "Current upper bound: " << get_plan_cost() << endl;
 	cout << "Update steps: " << update_steps << endl;
     cout << "total refine time: " << total_refine_timer << endl;
+	cout << "Search time: " << utils::g_timer << endl;
     cout << endl;	
     
     cout << endl;
@@ -330,6 +331,13 @@ SearchStatus DFSPruning::step() {
 }
 
 pair<SearchNode, int> DFSPruning::fetch_next_node() {	
+	
+	if(print_timer() > 60){
+		cout << "+++++++++++++++++++++++++++++++++++++" << endl;                        
+		print_statistics();
+		print_timer.reset();
+	}
+
     while (true) {
         if (open_list->empty()){
 			const GlobalState &initial_state = state_registry.get_initial_state();
@@ -377,13 +385,6 @@ pair<SearchNode, int> DFSPruning::fetch_next_node() {
 			num_pruned_states++;
 			continue;	
 		}
-		/*
-        if(print_timer() > 10){
-            cout << "+++++++++++++++++++++++++++++++++++++" << endl;                        
-            print_statistics();
-			print_timer.reset();
-        }
-		*/
         
 		//no multipath dependencies
 		

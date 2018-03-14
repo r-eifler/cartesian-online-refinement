@@ -269,6 +269,13 @@ bool AdditiveCartesianHeuristic::refine_check_bound(const GlobalState &global_st
 	int refinement_steps = 0;
 	refined_states_total++;
 	while(h_value <= bound && (check_strategy != CheckStrategy::BOUND_AND_BELLMAN || !prove_bellman_sum(global_state, succStates, &h_value))){
+		if(print_timer() > 60){
+			cout << "Search time: " << utils::g_timer << endl;
+			print_statistics();
+			print_timer.reset();
+		}
+
+
 		//if not refinable merge 
 		if(!still_refinable){
 			merge_timer.resume();
@@ -331,6 +338,14 @@ bool AdditiveCartesianHeuristic::refine_check_bellman(const GlobalState &global_
 	int refinement_steps = 0;
 	refined_states_total++;
 	while(! prove_bellman_sum(global_state, succStates, &h_value)){
+
+		if(print_timer() > 60){
+			cout << "Search time: " << utils::g_timer << endl;
+			print_statistics();
+			print_timer.reset();
+		}
+
+
 		//if not refinable merge 
 		if(!still_refinable){
 			merge_timer.resume();
@@ -535,6 +550,7 @@ void AdditiveCartesianHeuristic::print_statistics(){
 	
 		cout << "---------------- PRRUNING ----------------- " << endl;
 		cout << "States reached pruning bound: " << num_reached_bound << endl;
+		cout << "Prove time: " << prove_timer () << endl;
 		cout << endl;
 	
 		orderSelecter->print_statistics();
