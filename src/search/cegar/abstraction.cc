@@ -389,7 +389,7 @@ bool Abstraction::split_usefull(AbstractState * state, int var, const std::vecto
 	}
 	cout << endl;
 	*/
-	//Check if all transitions from v1 to v2 (respectively v2 to v1) are contained in any unused_cost
+	//Check if all transitions from v1 to v2 (respectively v2 to v1) are contained in any unused_cost or cost partitioning
 	//1. v1 to v2
 	bool v1tov2_has_cost = false;
 	for(size_t i = 0; i < unused_cost->size(); i++){
@@ -1095,7 +1095,7 @@ void Abstraction::print_end_statistics() {
     cout << "Final Unmet goals: " << unmet_goals << endl;
     //cout << "update time: " << update_timer << endl;
     cout << "refinement time: " << refine_timer << endl;
-	cout << "Usefull splits: " << usefull_splits << endl;
+	cout << "Performed splits: " << usefull_splits << endl;
     
     /*
     for(vector<int> cp : costs_partitionings){

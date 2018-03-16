@@ -54,7 +54,6 @@ bool OnlineRefinement::refine(State state, std::vector<bool> toRefine){
 	}
 
 	//Recompute costpartitioning, Reset Refined status, update h values
-	//cout << "Recompute cost partitioning" << endl;
 	int number_orders = cost_saturation->number_of_orders();
 	for(int o = 0; o < number_orders; o++){
     	cost_saturation->recompute_cost_partitioning_unused(o); 
