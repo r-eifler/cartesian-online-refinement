@@ -161,6 +161,7 @@ SearchStatus EagerSearch::step() {
 							 (!wait_time && statistics.get_expanded() % (int) refinement_waiting == 0) || 
 							 need_to_refine)){ 
 			refine_timer.reset();
+			/*
 			//Check if state satisfies the Bellman equation
 			Heuristic* h = heuristics[0];        
 			vector<pair<GlobalState, int>> succStates;
@@ -169,11 +170,11 @@ SearchStatus EagerSearch::step() {
 				succStates.push_back(make_pair(succ_state, op->get_cost()));
 			}
 			if(! h->prove_bellman(s, succStates)){
+			*/
 				states_to_refine.push_back(make_pair(s, node.get_g()));
 
 				//cout << "States: " << states_to_refine.size() << " <= " << collect_states << endl;
 				if(collect_states == 1 || (int) states_to_refine.size() >= collect_states){
-					//cout << "---> REFINE" << endl;
 					for(pair<GlobalState, int> gs : states_to_refine){	
 						total_refine_timer.resume();
 						//Generate all succesor states 
@@ -184,6 +185,7 @@ SearchStatus EagerSearch::step() {
 						}
 
 						//ONLINE REFINEMENT  
+						Heuristic* h = heuristics[0];        
 						bool refined = h->online_Refine(gs.first, succStates);
 						if(refined){
 							num_refined_nodes++;  						
@@ -203,7 +205,7 @@ SearchStatus EagerSearch::step() {
 					states_to_refine.clear();
 					refine_timer.reset();
 				}
-			}
+			//}
 		}
 	}
     //------------------------- ONLINE REFINEMENT ----------------------------------------
