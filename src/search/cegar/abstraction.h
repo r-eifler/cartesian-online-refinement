@@ -181,7 +181,7 @@ public:
     //Onlie refinement
     Node *get_node(const State &state) const;
     const TaskProxy* get_Task();
-    int onlineRefine(const State &state, int num_of_iter, int update_h_values, int max_states_refine, std::vector<std::vector<int>> *unused_cost);
+    int onlineRefine(const State &state, std::vector<State> goal_states, int num_of_iter, int max_states_refine, std::vector<std::vector<int>> *unused_cost);
 	//checks if the state satisfis the abstraction (not equals to h(s) = 0)
 	bool satisfies_goal(State state);
 	// checks if the solution of abs and this can be combined to achieve both goals

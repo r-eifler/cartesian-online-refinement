@@ -141,6 +141,92 @@ void EagerSearch::print_statistics() const {
     
 }
 
+SearchStatus EagerSearch::compute_next_real_time_step(GlobalState s, bool solution_found){
+	cout << "------------------ LH " << lookahead_size << " -----------------" << endl;
+	//find next action to execute
+	Plan plan;
+	search_space->trace_path(s, plan);
+	const GlobalOperator* next_action = NULL;
+
+	/*
+	cout << "current state: ";
+	for(uint i = 0; i < (path.end()-1)->get_values().size(); i++){
+		cout << "v" << i << " = " << current_state_v.get_values()[i] << " ";
+	}
+	cout << endl;
+	*/
+
+	//cout << "Length of plan part: " << plan.size() << " Length of path: " << path.size() << endl;
+	for(uint i = 0; (i < plan.size()) && ((i < (uint) actions_per_step) || solution_found); i++){
+		//NEXT ACTION
+		next_action = plan[i];
+		path_actions.push_back(next_action);
+		cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
+		
+		//NEXT STATE
+		GlobalState current_state = current_state_v.front();
+		current_state_v.clear();
+		GlobalState next_state = state_registry->get_successor_state(current_state, *next_action);
+		current_state_v.push_back(next_state);
+	}
+
+	//if goal was reached terminate the search and print the solution
+	if(solution_found){
+		for(uint j = 0; j < path_actions.size(); j++){
+			cout << path_actions[j]->get_name() << endl;
+		}
+		cout << "PLAN LENGTH: " << path_actions.size() << endl;
+		return SOLVED;
+	}
+
+	vector<GlobalState> frontier_states;
+	while(!open_list->empty()){
+		vector<int> keys;
+		StateID id = open_list->remove_min(&keys);
+        GlobalState s = state_registry->lookup_state(id);
+		frontier_states.push_back(s);
+	}
+
+	cout << "Frontier nodes: " << frontier_states.size() << endl;
+
+	//refine heuristic on the next state (new current state)
+	vector<const GlobalOperator *> applicable_ops;
+	g_successor_generator->generate_applicable_ops(current_state_v.front(), applicable_ops);
+	vector<pair<GlobalState, int>> succStates;
+	for (const GlobalOperator *op : applicable_ops) {
+		GlobalState succ_state = state_registry->get_successor_state(current_state_v.front(), *op);
+		succStates.push_back(make_pair(succ_state, op->get_cost()));
+	}
+	Heuristic* h = heuristics[0];        
+	cout << "+++++++++++++ REFINE ++++++++++++++++" << endl;
+	h->online_Refine(current_state_v.front(), succStates, frontier_states);
+	//cout << "REFINE" << endl;
+
+	//Reset search 
+	//state_registry = new StateRegistry(*g_root_task(), *g_state_packer, *g_axiom_evaluator, g_initial_state_data);
+	search_space = new SearchSpace(*state_registry, cost_type);
+
+	//next_state is the new start state for the next search
+	open_list = open_list_factory->create_state_open_list();
+	SearchNode node = search_space->get_node(current_state_v.front());       
+	node.open_initial();
+	
+	EvaluationContext eval_context(current_state_v.front(), 0, true, &statistics);
+	open_list->insert(eval_context, current_state_v.front().get_id());
+
+	/*
+	cout << "Refine state: ";
+	for(uint i = 0; i < node.get_state().get_values().size(); i++){
+		cout << "v" << i << " = " << node.get_state().get_values()[i] << " ";
+	}
+	cout << endl;
+	*/
+
+	//reset lookahead
+	lookahead_size = 0;
+	return IN_PROGRESS;
+}
+
 SearchStatus EagerSearch::step() {
 
     pair<SearchNode, bool> n = fetch_next_node();
@@ -166,81 +252,7 @@ SearchStatus EagerSearch::step() {
 	//Check size of lookahead is reached
 	bool solution_found = check_goal_and_set_plan(s);
 	if(lookahead == lookahead_size || solution_found){
-		cout << "------------------ LH " << lookahead_size << " -----------------" << endl;
-		//cout << "----> Step finished" << endl;
-		//find next action to execute
-        Plan plan;
-        search_space->trace_path(s, plan);
-		const GlobalOperator* next_action = NULL;
-
-		/*
-		cout << "current state: ";
-		for(uint i = 0; i < (path.end()-1)->get_values().size(); i++){
-			cout << "v" << i << " = " << current_state_v.get_values()[i] << " ";
-		}
-		cout << endl;
-		*/
-
-		//cout << "Length of plan part: " << plan.size() << " Length of path: " << path.size() << endl;
-		for(uint i = 0; (i < plan.size()) && ((i < (uint) actions_per_step) || solution_found); i++){
-			//NEXT ACTION
-			next_action = plan[i];
-			path_actions.push_back(next_action);
-			cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
-			
-			//NEXT STATE
-			GlobalState current_state = current_state_v.front();
-			current_state_v.clear();
-			GlobalState next_state = state_registry->get_successor_state(current_state, *next_action);
-			current_state_v.push_back(next_state);
-		}
-
-		//if goal was reached terminate the search and print the solution
-		if(solution_found){
-			for(uint j = 0; j < path_actions.size(); j++){
-				cout << path_actions[j]->get_name() << endl;
-			}
-			cout << "PLAN LENGTH: " << path_actions.size() << endl;
-			return SOLVED;
-		}
-
-		//refine heuristic on the next state (new current state)
-		vector<const GlobalOperator *> applicable_ops;
-		g_successor_generator->generate_applicable_ops(current_state_v.front(), applicable_ops);
-		vector<pair<GlobalState, int>> succStates;
-		for (const GlobalOperator *op : applicable_ops) {
-			GlobalState succ_state = state_registry->get_successor_state(current_state_v.front(), *op);
-			succStates.push_back(make_pair(succ_state, op->get_cost()));
-		}
-		Heuristic* h = heuristics[0];        
-		cout << "REFINE" << endl;
-		h->online_Refine(current_state_v.front(), succStates);
-		cout << "REFINE" << endl;
-
-		//Reset search 
-		//cout << "********Reset Search******" << endl;
-		//state_registry = new StateRegistry(*g_root_task(), *g_state_packer, *g_axiom_evaluator, g_initial_state_data);
-		search_space = new SearchSpace(*state_registry, cost_type);
-
-		//next_state is the new start state for the next search
-		open_list = open_list_factory->create_state_open_list();
-        SearchNode node = search_space->get_node(current_state_v.front());       
-        node.open_initial();
-        
-		EvaluationContext eval_context(current_state_v.front(), 0, true, &statistics);
-        open_list->insert(eval_context, current_state_v.front().get_id());
-
-		/*
-		cout << "Refine state: ";
-		for(uint i = 0; i < node.get_state().get_values().size(); i++){
-			cout << "v" << i << " = " << node.get_state().get_values()[i] << " ";
-		}
-		cout << endl;
-		*/
-
-		//reset lookahead
-		lookahead_size = 0;
-		return IN_PROGRESS;
+		return compute_next_real_time_step(s, solution_found);
 	}
 
 
@@ -248,65 +260,7 @@ SearchStatus EagerSearch::step() {
     vector<const GlobalOperator *> applicable_ops;
     g_successor_generator->generate_applicable_ops(s, applicable_ops);
 
-    
-    
-    //------------------------- ONLINE REFINEMENT ----------------------------------------
-	/*double ratio = total_refine_timer() /  utils::g_timer();
-	//cout << "--------> Refine-search ratio: " << ratio <<  " max: " << refine_search_ratio << endl;
-   	if( ratio < refine_search_ratio){
-    if(refine_online && ((wait_time && refine_timer() > refinement_waiting) || 
-						 (!wait_time && statistics.get_expanded() % (int) refinement_waiting == 0) || 
-						 need_to_refine)){ 
-		refine_timer.reset();
-		//store state
-		states_to_refine.push_back(make_pair(s, node.get_g()));
-		//cout << "States: " << states_to_refine.size() << " <= " << collect_states << endl;
-		if(collect_states == 1 || (int) states_to_refine.size() >= collect_states){
-			//cout << "---> REFINE" << endl;
-			for(pair<GlobalState, int> gs : states_to_refine){	
-				total_refine_timer.resume();
-				Heuristic* h = heuristics[0];        
-				// Check whether h(s) is too low by looking at all successors.
-				assert(heuristics.size() == 1);  // HACK
-				ScalarEvaluator *heuristic = heuristics[0];  // HACK
-				int infinity = EvaluationResult::INFTY;
-				EvaluationContext state_eval_context(gs.first, gs.second, false, nullptr);
-				int state_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-
-				if (state_h != infinity) {
-					//Generate all succesor states 
-					vector<pair<GlobalState, int>> succStates;
-					for (const GlobalOperator *op : applicable_ops) {
-						GlobalState succ_state = state_registry.get_successor_state(gs.first, *op);
-						succStates.push_back(make_pair(succ_state, op->get_cost()));
-					}
-
-					//ONLINE REFINEMENT  
-					bool refined = h->online_Refine(gs.first, succStates);
-					if(refined){
-					    num_refined_nodes++;  						
-						if(collect_states == 1){
-							need_to_refine = false;
-						}
-					} 
-					else{
-						if(collect_states == 1){
-							need_to_refine = true;
-						}
-					}
-					//cout << "-------------------------------------" << endl;
-				}
-
-				total_refine_timer.stop();  
-			}
-			states_to_refine.clear();
-			refine_timer.reset();
-		}
-    }
-	}
-    //------------------------- ONLINE REFINEMENT ----------------------------------------
-    */
-    
+   
     /*
       TODO: When preferred operators are in use, a preferred operator will be
       considered by the preferred operator queues even when it is pruned.
@@ -473,38 +427,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
         
         if (node.is_closed())
             continue;
-        
-        
-        //------------ Check if state needs to be reevaluated ------------
-		/*
-        if(true){
-			//h value of the last evaluation
-			int old_h = node.get_h_value();
-
-
-			//if(old_h + node.get_g() != last_key_removed[0]){
-			 //   continue;   
-
-
-			EvaluationContext state_eval_context(s, node.get_g(), false, &statistics);
-			ScalarEvaluator *heuristic = heuristics[0];
-			int new_h = state_eval_context.get_heuristic_value_or_infinity(heuristic);
-
-			//TODO can h value also decrease ?
-			//assert(old_h <= new_h);
-
-			//the state needs to be put back if the h value is not updated or the position does 
-			//not fit to the h and g value of the state
-			if(old_h < new_h || old_h + node.get_g() != last_key_removed[0]){
-				node.set_h_value(new_h);
-				open_list->insert(state_eval_context, node.get_state_id());  
-				num_reeval_states++;
-				//std::cout << "Fetch next Node: " << old_h + node.get_g() << " old h: " << old_h << " new h: " << new_h << " state: " << num_reeval_states << std::endl;
-				continue;  
-			}
-        }*/
-        open_list_timer.stop();
-        /*
+       /* 
         if(print_timer() > 30){
             cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
             cout << "Num reeval states " << num_reeval_states  << endl;

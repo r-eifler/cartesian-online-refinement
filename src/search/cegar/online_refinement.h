@@ -28,7 +28,7 @@ public:
     explicit OnlineRefinement(CostSaturation* cs, utils::RandomNumberGenerator* rng, int mso, bool use_us);
 
 	void set_heuristic_functions(std::vector<CartesianHeuristicFunction*> *fv);
-	bool refine(State state, std::vector<bool> toRefine);
+	bool refine(State state, std::vector<bool> toRefine, std::vector<State> frontier_nodes);
 
 	void print_statistics();
 

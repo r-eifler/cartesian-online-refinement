@@ -72,6 +72,7 @@ class EagerSearch : public SearchEngine {
     void update_f_value_statistics(const SearchNode &node);
     void reward_progress();
     void print_checkpoint_line(int g) const;
+	SearchStatus compute_next_real_time_step(GlobalState s, bool solution_found);
 
 protected:
     virtual void initialize() override;

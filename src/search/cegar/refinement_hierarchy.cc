@@ -60,10 +60,13 @@ RefinementHierarchy::RefinementHierarchy()
 
 Node *RefinementHierarchy::get_node(const State &state) const {
     assert(root);
+	//cout << "-------- get Node -------------" << endl;
     Node *current = root.get();
     while (current->is_split()) {
+		//cout << "v" << current->get_var() << " = " << state[current->get_var()].get_value() << endl;
         current = current->get_child(state[current->get_var()].get_value());
     }
+	//cout << "-------- get Node -------------" << endl;
     return current;
 }
 	
