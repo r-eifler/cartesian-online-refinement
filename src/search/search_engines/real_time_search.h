@@ -1,34 +1,68 @@
 #ifndef SEARCH_ENGINES_REAL_TIME_SEARCH_H
 #define SEARCH_ENGINES_REAL_TIME_SEARCH_H
 
-#include "../option_parser_util.h"
+#include "../evaluation_context.h"
 #include "../search_engine.h"
+
+#include "../open_lists/open_list.h"
+
+#include <map>
+#include <memory>
+#include <set>
+#include <utility>
+#include <vector>
 
 namespace options {
 class Options;
 }
 
 namespace real_time_search {
+enum class PreferredUsage {
+    PRUNE_BY_PREFERRED,
+    RANK_PREFERRED_FIRST
+};
+
+/*
+  Enforced hill-climbing with deferred evaluation.
+
+  TODO: We should test if this lazy implementation really has any benefits over
+  an eager one. We hypothesize that both versions need to evaluate and store
+  the same states anyways.
+*/
 class RealTimeSearch : public SearchEngine {
-    const std::vector<options::ParseTree> engine_configs;
-    bool pass_bound;
-    bool repeat_last_phase;
-    bool continue_on_fail;
-    bool continue_on_solve;
+    std::unique_ptr<StateOpenList> open_list;
 
-    int phase;
-    bool last_phase_found_solution;
-    int best_bound;
-    bool iterated_found_solution;
+    Heuristic *heuristic;
+    std::vector<Heuristic *> preferred_operator_heuristics;
+    std::set<Heuristic *> heuristics;
+    bool use_preferred;
+    PreferredUsage preferred_usage;
 
-    SearchEngine *get_search_engine(int engine_config_start_index);
-    SearchEngine *create_phase(int phase);
-    SearchStatus step_return_value();
+    EvaluationContext current_eval_context;
+    int current_phase_start_g;
 
+    // Statistics
+    std::map<int, std::pair<int, int>> d_counts;
+    int num_ehc_phases;
+    int last_num_expanded;
+
+	//Collect plan during execution
+	std::vector<const GlobalOperator*> real_time_plan;
+	std::vector<StateID> expand_states;
+
+    void reach_state(
+        const GlobalState &parent, const GlobalOperator &op,
+        const GlobalState &state);
+	SearchStatus compute_next_real_time_step(GlobalState s, bool solution_found);
+    SearchStatus search();
+
+protected:
+    virtual void initialize() override;
     virtual SearchStatus step() override;
 
 public:
     explicit RealTimeSearch(const options::Options &opts);
+    virtual ~RealTimeSearch() override;
 
     virtual void print_statistics() const override;
 };

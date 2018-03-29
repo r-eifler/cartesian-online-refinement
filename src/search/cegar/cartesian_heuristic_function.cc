@@ -56,6 +56,29 @@ int CartesianHeuristicFunction::online_Refine(const State &parent_state, std::ve
     return abstraction->onlineRefine(local_state, local_goal_states, max_iter, max_states_refine, unused_cost);
 }
 
+
+int CartesianHeuristicFunction::refineBellmanStyle(const State & parent_state){
+
+    State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
+	return abstraction->refineBellmanStyle(local_state);
+}
+
+
+int CartesianHeuristicFunction::refineSplitPre(const State & state, const State & prestate){
+
+    State local_state = (abstraction->get_Task())->convert_ancestor_state(state);
+    State local_prestate = (abstraction->get_Task())->convert_ancestor_state(prestate);
+	return abstraction->refineSplitPre(local_state, local_prestate);
+}
+
+
+int CartesianHeuristicFunction::refineSplitPreAction(const State &state, const State &preState, const std::vector<std::pair<int,int>> conditions){
+
+    State local_state = (abstraction->get_Task())->convert_ancestor_state(state);
+    State local_prestate = (abstraction->get_Task())->convert_ancestor_state(preState);
+	return abstraction->refineSplitPreAction(local_state, local_prestate, conditions);
+}
+
 bool CartesianHeuristicFunction::satisfies_goal(State parent_state){
 	State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
 	return abstraction->satisfies_goal(local_state);	

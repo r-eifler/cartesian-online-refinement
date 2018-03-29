@@ -181,7 +181,9 @@ public:
     static AbstractState get_abstract_state(
         const TaskProxy &task_proxy, const ConditionsProxy &conditions);
     static AbstractState get_abstract_state_vector(
-        const TaskProxy &task_proxy, std::vector<std::pair<int,int>> vars);
+        const TaskProxy &task_proxy, std::vector<std::pair<int, std::vector<int>>> vars);
+    static AbstractState get_abstract_state_Condition(
+        const TaskProxy &task_proxy, std::vector<std::pair<int,int>> conditions);
 };
 }
 

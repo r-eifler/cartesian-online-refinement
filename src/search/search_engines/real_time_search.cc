@@ -1,188 +1,364 @@
 #include "real_time_search.h"
 
+#include "search_common.h"
+
+#include "../global_operator.h"
 #include "../option_parser.h"
 #include "../plugin.h"
+#include "../successor_generator.h"
 
-#include <iostream>
+#include "../evaluators/g_evaluator.h"
+#include "../evaluators/pref_evaluator.h"
+
+#include "../open_lists/open_list_factory.h"
+#include "../open_lists/standard_scalar_open_list.h"
+#include "../open_lists/tiebreaking_open_list.h"
+
+#include "../algorithms/ordered_set.h"
+
+#include "../utils/system.h"
 
 using namespace std;
+using utils::ExitCode;
 
 namespace real_time_search {
-RealTimeSearch::RealTimeSearch(const Options &opts)
+using GEval = g_evaluator::GEvaluator;
+using PrefEval = pref_evaluator::PrefEvaluator;
+
+
+RealTimeSearch::RealTimeSearch(
+    const Options &opts)
     : SearchEngine(opts),
-      //engine_configs(opts.get_list<ParseTree>("engine_configs")),
-      pass_bound(opts.get<bool>("pass_bound")),
-      repeat_last_phase(opts.get<bool>("repeat_last")),
-      continue_on_fail(opts.get<bool>("continue_on_fail")),
-      continue_on_solve(opts.get<bool>("continue_on_solve")),
-      phase(0),
-      last_phase_found_solution(false),
-      best_bound(bound),
-      iterated_found_solution(false) {
-}
+      heuristic(opts.get<Heuristic *>("h")),
+      preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
+      preferred_usage(PreferredUsage(opts.get_enum("preferred_usage"))),
+      current_eval_context(state_registry->get_initial_state(), &statistics),
+      current_phase_start_g(-1),
+      num_ehc_phases(0),
+      last_num_expanded(-1) {
 
-SearchEngine *RealTimeSearch::get_search_engine(
-    int engine_configs_index) {
-    OptionParser parser(engine_configs[engine_configs_index], false);
-    SearchEngine *engine = parser.start_parsing<SearchEngine *>();
-
-    cout << "Starting search: ";
-    //kptree::print_tree_bracketed(engine_configs[engine_configs_index], cout);
-    cout << endl;
-
-    return engine;
-}
-
-SearchEngine *RealTimeSearch::create_phase(int phase) {
-    int num_phases = engine_configs.size();
-	cout << "Number of engines: " << num_phases << endl;
-    if (phase >= num_phases) {
-        /* We've gone through all searches. We continue if
-           repeat_last_phase is true, but *not* if we didn't find a
-           solution the last time around, since then this search would
-           just behave the same way again (assuming determinism, which
-           we might not actually have right now, but strive for). So
-           this overrides continue_on_fail.
-        */
-        if (repeat_last_phase && last_phase_found_solution) {
-            return get_search_engine(engine_configs.size() - 1);
-        } else {
-            return nullptr;
-        }
+	cout << "Heuristic: " << heuristic << endl;
+    const GlobalState &initial_state = state_registry->get_initial_state();
+    for (Heuristic *heuristic : heuristics) {
+        heuristic->notify_initial_state(initial_state);
     }
 
-    return get_search_engine(phase);
+	open_list = search_common::create_greedy_open_list_factory(opts)->create_state_open_list();
+}
+
+RealTimeSearch::~RealTimeSearch() {
+}
+
+void RealTimeSearch::reach_state(
+    const GlobalState &parent, const GlobalOperator &op, const GlobalState &state) {
+    for (Heuristic *heur : heuristics) {
+        heur->notify_state_transition(parent, op, state);
+    }
+}
+
+void RealTimeSearch::initialize() {
+    assert(heuristic);
+    cout << "Conducting enforced hill-climbing search, (real) bound = "
+         << bound << endl;
+    if (use_preferred) {
+        cout << "Using preferred operators for "
+             << (preferred_usage == PreferredUsage::RANK_PREFERRED_FIRST ?
+            "ranking successors" : "pruning") << endl;
+    }
+
+    bool dead_end = current_eval_context.is_heuristic_infinite(heuristic);
+    statistics.inc_evaluated_states();
+    print_initial_h_values(current_eval_context);
+
+    if (dead_end) {
+        cout << "Initial state is a dead end, no solution" << endl;
+        if (heuristic->dead_ends_are_reliable())
+            utils::exit_with(ExitCode::UNSOLVABLE);
+        else
+            utils::exit_with(ExitCode::UNSOLVED_INCOMPLETE);
+    }
+
+    //SearchNode node = search_space->get_node(current_eval_context.get_state());
+    //node.open_initial();
+
+    current_phase_start_g = 0;
+}
+
+SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool solution_found){
+	//find next action to execute
+	Plan current_plan;
+	search_space->trace_path(s, current_plan);
+
+	//if goal was reached terminate the search and print the solution
+	if(solution_found){
+		//build corrent plan
+		for(uint i = 0; i < current_plan.size(); i++){
+			cout << "NEXT ACTION ----> " << current_plan[i]->get_name() << endl;
+			real_time_plan.push_back(current_plan[i]);
+		}
+		set_plan(real_time_plan);	
+		return SOLVED;
+	}
+
+	for(const GlobalOperator* next_action : current_plan){
+		//const GlobalOperator* next_action = current_plan[0];
+		real_time_plan.push_back(next_action);
+
+		//cout << "Length of plan part: " << current_plan.size() << " Length of path: " << real_time_plan.size() << endl;
+
+		cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
+			
+		//NEXT STATE
+		GlobalState current_state = current_eval_context.get_state();
+		SearchNode current_node = search_space->get_node(current_state);
+		GlobalState next_state = state_registry->get_successor_state(current_state, *next_action);
+		int succ_g = current_node.get_g() + get_adjusted_cost(*next_action);
+		EvaluationContext eval_context(next_state,  succ_g, true, &statistics);
+		current_eval_context = eval_context;
+
+
+		//Collect frontier states for refinement
+		vector<GlobalState> frontier_states;
+		while(!open_list->empty()){
+			vector<int> keys;
+			StateID id = open_list->remove_min(&keys);
+			GlobalState s = state_registry->lookup_state(id);
+			frontier_states.push_back(s);
+		}
+
+		//cout << "Frontier nodes: " << frontier_states.size() << endl;
+
+		//refine heuristic on the next state
+		//refine heuristic an all expanded sates
+		cout << "+++++++++++++ REFINE ++++++++++++++++" << endl;
+		//cout << "Number expanded states: " << expand_states.size() << endl;
+		for(uint i = 1; i < expand_states.size(); i++){
+			StateID refine_state_id = expand_states[i];
+			cout << "----------> STATE: " << refine_state_id << endl;
+			//cout << "Refine state: " << refine_state_id << endl;
+			GlobalState refine_state = state_registry->lookup_state(refine_state_id);
+			SearchNode node = search_space->get_node(refine_state);
+			StateID parent_id = node.get_parent_id();
+			//cout << "Parent: " << parent_id <<  " " << parent_id.hash() << endl;
+			GlobalState parent_state = state_registry->lookup_state(parent_id);
+			frontier_states.clear();
+			frontier_states.push_back(parent_state);
+
+			/*
+			cout << "...... Parent State......." << endl;
+			parent_state.dump_pddl();
+			cout << endl;
+			cout << ".......Refine State........" << endl;
+			refine_state.dump_pddl();
+			cout << endl;
+			cout << "++++++++++++++++++" << endl;
+			*/
+
+			//GlobalState refine_state = next_state;
+			vector<const GlobalOperator *> applicable_ops;
+			g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
+			vector<pair<GlobalState, int>> succStates;
+			//cout << "Applicable ops: " << endl;
+			for (const GlobalOperator *op : applicable_ops) {
+				//cout << op->get_name() << endl;
+				GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
+				succStates.push_back(make_pair(succ_state, op->get_cost()));
+			}
+		
+		
+			if(frontier_states.size() > 0){
+				//heuristic->online_Refine(current_eval_context.get_state(), succStates, frontier_states);
+				vector<pair<int,int>> pre_con;
+				for(const GlobalCondition con : next_action->get_preconditions()){
+					pre_con.push_back(make_pair(con.var, con.val));
+				}
+				heuristic->online_Refine(refine_state, succStates, frontier_states, pre_con);
+			}
+		}
+
+		//only one step
+		break;
+	}
+
+	cout << "+++++++++++++ REFINE ++++++++++++++++" << endl;
+	//Reset search 
+	search_space = new SearchSpace(*state_registry, cost_type);
+	expand_states.clear();
+	
+	return IN_PROGRESS;
 }
 
 SearchStatus RealTimeSearch::step() {
-	cout << "Phase: " << phase << endl;
-    SearchEngine *current_search = create_phase(phase);
-    if (!current_search) {
-		cout << "no current search" << endl;
-        return found_solution() ? SOLVED : FAILED;
+	cout << "+++++++++++++ STEP +++++++++++++++" << endl;
+    last_num_expanded = statistics.get_expanded();
+    search_progress.check_progress(current_eval_context);
+
+	/*
+    if (check_goal_and_set_plan(current_eval_context.get_state())) {
+        return SOLVED;
     }
-    if (pass_bound) {
-        current_search->set_bound(best_bound);
-    }
-    ++phase;
+	*/
 
-    current_search->search();
-
-    SearchEngine::Plan found_plan;
-    int plan_cost = 0;
-    last_phase_found_solution = current_search->found_solution();
-    if (last_phase_found_solution) {
-        iterated_found_solution = true;
-        found_plan = current_search->get_plan();
-        plan_cost = calculate_plan_cost(found_plan);
-        if (plan_cost < best_bound) {
-            //save_plan(found_plan, true);
-            best_bound = plan_cost;
-            set_plan(found_plan);
-        }
-    }
-    current_search->print_statistics();
-
-    const SearchStatistics &current_stats = current_search->get_statistics();
-    statistics.inc_expanded(current_stats.get_expanded());
-    statistics.inc_evaluated_states(current_stats.get_evaluated_states());
-    statistics.inc_evaluations(current_stats.get_evaluations());
-    statistics.inc_generated(current_stats.get_generated());
-    statistics.inc_generated_ops(current_stats.get_generated_ops());
-    statistics.inc_reopened(current_stats.get_reopened());
-
-    return step_return_value();
+	//Add initial state of current search to the openlist
+	GlobalState current_state = current_eval_context.get_state();
+    statistics.inc_evaluated_states();
+	SearchNode node = search_space->get_node(current_state);
+	node.open_initial();
+	open_list->insert(current_eval_context, current_state.get_id());
+    return  search();
 }
 
-SearchStatus RealTimeSearch::step_return_value() {
-    if (iterated_found_solution)
-        cout << "Best solution cost so far: " << best_bound << endl;
+SearchStatus RealTimeSearch::search() {
+	int lookahead = 5;
 
-    if (last_phase_found_solution) {
-        if (continue_on_solve) {
-            cout << "Solution found - keep searching" << endl;
-            return IN_PROGRESS;
-        } else {
-            cout << "Solution found - stop searching" << endl;
-            return SOLVED;
+    while (!open_list->empty()) {
+		//cout << "--------- Lookahead: " << lookahead << "----------" << endl;
+        vector<int> last_key_removed;
+        StateID id = open_list->remove_min(&last_key_removed);
+
+        GlobalState state = state_registry->lookup_state(id);
+        SearchNode node = search_space->get_node(state);
+
+		//A* check closed 
+		if(node.is_closed()){
+			continue;
+		}
+		node.close();
+		//cout << "Expand: " << state.get_id() << " h=" << last_key_removed[0] << endl;
+		lookahead--;
+
+		//If solution has been found or lookhead is reached return the current
+		//best state (next min in openlist)
+		bool solution_found = check_goal_and_set_plan(state);
+		if((lookahead == 0 || solution_found)){
+			expand_states.push_back(state.get_id());
+			//cout << "----> compute next real time step" << endl;
+			return compute_next_real_time_step(state, solution_found);
+		}
+		
+		vector<const GlobalOperator *> applicable_ops;
+    	g_successor_generator->generate_applicable_ops(state, applicable_ops);
+
+		for (const GlobalOperator *op : applicable_ops) {
+
+			statistics.inc_generated();
+			
+			GlobalState succ_state = state_registry->get_successor_state(state, *op);
+			SearchNode succ_node = search_space->get_node(succ_state);
+
+			// Previously encountered dead end. Don't re-evaluate.
+			if (succ_node.is_dead_end())
+				continue;
+
+			// update new path
+			if (succ_node.is_new()) {
+				//cout << "Succ: " << succ_state.get_id() << "   " << op->get_name();
+					/*
+				  Note: we must call notify_state_transition for each heuristic, so
+				  don't break out of the for loop early.
+				*/
+				for (Heuristic *heuristic : heuristics) {
+					heuristic->notify_state_transition(state, *op, succ_state);
+				}
+
+				// We have not seen this state before.
+				// Evaluate and create a new node.
+
+				// Careful: succ_node.get_g() is not available here yet,
+				// hence the stupid computation of succ_g.
+				// TODO: Make this less fragile.
+				int succ_g = node.get_g() + get_adjusted_cost(*op);
+
+				EvaluationContext eval_context(
+					succ_state, succ_g, false, &statistics);
+				statistics.inc_evaluated_states();
+
+				if (open_list->is_dead_end(eval_context)) {
+					succ_node.mark_as_dead_end();
+					statistics.inc_dead_ends();
+					continue;
+				}
+				succ_node.open(node, op);
+				//cout << " h=" << eval_context.get_heuristic_value(heuristic) << endl;
+				//cout << "Update Parent new " << succ_state.get_id() << " -> " << state.get_id() << endl;
+			
+				open_list->insert(eval_context, succ_state.get_id());
+				if (search_progress.check_progress(eval_context)) {
+					//TODO
+				}
+			} 
+			else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
+				//cout << "UPDATE Parent: Succ: " << succ_state.get_id() << "   " << op->get_name();
+				// If we do not reopen closed nodes, we just update the parent pointers.
+				// Note that this could cause an incompatibility between
+				// the g-value and the actual path that is traced back.
+				//cout << "Update Parent no reopen " << succ_state.get_id() << " -> " << state.get_id() << endl;
+				succ_node.update_parent(node, op);
+			}
+			/*
+			else
+			{
+				cout << "NOT NEW: Succ: " << succ_state.get_id() << "   " << op->get_name() << endl;
+			}
+			*/
         }
-    } else {
-        if (continue_on_fail) {
-            cout << "No solution found - keep searching" << endl;
-            return IN_PROGRESS;
-        } else {
-            cout << "No solution found - stop searching" << endl;
-            return iterated_found_solution ? SOLVED : FAILED;
-        }
+		expand_states.push_back(state.get_id());
     }
+    cout << "No solution - FAILED" << endl;
+    return FAILED;
 }
 
 void RealTimeSearch::print_statistics() const {
-    cout << "Cumulative statistics:" << endl;
     statistics.print_detailed_statistics();
+
+    cout << "EHC phases: " << num_ehc_phases << endl;
+    //assert(num_ehc_phases != 0);
+    cout << "Average expansions per EHC phase: "
+         << static_cast<double>(statistics.get_expanded()) / num_ehc_phases
+         << endl;
+
+    for (auto count : d_counts) {
+        int depth = count.first;
+        int phases = count.second.first;
+        assert(phases != 0);
+        int total_expansions = count.second.second;
+        cout << "EHC phases of depth " << depth << ": " << phases
+             << " - Avg. Expansions: "
+             << static_cast<double>(total_expansions) / phases << endl;
+    }
+
+	cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
+	heuristic->print_statistics();
 }
 
 static SearchEngine *_parse(OptionParser &parser) {
-    parser.document_synopsis("Real time search", "");
-    parser.document_note(
-        "Note 1",
-        "We don't cache heuristic values between search iterations at"
-        " the moment. If you perform a LAMA-style iterative search,"
-        " heuristic values will be computed multiple times.");
-    parser.document_note(
-        "Note 2",
-        "The configuration\n```\n"
-        "--search \"iterated([lazy_wastar(merge_and_shrink(),w=10), "
-        "lazy_wastar(merge_and_shrink(),w=5), lazy_wastar(merge_and_shrink(),w=3), "
-        "lazy_wastar(merge_and_shrink(),w=2), lazy_wastar(merge_and_shrink(),w=1)])\"\n"
-        "```\nwould perform the preprocessing phase of the merge and shrink heuristic "
-        "5 times (once before each iteration).\n\n"
-        "To avoid this, use heuristic predefinition, which avoids duplicate "
-        "preprocessing, as follows:\n```\n"
-        "--heuristic \"h=merge_and_shrink()\" --search "
-        "\"iterated([lazy_wastar(h,w=10), lazy_wastar(h,w=5), lazy_wastar(h,w=3), "
-        "lazy_wastar(h,w=2), lazy_wastar(h,w=1)])\"\n"
-        "```");
-    parser.document_note(
-        "Note 3",
-        "If you reuse the same landmark count heuristic "
-        "(using heuristic predefinition) between iterations, "
-        "the path data (that is, landmark status for each visited state) "
-        "will be saved between iterations.");
-    parser.add_list_option<ParseTree>("engine_configs",
-                                      "list of search engines for each phase");
-    parser.add_option<bool>(
-        "pass_bound",
-        "use bound from previous search. The bound is the real cost "
-        "of the plan found before, regardless of the cost_type parameter.",
-        "true");
-    parser.add_option<bool>("repeat_last",
-                            "repeat last phase of search",
-                            "false");
-    parser.add_option<bool>("continue_on_fail",
-                            "continue search after no solution found",
-                            "false");
-    parser.add_option<bool>("continue_on_solve",
-                            "continue search after solution found",
-                            "true");
+    parser.document_synopsis("Lazy enforced hill-climbing", "");
+    parser.add_option<Heuristic *>("h", "heuristic");
+    vector<string> preferred_usages;
+    preferred_usages.push_back("PRUNE_BY_PREFERRED");
+    preferred_usages.push_back("RANK_PREFERRED_FIRST");
+    parser.add_enum_option(
+        "preferred_usage",
+        preferred_usages,
+        "preferred operator usage",
+        "PRUNE_BY_PREFERRED");
+    parser.add_list_option<Heuristic *>(
+        "preferred",
+        "use preferred operators of these heuristics",
+        "[]");
+    parser.add_option<int>(
+        "boost",
+        "boost value for preferred operator open lists", "0");
+    parser.add_list_option<ScalarEvaluator *>("evals", "scalar evaluators");
     SearchEngine::add_options_to_parser(parser);
     Options opts = parser.parse();
+    opts.verify_list_non_empty<ScalarEvaluator *>("evals");
 
-    //opts.verify_list_non_empty<ParseTree>("engine_configs");
-
-    /*if (parser.help_mode()) {
+    if (parser.dry_run())
         return nullptr;
-    } else if (parser.dry_run()) {
-        //check if the supplied search engines can be parsed
-        for (const ParseTree &config : opts.get_list<ParseTree>("engine_configs")) {
-            OptionParser test_parser(config, true);
-            test_parser.start_parsing<SearchEngine *>();
-        }
-        return nullptr;
-    } else {*/
+    else
         return new RealTimeSearch(opts);
-    //}
 }
 
-static Plugin<SearchEngine> _plugin("realtime", _parse);
+static Plugin<SearchEngine> _plugin("rt", _parse);
 }

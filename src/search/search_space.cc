@@ -95,6 +95,10 @@ void SearchNode::update_parent(const SearchNode &parent_node,
     info.creating_operator = get_op_index_hacked(parent_op);
 }
 
+StateID SearchNode::get_parent_id(){
+	return info.parent_state_id;
+}
+
 void SearchNode::close() {
     assert(info.status == SearchNodeInfo::OPEN);
     info.status = SearchNodeInfo::CLOSED;
@@ -139,6 +143,7 @@ void SearchSpace::trace_path(const GlobalState &goal_state,
     GlobalState current_state = goal_state;
     assert(path.empty());
     for (;;) {
+		//cout << "current state: " << current_state.get_id() << endl;
         const SearchNodeInfo &info = search_node_infos[current_state];
         if (info.creating_operator == -1) {
             assert(info.parent_state_id == StateID::no_state);
@@ -146,6 +151,7 @@ void SearchSpace::trace_path(const GlobalState &goal_state,
         }
         assert(utils::in_bounds(info.creating_operator, g_operators));
         const GlobalOperator *op = &g_operators[info.creating_operator];
+		//cout << op->get_name() << endl;
         path.push_back(op);
         current_state = state_registry.lookup_state(info.parent_state_id);
     }

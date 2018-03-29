@@ -40,6 +40,9 @@ public:
 	//Online Refinement
 	std::vector<int> get_values(const State &parent_state) const;
 	int online_Refine(const State &state, std::vector<State> goal_states, int max_iter, int max_states_refine, std::vector<std::vector<int>> *unused_cost) const;
+	int refineBellmanStyle(const State & state);
+	int refineSplitPre(const State & state, const State & prestate);
+	int refineSplitPreAction(const State &state, const State &preState, const std::vector<std::pair<int,int>> conditions);
 	void print_statistics() const; 
 	void update_h_values();
 	void merge(CartesianHeuristicFunction *function);

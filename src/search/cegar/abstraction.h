@@ -55,6 +55,10 @@ class Abstraction {
 	
     int refinement_calls = 0; 
 	int usefull_splits = 0;
+	int num_same_abstract_state = 0;
+	int num_spurious_meeting_point_goal = 0;
+	int num_spurious_meeting_point = 0;
+	int num_standard_refine = 0;
 	
 	// stores the saturation which is only computed testwise to find a better order
 	std::vector<int> current_saturation;
@@ -77,6 +81,7 @@ class Abstraction {
     /* Abstract goal states. Landmark tasks may have multiple abstract
        goal states. */
     AbstractStates goals;
+	AbstractStates refine_goals;
 
     // Count the number of times each flaw type is encountered.
     int deviations;
@@ -110,6 +115,7 @@ class Abstraction {
     void build(utils::RandomNumberGenerator &rng);
 
     bool is_goal(AbstractState *state) const;    
+    bool is_refine_goal(AbstractState *state) const;    
 
     // Split state into two child states.
     std::pair<AbstractState*, AbstractState*> refine(AbstractState *state, int var, const std::vector<int> &wanted);
@@ -120,6 +126,9 @@ class Abstraction {
        first encountered flaw or nullptr if there is no flaw. */
     //std::unique_ptr<Flaw> find_flaw(const Solution &solution);
     std::unique_ptr<Flaw> find_flaw(const Solution &solution, AbstractState *start_state, State concrete_start_state);
+    std::unique_ptr<Flaw> find_flaw_bellman(const Solution &solution, AbstractState *start_state, State concrete_start_state);
+    std::unique_ptr<Flaw> find_flaw_Condition(const std::vector<std::pair<int,int>> condictions, AbstractState *start_state, State concrete_start_state);
+    std::unique_ptr<Flaw> find_flaw_online(const Solution &solution, AbstractState *start_state, State concrete_start_state, std::vector<std::pair<int,std::vector<int>>> vars);
 
     // Perform Dijkstra's algorithm from the goal states to update the h-values.
     void update_h_and_g_values();
@@ -182,6 +191,9 @@ public:
     Node *get_node(const State &state) const;
     const TaskProxy* get_Task();
     int onlineRefine(const State &state, std::vector<State> goal_states, int num_of_iter, int max_states_refine, std::vector<std::vector<int>> *unused_cost);
+	int refineBellmanStyle(const State & state);
+	int refineSplitPre(const State &state, const State preState);
+	int refineSplitPreAction(const State &state, const State &preState, const std::vector<std::pair<int,int>> condictions);
 	//checks if the state satisfis the abstraction (not equals to h(s) = 0)
 	bool satisfies_goal(State state);
 	// checks if the solution of abs and this can be combined to achieve both goals

@@ -51,6 +51,16 @@ struct Flaw {
           the corresponding variable. The values that are in both the
           current and the desired abstract state are the "wanted" ones.
         */
+	/*	
+		cout << "GET POSSIBLE SPLITS" << endl;
+		for(uint i = 0; i < concrete_state.size(); i++){
+			cout << "v" << i << " = " << concrete_state[i].get_value() << " ";
+		}
+		cout << endl;
+		cout << "current: " << *current_abstract_state << endl;
+		cout << "desired: " << desired_abstract_state << endl;
+	*/
+
         for (FactProxy wanted_fact_proxy : concrete_state) {
             FactPair fact = wanted_fact_proxy.get_pair();
             if (!current_abstract_state->contains(fact.var, fact.value) ||
@@ -69,10 +79,14 @@ struct Flaw {
                 if(wanted.empty()){
                     return splits;   
                 }
-                splits.emplace_back(var_id, move(wanted));
+				//test if variable domain can be split
+				if(current_abstract_state->count(var_id) > 1){
+					splits.emplace_back(var_id, move(wanted));
+				}
             }
         }
-        assert(!splits.empty());
+        //assert(!splits.empty());
+		//TODO !!!!!!!!!!!!!!!!!!!!
         return splits;
     }
 };
@@ -155,6 +169,10 @@ Abstraction::~Abstraction() {
 
 bool Abstraction::is_goal(AbstractState *state) const {
     return goals.count(state) == 1;
+}
+    
+bool Abstraction::is_refine_goal(AbstractState *state) const {
+    return refine_goals.count(state) == 1;
 }
     
 bool Abstraction::satisfies_goal(State state){
@@ -243,6 +261,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
 	//cout << "...... REFINE ... " << endl;
     bool found_concrete_solution = false;
     while (may_keep_refining()) {
+		/*
         //cout << "-----------------------" << endl;
         bool found_abstract_solution = abstract_search.find_solution(init, goals);
         if (!found_abstract_solution) {
@@ -261,6 +280,38 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
         const Split &split = split_selector.pick_split(*abstract_state, splits, rng);
         refine(abstract_state, split.var_id, split.values);
         //cout << "-----------------------" << endl;
+		*/
+
+		AbstractState *abstract_state = *goals.begin(); 
+		//cout << "Abstract GOAL State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
+
+
+		vector<Split> split_facts;
+		//cout << "Split values: " << endl;
+		for(FactProxy goal : task_proxy.get_goals()){
+			//if(state[i] != preState[i]){
+			if(abstract_state->count(goal.get_variable().get_id()) > 1){
+				//cout << "v" << goal.get_variable().get_id() << " = " << goal.get_value() << endl;
+				vector<int> values;
+				values.push_back(goal.get_value());
+				split_facts.emplace_back(goal.get_variable().get_id(), move(values));
+			}
+			//}
+		}
+
+		if(split_facts.empty()){
+			cout << "NO SPLITS" << endl;
+			return;
+		}
+
+		const Split &split = split_selector.pick_split(*abstract_state, split_facts, rng);
+
+		if(abstract_state->count(split.var_id) > 1){
+				refine(abstract_state, split.var_id, split.values);  
+				//AbstractState *abstract_state = *goals.begin(); 
+				//cout << "Abstract GOAL State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
+		}
+		//cout << "---------------------------------------------------------------------------" << endl;
     }
     cout << "Concrete solution found: " << found_concrete_solution << endl;
 }
@@ -286,27 +337,354 @@ void Abstraction::update_Task(shared_ptr<AbstractTask> abstask){
 std::shared_ptr<AbstractTask> Abstraction::get_AbsTask(){
    return task;     
 }
+
+
+
+int Abstraction::refineBellmanStyle(const State & state){
+		
+	AbstractState *abstract_state = NULL;
+	if(states.size() == 1){
+		abstract_state = *(states.begin());	
+	}
+	else{
+		abstract_state = get_node(state)->get_AbstractState(); 
+	}
+	bool found_abstract_solution = abstract_search.find_solution(abstract_state, goals);
+
+	if (!found_abstract_solution) {
+		cout << "Abstract problem is unsolvable!" << endl;
+		return 0;
+	}
+
+	unique_ptr<Flaw> flaw = find_flaw_bellman(abstract_search.get_solution(), abstract_state, state); 
+
+	vector<Split> splits = flaw->get_possible_splits();
+	if(splits.empty()){
+		cout << "Split empty" << endl;
+		return 0;
+	}
+   
+	const Split &split = split_selector.pick_split(*abstract_state, splits, rng);
+
+	cout << "Split: ";
+	cout << *abstract_state;
+	cout << " with : " << split.var_id << " = {" ;
+	for(int v : split.values){
+			cout << v << " ";
+	}
+	cout << "}" << endl;
+
+	refine(abstract_state, split.var_id, split.values);  
+
+	return 1;
+}
+
+
+std::unique_ptr<Flaw> Abstraction::find_flaw_bellman(const Solution &solution, AbstractState *start_state, State concrete_start_state){
+
+	OperatorProxy op = task_proxy.get_operators()[solution.begin()->op_id];
+    return utils::make_unique_ptr<Flaw>(move(concrete_start_state), start_state,
+        AbstractState::get_abstract_state(task_proxy, op.get_preconditions()));
+
+}
+
+
+int Abstraction::refineSplitPre(const State &state, const State preState){
+	/*
+	cout << "---> Refine pre state" << endl;
+	cout << "Current State: " << endl;
+	state.dump_pddl();
+	state.dump_fdr();
+	cout << endl;
+
+	cout << "Pre State: " << endl;
+	preState.dump_pddl();
+	preState.dump_fdr();
+	cout << endl;
+	*/
+
+	AbstractState *abstract_state = get_node(state)->get_AbstractState(); 
+	//cout << "Abstract State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
+
+	AbstractState *abstract_pre_state = get_node(preState)->get_AbstractState(); 
+	//cout << "Abstract pre State: h=" << abstract_pre_state->get_h_values()[0] << endl << *abstract_pre_state << endl;
+
+	//If both states are in the same abstract state:
+	//split it such that it is not the case anymore
+	if(abstract_pre_state == abstract_state){
+		num_same_abstract_state++;
+		cout << "SAME ABSTRACT STATE" << endl;
+
+		//TODO split multiple times ?
+		vector<Split> split_facts;
+		//cout << "Split values: " << endl;
+		for(uint i = 0; i < state.size(); i++){
+			if(state[i] != preState[i]){
+				if(abstract_state->count(i) > 1){
+					//cout << "v" << i << " = " << preState[i].get_value() << endl;;
+					vector<int> values;
+					values.push_back(preState[i].get_value());
+					split_facts.emplace_back(i, move(values));
+				}
+			}
+		}
+
+		if(split_facts.empty()){
+			//cout << "NO SPLITS" << endl;
+			return 0;
+		}
+
+		const Split &split = split_selector.pick_split(*abstract_state, split_facts, rng);
+
+		if(abstract_state->count(split.var_id) > 1){
+				refine(abstract_state, split.var_id, split.values);  
+		}
+	}
+	else{
+		//abstract states are not the same
+		abstract_search.find_solution(abstract_state, goals);
+		Solution solution_state = abstract_search.get_solution();
+
+		abstract_search.find_solution(abstract_pre_state, goals);
+		Solution solution_pre_state = abstract_search.get_solution();
+
+		//Find meeting point
+		//collect all states on the solution of state s'
+		unordered_set<AbstractState*> solution_states;
+		solution_states.insert(abstract_state);
+		for (const Transition &step : solution_state) {
+			solution_states.insert(step.target);
+		}
+	
+		//Find the first state the solution of s which is also in the solution
+		//of s'
+		AbstractState* meeting_point = NULL; 
+		int op_id_pre = 0;
+		for(const Transition & step : solution_pre_state){
+			if(solution_states.find(step.target) != solution_states.end()){
+				op_id_pre = step.op_id;
+				meeting_point = step.target;
+			}
+		}
+		//cout << "MEETING POINT = " << *meeting_point << endl;
+		if(is_abstract_goal(meeting_point)){
+			cout << "GOAL IS MEETING POINT" << endl;
+			num_spurious_meeting_point_goal++;
+			vector<State> new_goals;
+			int r = onlineRefine(state, new_goals, 1, 1, NULL); 	
+			//print_states();
+			return r;
+		}
+
+		//TODO find matching transition in solution od s'
+		
+		int op_id = 0;
+		for (const Transition &step : solution_state) {
+			if(step.target == meeting_point){
+				op_id = step.op_id;
+			}
+		}
+
+		
+		OperatorProxy op_pre = task_proxy.get_operators()[op_id_pre];
+		EffectsProxy effects_pre = op_pre.get_effects();
+		OperatorProxy op = task_proxy.get_operators()[op_id];
+		EffectsProxy effects = op.get_effects();
+
+		int is_spurous_meeting_point = false;
+		for(uint i = 0; i < effects.size(); i++){
+			int var = effects[i].get_fact().get_variable().get_id();
+			int value = effects[i].get_fact().get_value();
+			for(uint j = 0; j < effects_pre.size(); j++){
+				if(effects_pre[j].get_fact().get_variable().get_id() == var && 
+						effects_pre[j].get_fact().get_value() == value){
+					break;
+				}
+				is_spurous_meeting_point = true;
+				goto end_comparison;
+			}
+		}
+
+		end_comparison:
+		if(is_spurous_meeting_point){
+			num_spurious_meeting_point++;
+			//Split according to the effect 
+			cout << "SPURIOUS MEETING POINT" << endl;
+			vector<Split> split_facts;
+			//cout << "Effect: " << endl;
+			for(uint i = 0; i < effects.size(); i++){
+				int var = effects[i].get_fact().get_variable().get_id();
+				int value = effects[i].get_fact().get_value();
+				//cout << "Domain size var " << var << ": " << meeting_point->count(var) << endl;
+				if(meeting_point->count(var) > 1){
+					//cout << "v" << var << " = " << value << endl;;
+					vector<int> values;
+					values.push_back(value);
+					split_facts.emplace_back(var, move(values));
+				}
+			}
+
+			if(split_facts.empty()){
+				//cout << "NO SPLITS" << endl;
+				return 0;
+			}
+
+			const Split &split = split_selector.pick_split(*meeting_point, split_facts, rng);
+			//cout << "Split: var" << split.var_id << " = " << split.values[0] << endl; 
+
+			if(meeting_point->count(split.var_id) > 1){
+					refine(meeting_point, split.var_id, split.values);  
+			}
+
+		}
+		else{
+			num_standard_refine++;
+			vector<State> new_goals;
+			onlineRefine(state, new_goals, 1, 1, NULL); 	
+		}
+	}
+	//print_states();
+	//cout << "Abstraction size: " << states.size() << endl;
+	return 1;
+}
+
+
+int Abstraction::refineSplitPreAction(const State &state, const State &preState, const std::vector<std::pair<int,int>> conditions){
+
+
+	cout << "Current State: " << endl;
+	state.dump_pddl();
+	state.dump_fdr();
+	AbstractState *abstract_current_state = get_node(state)->get_AbstractState(); 
+	cout << *abstract_current_state << endl;
+	cout << endl;
+
+	cout << "Pre State: " << endl;
+	preState.dump_pddl();
+	preState.dump_fdr();
+	AbstractState *abstract_pre_state = get_node(preState)->get_AbstractState(); 
+	cout << *abstract_pre_state << endl;
+	cout << endl;
+
+
+	cout << "Precondition: ";
+	for(uint i = 0; i < conditions.size(); i++){
+		cout << "v" << conditions[i].first << " = " << conditions[i].second << " ";
+	}
+	cout << endl;
+
+	unique_ptr<Flaw> flaw = find_flaw_Condition(conditions, abstract_current_state, state);
+
+	vector<Split> splits = flaw->get_possible_splits();
+	if(splits.empty()){
+		cout << "Split empty" << endl;
+
+		unique_ptr<Flaw> flaw = find_flaw_Condition(conditions, abstract_pre_state, state);
+		vector<Split> splits = flaw->get_possible_splits();
+		if(splits.empty()){
+			cout << "Split empty" << endl;
+			vector<State> new_goals;
+			//onlineRefine(state, new_goals, 1, 10000000, NULL);
+			return 0;
+		}
+
+		const Split &split = split_selector.pick_split(*abstract_pre_state, splits, rng);
+		cout << "Split: v" << split.var_id << " = " << split.values[0] << endl;
+
+		if(abstract_pre_state->count(split.var_id) > 1){
+			refine(abstract_pre_state, split.var_id, split.values);  
+		}
+
+		print_states();
+		return 1;
+	}
+   
+	const Split &split = split_selector.pick_split(*abstract_current_state, splits, rng);
+
+	if(abstract_current_state->count(split.var_id) > 1){
+		refine(abstract_current_state, split.var_id, split.values);  
+	}
+
+	print_states();
+	return 1;
+}
+
+std::unique_ptr<Flaw> Abstraction::find_flaw_Condition(const std::vector<std::pair<int,int>> conditions, AbstractState *start_state, State concrete_start_state){
+
+    return utils::make_unique_ptr<Flaw>(move(concrete_start_state), start_state,
+        AbstractState::get_abstract_state_Condition(task_proxy, conditions));
+}
     
-int Abstraction::onlineRefine(const State &state, std::vector<State> goal_states, int num_of_Iter, int max_states_refine, std::vector<std::vector<int>> *unused_cost){
+int Abstraction::onlineRefine(const State &state, std::vector<State> , int num_of_Iter, int max_states_refine, std::vector<std::vector<int>> *unused_cost){
+	//cout << "******************************** NORMAL ONLINE REFINE **********************************" << endl;
     refined = false;
     int state_border = get_num_states() + max_states_refine < 0 ? max_states_refine : get_num_states() + max_states_refine;
     if(!(utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0)){
      return 0;   
     }
+
+/*	
+	//find new goals facts
+	vector<int> new_goal_facts;
+	for(uint i = 0; i < goal_states[0].size(); i++){
+		new_goal_facts.push_back(goal_states[0][i].get_value());
+	}
 	
-	AbstractStates given_goals;
-	cout << "New goal states" << endl << "\t";
+	refine_goals.clear();
+	cout << "--------- New goal states -----------" << endl;
 	for(const State s : goal_states){
+		cout << "\tConcrete: " << endl;
+		s.dump_pddl();
 		for(uint i = 0; i < s.size(); i++){
-			cout << "Concrete: v" << s[i].get_variable().get_id() << " = " << s[i].get_value() << " ";
+			if(new_goal_facts[i] != s[i].get_value()){
+				new_goal_facts[i] = -1;
+			}
+			cout << "v" << s[i].get_variable().get_id() << " = " << s[i].get_value() << " ";
 		}
 		cout << endl << "\t";
 		AbstractState* gs = refinement_hierarchy.get_node(s)->get_AbstractState();
-		given_goals.insert(gs);
+		refine_goals.insert(gs);
 
-		cout << "Abstract: " <<  *gs << endl;
+		cout << "Abstract: "<< endl <<  *gs << endl;
 	}
+	cout << "--------- New goal states -----------" << endl;
 
+	cout << "---------- Current State----------------" << endl;
+	state.dump_pddl();
+	for(uint i = 0; i < state.size(); i++){
+		cout << "v" << state[i].get_variable().get_id() << " = " << state[i].get_value() << " ";
+		if(new_goal_facts[i] == state[i].get_value()){
+			new_goal_facts[i] = -1;
+		}
+	}
+	cout << endl;
+	cout << endl;
+
+	cout << "New goal Facts: ";
+	//TODO what happens if there are no common values in the goal states ?
+	vector<pair<int,vector<int>>> goal_facts_split;
+	for(uint i = 0; i < new_goal_facts.size(); i++){
+		if(new_goal_facts[i] != -1){
+			vector<int> values;
+			cout << "v" << i << " = {";
+		
+			
+			for(int j = 0; j < state[i].get_variable().get_domain_size(); j++){
+				if(new_goal_facts[i] != j){
+					cout << j << ", ";
+					values.push_back(j);
+				}
+			}
+			
+
+			cout << new_goal_facts[i];
+			vaolues.push_back(new_goal_facts[i]); 
+			cout << "}" << endl;
+			goal_facts_split.push_back(make_pair(i,values));
+		}
+	}
+	cout << endl;
+*/
     refinement_calls++;
     int refined_states = 0;
     refine_timer.resume();
@@ -323,17 +701,17 @@ int Abstraction::onlineRefine(const State &state, std::vector<State> goal_states
 		
         //bool found_abstract_solution = abstract_search.find_solution(start_state, goals);
 	bool found_abstract_solution = false;
-		if(given_goals.size() > 0){
-			cout << "Use frontier as goals: " << given_goals.size() << endl;
-			found_abstract_solution = abstract_search.find_solution(start_state, given_goals);
+		if(refine_goals.size() > 0){
+			//cout << "Use frontier as goals: " << refine_goals.size() << endl;
+			found_abstract_solution = abstract_search.find_solution(start_state, refine_goals);
 		}
 		else{
-			cout << "use original goals: " << endl;
+			//cout << "use original goals: " << endl;
 			found_abstract_solution = abstract_search.find_solution(start_state, goals);
 		}
 
         if (!found_abstract_solution) {
-            cout << "Abstract problem is unsolvable!" << endl;
+            //cout << "Abstract problem is unsolvable!" << endl;
             break;
         }
 
@@ -353,17 +731,18 @@ int Abstraction::onlineRefine(const State &state, std::vector<State> goal_states
             refined = refined_states > 0;
             return refined_states;
         }
-        
+       
         const Split &split = split_selector.pick_split(*abstract_state, splits, rng);
-	
-		
-		cout << *abstract_state << endl;
-		cout << "Split: " << split.var_id << " = {" ;
+
+		/*
+		cout << "Split: ";
+		cout << *abstract_state;
+		cout << " with : " << split.var_id << " = {" ;
 		for(int v : split.values){
 				cout << v << " ";
 		}
 		cout << "}" << endl;
-		
+		*/
 	
 		bool split_useful = split_usefull(abstract_state, split.var_id, split.values, unused_cost);
 		if(split_useful){	
@@ -380,6 +759,8 @@ int Abstraction::onlineRefine(const State &state, std::vector<State> goal_states
     refine_timer.stop();
     
     refined = refined_states > 0;
+
+	//print_states();
     return refined_states;
 }
 	
@@ -804,13 +1185,14 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *sta
     AbstractState *v1 = new_states.first;
     AbstractState *v2 = new_states.second;
 
-   /* 
+   
+	/*
     cout << "-----------------------" << endl;
-    cout << "Split " << *state << " h = " << state->get_h_value() << " in " << endl;
-    cout << *v1 << " h = " << v1->get_h_value() << " and " << endl;
-    cout << *v2 << " h = " << v2->get_h_value() << endl;
+    cout << "Split " << *state <<  " in " << endl;
+    cout << *v1  << " and " << endl;
+    cout << *v2 << endl;
     cout << "-----------------------" << endl;
-    */
+	*/
 
     transition_updater.rewire(state, v1, v2, var);
 
@@ -875,9 +1257,8 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *sta
     return make_pair(v1,v2);
 }
 
-// TODO find flow start at specified state
 unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState *start_state, State concrete_start_state){
-    if (true)
+    if (false)
         cout << "Find Flaw:" << endl;
 
     //AbstractState *abstract_state = init;
@@ -887,7 +1268,7 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
     
     assert(abstract_state->includes(concrete_state));
 
-    if (true){
+    if (false){
         cout << "   Initial abstract state: " << *abstract_state << endl;
         cout << "   Length of solution: " << solution.size() << endl;
         for (const Transition &step : solution) {
@@ -904,12 +1285,12 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
         //cout << "operator " << op.get_name() << endl;       
         AbstractState *next_abstract_state = step.target;
         if (is_applicable(op, concrete_state)) {
-            if (true)
+            if (false)
                 cout << "  Move to " << *next_abstract_state << " with "
                      << op.get_name() << endl;
             State next_concrete_state = concrete_state.get_successor(op);
             if (!next_abstract_state->includes(next_concrete_state)) {
-                if (true)
+                if (false)
                     cout << "  Paths deviate." << endl;
                 ++deviations;
                 //cout << "path deviate: " << length_correct_trace << "/" << solution.size() << endl;
@@ -922,7 +1303,7 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
             concrete_state = move(next_concrete_state);
             //length_correct_trace++;
         } else {
-            if (true)
+            if (false)
                 cout << "  Operator not applicable: " << op.get_name() << endl;
             ++unmet_preconditions;
             //cout << "not app: " << length_correct_trace << "/" << solution.size() << endl;
@@ -938,7 +1319,7 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
         // We found a concrete solution.
         return nullptr;
     } else {
-        if (true)
+        if (false)
             cout << "  Goal test failed." << endl;
         ++unmet_goals;
         //cout << "goal: " << length_correct_trace << "/" << solution.size() << endl;
@@ -947,6 +1328,82 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
             abstract_state,
             AbstractState::get_abstract_state(
                 task_proxy, task_proxy.get_goals()));
+    }
+}
+
+unique_ptr<Flaw> Abstraction::find_flaw_online(const Solution &solution, AbstractState *start_state, State concrete_start_state, vector<pair<int,vector<int>>> vars){
+    if (false)
+        cout << "Find Flaw:" << endl;
+
+    //AbstractState *abstract_state = init;
+    //State concrete_state = task_proxy.get_initial_state();
+    AbstractState *abstract_state = start_state;
+    State concrete_state = concrete_start_state;
+    
+    assert(abstract_state->includes(concrete_state));
+
+    if (false){
+        cout << "   Initial abstract state: " << *abstract_state << endl;
+        cout << "   Length of solution: " << solution.size() << endl;
+        for (const Transition &step : solution) {
+            OperatorProxy op = task_proxy.get_operators()[step.op_id];
+            cout << "   " << op.get_name() << endl;
+        }
+    }
+
+    //int length_correct_trace = 0;
+    for (const Transition &step : solution) {
+        if (!utils::extra_memory_padding_is_reserved())
+            break;
+        OperatorProxy op = task_proxy.get_operators()[step.op_id];
+        //cout << "operator " << op.get_name() << endl;       
+        AbstractState *next_abstract_state = step.target;
+        if (is_applicable(op, concrete_state)) {
+            if (false)
+                cout << "  Move to " << *next_abstract_state << " with "
+                     << op.get_name() << endl;
+            State next_concrete_state = concrete_state.get_successor(op);
+            if (!next_abstract_state->includes(next_concrete_state)) {
+                if (false)
+                    cout << "  Paths deviate." << endl;
+                ++deviations;
+                //cout << "path deviate: " << length_correct_trace << "/" << solution.size() << endl;
+                return utils::make_unique_ptr<Flaw>(
+                    move(concrete_state),
+                    abstract_state,
+                    next_abstract_state->regress(op));
+            }
+            abstract_state = next_abstract_state;
+            concrete_state = move(next_concrete_state);
+            //length_correct_trace++;
+        } else {
+            if (false)
+                cout << "   Operator not applicable: " << op.get_name() << endl;
+            ++unmet_preconditions;
+            //cout << "not app: " << length_correct_trace << "/" << solution.size() << endl;
+            return utils::make_unique_ptr<Flaw>(
+                move(concrete_state),
+                abstract_state,
+                AbstractState::get_abstract_state(
+                    task_proxy, op.get_preconditions()));
+        }
+    }
+    assert(is_goal(abstract_state) || is_refine_goal(abstract_state));
+    if (is_goal_state(task_proxy, concrete_state)) {
+        // We found a concrete solution.
+        return nullptr;
+    } else {
+        if (false)
+            cout << "  Goal test failed." << endl;
+        ++unmet_goals;
+
+		
+        //cout << "goal: " << length_correct_trace << "/" << solution.size() << endl;
+        return utils::make_unique_ptr<Flaw>(
+            move(concrete_state),
+            abstract_state,
+            AbstractState::get_abstract_state_vector(
+                task_proxy, vars));
     }
 }
   
@@ -1129,6 +1586,11 @@ void Abstraction::print_end_statistics() {
     //cout << "update time: " << update_timer << endl;
     cout << "refinement time: " << refine_timer << endl;
 	cout << "Usefull splits: " << usefull_splits << endl;
+	cout << endl;
+	cout << "Same abstract state: " << num_same_abstract_state << endl;
+	cout << "Spurious meeting point: " << num_spurious_meeting_point << endl;
+	cout << "Spurious goal meeting point: " << num_spurious_meeting_point_goal << endl;
+	cout << "Standard refine: " << num_standard_refine << endl;
     
     /*
     for(vector<int> cp : costs_partitionings){
@@ -1145,20 +1607,23 @@ void Abstraction::print_states(){
     cout << "+++++++++++++++++++ All States (" << states.size() << ") +++++++++++++++++++++" << endl;
 	cout << "Init: " << *init << endl;
     for(AbstractState* state : states){            
-        cout << "STATE G "<<  is_abstract_goal(state) << " " << is_goal(state) << " " << *state <<  endl;
+        cout << "STATE G "<<  is_abstract_goal(state) << " h=" << state->get_h_values()[0] << " " << *state <<  endl;
 		//cout << "STATE G "<<  is_abstract_goal(state) << " " << *state <<  endl;
         
-		/*
+		
         Transitions trans = state->get_outgoing_transitions();
         for(Transition t : trans){
-            cout << "	--> " << t.op_id << " " << *(t.target) << endl; 
+			cout << "\t" << task_proxy.get_operators()[t.op_id].get_name() << endl;
+            cout << "\t\t--> " << t.op_id << " " << *(t.target) << endl; 
 		}
+		/*
 		cout << "	--> ";
 		for(int i : state->get_loops()){
 			cout << i << " ";		
 		}
         cout << endl;
 		*/
+	
     }     
 }
  

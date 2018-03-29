@@ -176,7 +176,7 @@ int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
     }
     */
 
-	//cout << "h(" << state.hash() << ")=" << max << endl;
+	cout << "h(" << state.hash() << ")=" << max << endl;
     current_order = pos_max;
     usefullnes_of_order[pos_max]++;
     update_timer.stop();
@@ -241,7 +241,7 @@ void AdditiveCartesianHeuristic::print_order(){
     cout << endl;
 }
     
-bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>>, std::vector<GlobalState> frontier_states){ // succStates){
+bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> frontier_states, const std::vector<std::pair<int,int>> &conditions){
    //cout << "--------------------------------------------------------------------------------" << endl;
 
 	//Refine at most 10 sec
@@ -258,47 +258,19 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	bool conflict = false;
 	int h_value = 0;
 	vector<bool> toRefine;
-	/*if(prove_bellman){ 	
-		bool bellman = prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict);
-		if(bellman){
-			bellman_sat++;
-			return false;	
-		}
+	bool bellman = prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict);
+	if(bellman){
+		bellman_sat++;
+		return false;	
 	}
-	else{*/		
-		for(size_t i = 0; i < heuristic_functions.size(); i++){
-			toRefine.push_back(true);	
-		}
-		h_value = compute_heuristic(global_state);
-	//}
+	
    
     //cout << global_state.get_id() << " = " << h_value << endl;	
 	bellman_not_sat++;
 	
-    //Refinement pathology   
-    if( use_merge && heuristic_functions.size() > 1 && conflict && !use_all_goals ){
-		merge_timer.resume();
-        refinement_pathology++;
-		//modify refined -> otherwise no merge is selected 
-		vector<bool> modified_toRefine(toRefine.size(), true);
-        int merged = merge.merge(modified_toRefine);
-      
-       //Check if merge improved the heuristic
-       if(merged){
-		   int new_h_value = compute_heuristic(state);
-		   if(false && h_value <  new_h_value){   
-				cout << "Merge Heuristic has been improved h_old(s) = " << h_value << " --> h_new(s) = " << new_h_value << endl;
-		   }
-		   assert(new_h_value >= h_value); 
-       }
-		merge_timer.stop();
-       return true; 
-    }
-	
-
 	//First find a ner
 	//bool order_improved = 
-		reorder(state, &h_value, toRefine);
+	//	reorder(state, &h_value, toRefine);
 	/*
 	if(order_improved && prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){
 		return true;	
@@ -309,16 +281,16 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	bool still_refinable = true;
 	int refinement_steps = 0;
 	refined_states_total++;
-	//while(!prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){ // && timer() < 1){ // && refinement_steps >= max_iter){
-	while(timer() < 1){ // && refinement_steps >= max_iter){
+	while(!prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){ // && timer() < 1){ // && refinement_steps >= max_iter){
+	//while(timer() < 1){ // && refinement_steps >= max_iter){
 		//only necesary if no bellman equation is checked
 		toRefine.clear();
 		for(size_t i = 0; i < heuristic_functions.size(); i++){
 			toRefine.push_back(true);	
 		}
 
-		cout << "h(" << global_state.get_id() << ") = " << h_value << endl;	
-		cout << "	Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << endl;
+		//cout << "h(" << global_state.get_id() << ") = " << h_value << endl;	
+		//cout << "+++++++++++++++++++++++++ Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << " ++++++++++++++++++++++++++++++" << endl;
 		//if not refinable merge 
 		if(!still_refinable){
 			merge_timer.resume();
@@ -329,20 +301,38 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 			still_refinable = true;
 			merge_timer.stop();
 			continue;
-		}				
-		still_refinable = refine(state, &h_value, toRefine, frontier_states_local);
+		}			
+	
+		still_refinable =  refine(state, &h_value, toRefine, frontier_states_local, conditions);	
 		refinement_steps++;
 		refine_steps_total++;		
+		
 		//cout << "Timer: " << timer << endl;
 	}
-    cout << global_state.get_id() << " = " << h_value << endl;	
+	
+   //cout << "--------------------------------------------------------------------------------" << endl;
+   //cout << "------------------------------- END REFINE -------------------------------------" << endl;
+	/*
    cout << "--------------------------------------------------------------------------------" << endl;
+	bool still_refinable = true;
+	int h_pre = compute_heuristic(frontier_states[0]);
+	int new_h_pre = h_pre;
+	while(still_refinable && !prove_bellman_individual(global_state, succStates, &toRefine, &h_value, &conflict)){ //h_pre == new_h_pre){
+	refine_steps_total++;		
+		still_refinable = refine(state, &h_value, toRefine, frontier_states_local, conditions) > 0;
+		//cout << global_state.get_id() << " = " << h_value << endl;	
+	   	new_h_pre = compute_heuristic(frontier_states[0]);
+		cout << "Pre state: " << frontier_states_local[0].hash() << " = " << new_h_pre << endl;
+	   	cout << "--------------------------------------------------------------------------------" << endl;
+	}
+   cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+   */
    return true;  
 }
 	
 bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_state, vector<pair<GlobalState, int>> succStates, vector<bool> *toRefine, int* current_h, bool* conflict){
 	prove_timer.resume();
-	//cout << "---------------------------------------" << endl;
+	//cout << "------------ BELLMAN State: " << global_state.get_id() << " ---------------------------" << endl;
 	bool debug = false;
 	*current_h = 0;
 	toRefine->clear();
@@ -350,7 +340,7 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 	//heuristc value of currently expanded state
 	vector<int> h_values = compute_individual_heuristics_of_order(global_state, current_order);
 	if(debug)
-		cout << "h value:       ";
+		cout << "h(s) =:       ";
 	for(int v : h_values){
 		if(debug)
 			cout << v << " ";
@@ -377,17 +367,24 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 		for(int v : succ_values){
 			succ_h_value += v;   
 		}
+		/*
 		if(local_minimum && succ_h_value <= *current_h){
 			prove_timer.stop();
 			//cout << "NO LOCAL MINIMUM" << endl;
 			return true;
 		}
+		*/
+		//cout << "prov V: " << succ_h_value << " + " << succ.second << endl;
 		provable_h_value = min(
 				provable_h_value,
 				(succ_h_value == infinity) ? infinity : succ_h_value + succ.second);
 		
-		if(provable_h_value <= *current_h + threshold){
+		if(provable_h_value <= *current_h){
+			//cout << provable_h_value << " <= " << *current_h << endl;
 			prove_timer.stop();
+			if(debug){
+				cout << "sat bellman early" << endl;
+			}
 			return true;	
 		}
 		
@@ -449,9 +446,9 @@ bool AdditiveCartesianHeuristic::prove_bellman_individual(GlobalState global_sta
 	return false;
 }
 	
-bool AdditiveCartesianHeuristic::refine(State state, int* current_max_h, std::vector<bool> &toRefine, vector<State> frontier_states){
+bool AdditiveCartesianHeuristic::refine(State state, int* current_max_h, std::vector<bool> &toRefine, vector<State> frontier_states, const std::vector<std::pair<int,int>> &conditions){
 	refine_timer.resume();
-    bool refined = onlineRefinement.refine(state, toRefine, frontier_states);
+    bool refined = onlineRefinement.refine(state, toRefine, frontier_states, conditions);
  
     if(refined){
        int new_h_value = compute_heuristic(state);

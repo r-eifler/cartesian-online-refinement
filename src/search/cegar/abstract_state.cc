@@ -249,10 +249,21 @@ AbstractState AbstractState::get_abstract_state(
 }
 
 AbstractState AbstractState::get_abstract_state_vector(
-    const TaskProxy &task_proxy, vector<pair<int,int>> vars) {
+    const TaskProxy &task_proxy, vector<pair<int,vector<int>>> vars) {
     Domains domains(get_domain_sizes(task_proxy));
     for (uint i = 0; i < vars.size(); i++) {
-        domains.set_single_value(vars[i].first, vars[i].second);
+		for(uint j = 0; j < vars[i].second.size(); j++){
+			domains.remove(vars[i].first, vars[i].second[j]);
+		}
+    }
+    return AbstractState(domains, nullptr);
+}
+
+AbstractState AbstractState::get_abstract_state_Condition(
+        const TaskProxy &task_proxy, std::vector<std::pair<int,int>> conditions){
+    Domains domains(get_domain_sizes(task_proxy));
+    for (uint i = 0; i<conditions.size(); i++) {
+        domains.set_single_value(conditions[i].first, conditions[i].second);
     }
     return AbstractState(domains, nullptr);
 }
