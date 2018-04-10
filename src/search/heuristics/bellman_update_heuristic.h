@@ -8,12 +8,12 @@ namespace bellman_update_heuristic {
 class BellmanUpdateHeuristic : public Heuristic {
 
     int min_operator_cost;
-	std::map<int, int> h_values;
+	std::unordered_map<int, int> h_values;
 	ScalarEvaluator* base_heuristic;
 
 protected:
     virtual int compute_heuristic(const GlobalState &global_state);
-	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates);
+	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> new_goals);
 public:
     BellmanUpdateHeuristic(const options::Options &options);
     ~BellmanUpdateHeuristic();

@@ -87,7 +87,8 @@ protected:
 	// returns a vector which contains the heuristic value of each abstraction for the given state
 	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state) override;
 	
-	bool refine(State state, int* current_max_h, std::vector<bool> &toRefine, std::vector<State> frontier_states, const std::vector<std::pair<int,int>> &conditions);
+	bool refine(State state, int* current_max_h, std::vector<bool> &toRefine, std::vector<State> frontier_states);
+	bool refine(State state, State new_goal, std::vector<bool> &toRefine);
 	bool reorder(State state, int* current_max_h, std::vector<bool> &toRefine);
 	
 	//bool prove_bellman_sum(State state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h);
@@ -96,7 +97,8 @@ protected:
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);
 	
-	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> frontier_states, const std::vector<std::pair<int,int>> &conditions) override;
+	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> new_goals) override;
+	virtual bool online_Refine(const GlobalState &global_state, const GlobalState &new_goal, int h_bound) override;
 	
 	std::vector<int> compute_original_individual_heuristics(State state);
 	

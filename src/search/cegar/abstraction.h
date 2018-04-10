@@ -193,6 +193,7 @@ public:
     int onlineRefine(const State &state, std::vector<State> goal_states, int num_of_iter, int max_states_refine, std::vector<std::vector<int>> *unused_cost);
 	int refineBellmanStyle(const State & state);
 	int refineSplitPre(const State &state, const State preState);
+	int refineNewGoal(const State &state, const State &new_goal);
 	int refineSplitPreAction(const State &state, const State &preState, const std::vector<std::pair<int,int>> condictions);
 	//checks if the state satisfis the abstraction (not equals to h(s) = 0)
 	bool satisfies_goal(State state);

@@ -252,9 +252,9 @@ AbstractState AbstractState::get_abstract_state_vector(
     const TaskProxy &task_proxy, vector<pair<int,vector<int>>> vars) {
     Domains domains(get_domain_sizes(task_proxy));
     for (uint i = 0; i < vars.size(); i++) {
-		for(uint j = 0; j < vars[i].second.size(); j++){
-			domains.remove(vars[i].first, vars[i].second[j]);
-		}
+		//for(uint j = 0; j < vars[i].second.size(); j++){
+			domains.set_single_value(vars[i].first, vars[i].second[0]);
+		//}
     }
     return AbstractState(domains, nullptr);
 }

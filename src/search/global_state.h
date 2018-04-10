@@ -50,6 +50,11 @@ public:
 
     std::vector<int> get_values() const;
 
+    bool operator<(const GlobalState &other) const {
+        return this->get_id() < other.get_id();
+    }
+
+
     void dump_pddl() const;
     void dump_fdr() const;
 	

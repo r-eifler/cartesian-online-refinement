@@ -33,6 +33,11 @@ public:
         return !(*this == other);
     }
 
+    bool operator<(const StateID &other) const {
+        return this->hash() < other.hash();
+    }
+
+
     size_t hash() const {
         return value;
     }

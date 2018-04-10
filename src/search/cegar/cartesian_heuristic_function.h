@@ -43,6 +43,7 @@ public:
 	int refineBellmanStyle(const State & state);
 	int refineSplitPre(const State & state, const State & prestate);
 	int refineSplitPreAction(const State &state, const State &preState, const std::vector<std::pair<int,int>> conditions);
+	int refineNewGoal(const State &state, const State &newGoal);
 	void print_statistics() const; 
 	void update_h_values();
 	void merge(CartesianHeuristicFunction *function);

@@ -30,7 +30,7 @@ int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
     State state = convert_global_state(global_state);
 	if(h_values.find(state.hash()) != h_values.end()){
 		int h = h_values[state.hash()];
-		cout << "h(" << state.hash() << ")=" << h << endl;
+		//cout << "h(" << state.hash() << ")=" << h << endl;
 		return h;
 	}
 	else{
@@ -42,9 +42,9 @@ int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
 }
 
 
-bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
+bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState>){
 
-	cout << "+++++++++++++++ BELLMAN UPDATE +++++++++++++++++" << endl;
+	//cout << "+++++++++++++++ BELLMAN UPDATE +++++++++++++++++" << endl;
     State state = convert_global_state(global_state);
 	int h_s = compute_heuristic(global_state);
 	//cout << "current h = " << h_s << endl;
@@ -60,7 +60,7 @@ bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std:
 	}
 
 	if(min_h > h_s){
-		cout << "INCREASE " << h_s << " -> " << min_h << endl;
+		//cout << "INCREASE " << h_s << " -> " << min_h << endl;
 		h_values[state.hash()] = min_h;
 	}
 	else{

@@ -35,8 +35,17 @@ void Heuristic::set_preferred(const OperatorProxy &op) {
     set_preferred(op.get_global_operator());
 }
 
-bool Heuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState>, const std::vector<std::pair<int,int>> &){
+bool Heuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState>){
 	cout << "online refine not implemented " << global_state.get_id()  << "#succ States: " << succStates.size() << endl;	
+	return false;
+}
+
+bool Heuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
+	cout << "online refine not implemented " << global_state.get_id()  << "#succ States: " << succStates.size() << endl;	
+	return false;
+}
+
+bool Heuristic::online_Refine(const GlobalState& , const GlobalState&, int ){
 	return false;
 }
 

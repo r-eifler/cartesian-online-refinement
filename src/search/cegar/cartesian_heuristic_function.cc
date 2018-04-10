@@ -79,6 +79,13 @@ int CartesianHeuristicFunction::refineSplitPreAction(const State &state, const S
 	return abstraction->refineSplitPreAction(local_state, local_prestate, conditions);
 }
 
+int CartesianHeuristicFunction::refineNewGoal(const State &state, const State &new_goal){
+
+    State local_state = (abstraction->get_Task())->convert_ancestor_state(state);
+    State local_goal = (abstraction->get_Task())->convert_ancestor_state(new_goal);
+	return abstraction->refineNewGoal(local_state, local_goal);
+}
+
 bool CartesianHeuristicFunction::satisfies_goal(State parent_state){
 	State local_state = (abstraction->get_Task())->convert_ancestor_state(parent_state);
 	return abstraction->satisfies_goal(local_state);	
