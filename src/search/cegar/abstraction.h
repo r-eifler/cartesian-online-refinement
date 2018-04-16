@@ -38,6 +38,7 @@ struct Flaw;
 */
 class Abstraction {
 	std::shared_ptr<AbstractTask> task;
+	std::shared_ptr<AbstractTask> original_task;
     TaskProxy task_proxy;
     const int max_states;
     const int max_non_looping_transitions;
@@ -130,6 +131,7 @@ class Abstraction {
 public:
     Abstraction(
         std::shared_ptr<AbstractTask> task,
+        std::shared_ptr<AbstractTask> original_task,
         int max_states,
         int max_non_looping_transitions,
         double max_time,
@@ -174,6 +176,7 @@ public:
 	
 	void update_Task(std::shared_ptr<AbstractTask> task);
 	std::shared_ptr<AbstractTask> get_AbsTask();
+	std::shared_ptr<AbstractTask> get_OriginalAbsTask();
   
 	void print_statistics();
 	void print_end_statistics();

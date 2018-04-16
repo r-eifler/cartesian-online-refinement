@@ -80,6 +80,7 @@ struct Flaw {
     
 Abstraction::Abstraction(
     shared_ptr<AbstractTask> task,
+    shared_ptr<AbstractTask> original_task,
     int max_states,
     int max_non_looping_transitions,
     double max_time,
@@ -88,6 +89,7 @@ Abstraction::Abstraction(
     utils::RandomNumberGenerator &rng,
     bool debug)
     : task(task),
+	  original_task(original_task),
       task_proxy(*task),
       max_states(max_states),
       max_non_looping_transitions(max_non_looping_transitions),
@@ -279,6 +281,11 @@ void Abstraction::update_Task(shared_ptr<AbstractTask> abstask){
 std::shared_ptr<AbstractTask> Abstraction::get_AbsTask(){
    return task;     
 }
+
+std::shared_ptr<AbstractTask> Abstraction::get_OriginalAbsTask(){
+   return original_task;     
+}
+    
     
 int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_values, int max_states_refine, std::vector<std::vector<int>> *unused_cost){
     refined = false;
