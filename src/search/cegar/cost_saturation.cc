@@ -299,6 +299,7 @@ void CostSaturation::build_abstractions(
         assert(num_states < max_states);
         Abstraction *abstraction = new Abstraction(
             subtask,
+            subtask,
             max(1, (max_states - num_states) / rem_subtasks),
             max(1, (max_non_looping_transitions - num_non_looping_transitions) /
                 rem_subtasks),
@@ -398,7 +399,7 @@ void CostSaturation::recompute_cost_partitioning_unused(int order_id){
 		//cout << endl;
 				
 		//update the task in the abstraction
-		shared_ptr<AbstractTask> subtask = abs->get_AbsTask();
+		shared_ptr<AbstractTask> subtask = abs->get_OriginalAbsTask();
 		subtask = get_remaining_costs_task(subtask, sturated_cost_old, order_id);
 		abs->update_Task(subtask);
 		
@@ -471,7 +472,7 @@ void CostSaturation::recompute_cost_partitioning(std::vector<int> order){
 		
 		
 		//update the task in the abstraction
-		shared_ptr<AbstractTask> subtask = abs->get_AbsTask();
+		shared_ptr<AbstractTask> subtask = abs->get_OriginalAbsTask();
 		subtask = get_remaining_costs_task(subtask);
 		abs->update_Task(subtask);
 		
@@ -533,7 +534,7 @@ std::vector<int> CostSaturation::get_original_cost_partitioning(Abstraction* abs
 	remaining_costs = get_operator_costs(task_proxy);
 	
 	//update the task in the abstraction
-	shared_ptr<AbstractTask> subtask = abs->get_AbsTask();
+	shared_ptr<AbstractTask> subtask = abs->get_OriginalAbsTask();
 	subtask = get_remaining_costs_task(subtask);
 	abs->update_Task(subtask);
 
@@ -551,7 +552,7 @@ void CostSaturation::update_h_complete_cost(Abstraction* abs){
 	remaining_costs = get_operator_costs(task_proxy);
 	
 	//update the task in the abstraction
-	shared_ptr<AbstractTask> subtask = abs->get_AbsTask();
+	shared_ptr<AbstractTask> subtask = abs->get_OriginalAbsTask();
 	subtask = get_remaining_costs_task(subtask);
 	abs->update_Task(subtask);
 
