@@ -29,8 +29,14 @@ BellmanUpdateHeuristic::~BellmanUpdateHeuristic() {
 int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
     State state = convert_global_state(global_state);
 	if(h_values.find(state.hash()) != h_values.end()){
+		Heuristic* heuristic = (Heuristic*) base_heuristic;
+		int hCA = heuristic->compute_heuristic(global_state);
 		int h = h_values[state.hash()];
 		//cout << "h(" << state.hash() << ")=" << h << endl;
+		if(h < hCA){
+			h_values.erase(h_values.find(state.hash())); //TODO good idea ?
+			return hCA;
+		}
 		return h;
 	}
 	else{
@@ -42,7 +48,12 @@ int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
 }
 
 
-bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState>){
+bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> newGoals){
+
+		
+	Heuristic* heuristic = (Heuristic*) base_heuristic;
+	heuristic->online_Refine(global_state, succStates, newGoals);
+	
 
 	//cout << "+++++++++++++++ BELLMAN UPDATE +++++++++++++++++" << endl;
     State state = convert_global_state(global_state);

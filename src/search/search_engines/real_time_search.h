@@ -55,6 +55,8 @@ class RealTimeSearch : public SearchEngine {
         const GlobalState &state);
 	SearchStatus compute_next_real_time_step(GlobalState s, bool solution_found, int min_h);
 	bool refine_valley(GlobalState next_expanded_state, int min_h);
+	bool refine_root_to_frontier();
+	bool refine_expanded();
     SearchStatus search();
 
 protected:

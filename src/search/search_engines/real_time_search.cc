@@ -100,71 +100,14 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 		return SOLVED;
 	}
 
-	for(const GlobalOperator* next_action : current_plan){
-		//const GlobalOperator* next_action = current_plan[0];
+	//for(const GlobalOperator* next_action : current_plan){
+		const GlobalOperator* next_action = current_plan[0];
 		real_time_plan.push_back(next_action);
 
-		//cout << "Length of plan part: " << current_plan.size() << " Length of path: " << real_time_plan.size() << endl;
-
-		//cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
-
-		//cout << "Refine valley: min h value = " << min_h << endl;
-		bool refined = false; //refine_valley(s, min_h);
-
-		if(! refined){
-			//Collect frontier states for refinement
-			vector<GlobalState> frontier_states;
-			/*
-			while(!open_list->empty()){
-				vector<int> keys;
-				StateID id = open_list->remove_min(&keys);
-				GlobalState s = state_registry->lookup_state(id);
-				frontier_states.push_back(s);
-			}
-
-			//cout << "Frontier nodes: " << frontier_states.size() << endl;
-			*/
-
-			//refine heuristic on the next state
-			//refine heuristic an all expanded sates
-			//cout << "+++++++++++++ REFINE NORMAL ++++++++++++++++" << endl;
-			//cout << "Number expanded states: " << expand_states.size() << endl;
-			for(uint i = 1; i < expand_states.size(); i++){
-				StateID refine_state_id = expand_states[i];
-				//cout << "----------> STATE: " << refine_state_id << endl;
-				//cout << "Refine state: " << refine_state_id << endl;
-				GlobalState refine_state = state_registry->lookup_state(refine_state_id);
-				SearchNode node = search_space->get_node(refine_state);
-				StateID parent_id = node.get_parent_id();
-				//cout << "Parent: " << parent_id <<  " " << parent_id.hash() << endl;
-				GlobalState parent_state = state_registry->lookup_state(parent_id);
-				frontier_states.clear();
-				frontier_states.push_back(parent_state);
-
-				/*
-				cout << "...... Parent State......." << endl;
-				parent_state.dump_pddl();
-				cout << endl;
-				cout << ".......Refine State........" << endl;
-				refine_state.dump_pddl();
-				cout << endl;
-				cout << "++++++++++++++++++" << endl;
-				*/
-
-				//GlobalState refine_state = next_state;
-				vector<const GlobalOperator *> applicable_ops;
-				g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
-				vector<pair<GlobalState, int>> succStates;
-				//cout << "Applicable ops: " << endl;
-				for (const GlobalOperator *op : applicable_ops) {
-					//cout << op->get_name() << endl;
-					GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
-					succStates.push_back(make_pair(succ_state, op->get_cost()));
-				}
-		
-				heuristic->online_Refine(refine_state, succStates, frontier_states);
-			}
-		}
+		cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
+	
+		//refine_root_to_frontier();
+		refine_expanded();
 
 		//NEXT STATE
 		GlobalState current_state = current_eval_context.get_state();
@@ -174,16 +117,90 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 		EvaluationContext eval_context(next_state,  succ_g, true, &statistics);
 		current_eval_context = eval_context;
 		//only one step
-		break;
-	}
+	//	break;
+	//}
 
 
 	//Reset search 
 	open_list->clear();
+	delete search_space;
 	search_space = new SearchSpace(*state_registry, cost_type);
 	expand_states.clear();
 	
 	return IN_PROGRESS;
+}
+
+bool RealTimeSearch::refine_root_to_frontier(){
+	bool refined = false;
+	while(! open_list->empty()){
+		
+        vector<int> last_key_removed;
+        StateID id = open_list->remove_min(&last_key_removed);
+        GlobalState new_goal = state_registry->lookup_state(id);
+		vector<GlobalState> frontier_states;
+		frontier_states.push_back(new_goal);
+
+
+		GlobalState refine_state = current_eval_context.get_state();
+		SearchNode node = search_space->get_node(refine_state);
+
+		/*
+		cout << ".......Refine State........" << endl;
+		refine_state.dump_pddl();
+		cout << endl;
+		cout << "++++++++++++++++++" << endl;
+		*/
+
+		//GlobalState refine_state = next_state;
+		vector<const GlobalOperator *> applicable_ops;
+		g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
+		vector<pair<GlobalState, int>> succStates;
+		//cout << "Applicable ops: " << endl;
+		for (const GlobalOperator *op : applicable_ops) {
+			//cout << op->get_name() << endl;
+			GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
+			succStates.push_back(make_pair(succ_state, op->get_cost()));
+		}
+
+		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states);
+	}
+	return refined;
+}
+
+bool RealTimeSearch::refine_expanded(){
+	bool refined = false;
+	for(uint i = 1; i < expand_states.size(); i++){
+		StateID refine_state_id = expand_states[i];
+		//cout << "----------> STATE: " << refine_state_id << endl;
+		//cout << "Refine state: " << refine_state_id << endl;
+		GlobalState refine_state = state_registry->lookup_state(refine_state_id);
+		SearchNode node = search_space->get_node(refine_state);
+
+		vector<GlobalState> frontier_states;
+		/*
+		cout << "...... Parent State......." << endl;
+		parent_state.dump_pddl();
+		cout << endl;
+		cout << ".......Refine State........" << endl;
+		refine_state.dump_pddl();
+		cout << endl;
+		cout << "++++++++++++++++++" << endl;
+		*/
+
+		//GlobalState refine_state = next_state;
+		vector<const GlobalOperator *> applicable_ops;
+		g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
+		vector<pair<GlobalState, int>> succStates;
+		//cout << "Applicable ops: " << endl;
+		for (const GlobalOperator *op : applicable_ops) {
+			//cout << op->get_name() << endl;
+			GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
+			succStates.push_back(make_pair(succ_state, op->get_cost()));
+		}
+
+		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states);
+	}
+	return refined;
 }
 
 bool RealTimeSearch::refine_valley(GlobalState next_expanded_state, int min_h){
@@ -320,7 +337,7 @@ SearchStatus RealTimeSearch::step() {
 }
 
 SearchStatus RealTimeSearch::search() {
-	int lookahead = 10;
+	int lookahead = 5;
 
     while (!open_list->empty()) {
 		//cout << "--------- Lookahead: " << lookahead << "----------" << endl;
@@ -338,6 +355,7 @@ SearchStatus RealTimeSearch::search() {
 		//cout << "Expand: " << state.get_id() << " h=" << last_key_removed[0] << endl;
 		lookahead--;
 		statistics.inc_expanded(1);
+		expand_states.push_back(state.get_id());
 
 		//If solution has been found or lookhead is reached return the current
 		//best state (next min in openlist)
@@ -416,7 +434,6 @@ SearchStatus RealTimeSearch::search() {
 			}
 			*/
         }
-		expand_states.push_back(state.get_id());
 
 		/*
 		if(! new_state_found){

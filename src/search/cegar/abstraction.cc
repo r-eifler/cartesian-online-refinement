@@ -52,7 +52,7 @@ struct Flaw {
           current and the desired abstract state are the "wanted" ones.
         */
 		
-		/*
+		/*	
 		cout << "GET POSSIBLE SPLITS" << endl;
 		for(uint i = 0; i < concrete_state.size(); i++){
 			cout << "v" << i << " = " << concrete_state[i].get_value() << " ";
@@ -375,10 +375,75 @@ std::shared_ptr<AbstractTask> Abstraction::get_AbsTask(){
 }
 
 
+int Abstraction::refineBasedOnBellman(const State &state, const State &minSucc){
+
+	//cout << "********** refine based on bellman *******************" << endl;
+	
+	/*
+	cout << "Current State: " << endl;
+	state.dump_pddl();
+	state.dump_fdr();
+	cout << endl;
+
+	cout << "MinSucc State: " << endl;
+	minSucc.dump_pddl();
+	minSucc.dump_fdr();
+	cout << endl;
+	*/
+	
+	AbstractState *abstract_state = get_node(state)->get_AbstractState(); 
+	//cout << "Abstract State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
+
+	AbstractState *abstract_minSucc = get_node(minSucc)->get_AbstractState(); 
+	//cout << "Abstract pre State: h=" << abstract_minSucc->get_h_values()[0] << endl << *abstract_minSucc << endl;
+
+	//If both states are in the same abstract state:
+	//split it such that it is not the case anymore
+	if(abstract_minSucc == abstract_state){
+		num_same_abstract_state++;
+		//cout << "SAME ABSTRACT STATE" << endl;
+
+		//TODO split multiple times ?
+		vector<Split> split_facts;
+		//cout << "Split values: " << endl;
+		for(uint i = 0; i < state.size(); i++){
+			if(state[i] != minSucc[i]){
+				if(abstract_state->count(i) > 1){
+					//cout << "v" << i << " = " << preState[i].get_value() << endl;;
+					vector<int> values;
+					values.push_back(minSucc[i].get_value());
+					split_facts.emplace_back(i, move(values));
+				}
+			}
+		}
+
+		if(split_facts.empty()){
+			//cout << "NO SPLITS" << endl;
+			return 0;
+		}
+
+		const Split &split = split_selector.pick_split(*abstract_state, split_facts, rng);
+
+		if(abstract_state->count(split.var_id) > 1){
+				refine(abstract_state, split.var_id, split.values);  
+				//print_states();
+				return 1;
+		}
+
+		return 0;
+	}
+
+
+	//Abstract states are not the same
+	vector<State> no_other_goals;
+	return onlineRefine(state, no_other_goals, 1, std::numeric_limits<int>::max(), NULL);
+
+}
+
 
 int Abstraction::refineBellmanStyle(const State & state){
 	
-	cout << "in refine bellman style" << endl;
+	cout << "------> refine bellman style" << endl;
 	AbstractState *abstract_state = NULL;
 	if(states.size() == 1){
 		abstract_state = *(states.begin());	
@@ -392,6 +457,13 @@ int Abstraction::refineBellmanStyle(const State & state){
 	if (!found_abstract_solution) {
 		cout << "Abstract problem is unsolvable!" << endl;
 		return 0;
+	}
+
+	Solution sol = abstract_search.get_solution();
+	cout << "Solution lenght: " << sol.size() << endl;
+	for(uint i = 0; i < sol.size() ; i++){
+		OperatorProxy op = task_proxy.get_operators()[sol[i].op_id];
+		cout << "Shortcut : " << op.get_name()<< endl;
 	}
 
 	unique_ptr<Flaw> flaw = find_flaw_bellman(abstract_search.get_solution(), abstract_state, state); 
@@ -414,6 +486,7 @@ int Abstraction::refineBellmanStyle(const State & state){
 
 	refine(abstract_state, split.var_id, split.values);  
 
+	//print_states();
 	return 1;
 }
 
@@ -421,6 +494,10 @@ int Abstraction::refineBellmanStyle(const State & state){
 std::unique_ptr<Flaw> Abstraction::find_flaw_bellman(const Solution &solution, AbstractState *start_state, State concrete_start_state){
 
 	OperatorProxy op = task_proxy.get_operators()[solution.begin()->op_id];
+	cout << "Precondition: " << endl;
+	for(uint i = 0; i < op.get_preconditions().size(); i++){
+		cout << "v" << op.get_preconditions()[i].get_variable().get_id() << " = " << op.get_preconditions()[i].get_value() << endl; 
+	}
     return utils::make_unique_ptr<Flaw>(move(concrete_start_state), start_state,
         AbstractState::get_abstract_state(task_proxy, op.get_preconditions()));
 
@@ -587,7 +664,7 @@ int Abstraction::refineSplitPre(const State &state, const State preState){
 }
 
 
-int Abstraction::refineSplitPreAction(const State &state, const State &preState, const std::vector<std::pair<int,int>> conditions){
+int Abstraction::refineSplitOnCondition(const State &state, const State &preState, const std::vector<std::pair<int,int>> conditions){
 
 
 	cout << "Current State: " << endl;
@@ -735,13 +812,26 @@ int Abstraction::refineNewGoal(const State &state, const State &new_goal){
 
 }
     
-int Abstraction::onlineRefine(const State &state, std::vector<State> , int num_of_Iter, int max_states_refine, std::vector<std::vector<int>> *unused_cost){
+int Abstraction::onlineRefine(const State &state, std::vector<State> new_goals, int num_of_Iter, int max_states_refine, std::vector<std::vector<int>> *unused_cost){
 	//cout << "******************************** NORMAL ONLINE REFINE **********************************" << endl;
     refined = false;
     int state_border = get_num_states() + max_states_refine < 0 ? max_states_refine : get_num_states() + max_states_refine;
     if(!(utils::extra_memory_padding_is_reserved() && get_num_states() < state_border && num_of_Iter >= 0)){
      return 0;   
     }
+
+	refine_goals.clear();
+		vector<pair<int,vector<int>>> goal_facts_split;
+	if(new_goals.size() > 0){
+		State new_goal = new_goals[0];
+		refine_goals.insert(get_node(new_goal)->get_AbstractState());
+		for(uint i = 0; i < new_goal.size(); i++){
+			vector<int> values;
+			values.push_back(new_goal[i].get_value());
+			//cout << "v" << i << " = " << new_goal[i].get_value() << endl;
+			goal_facts_split.push_back(make_pair(i, values));
+		}
+	}
 
 	refinement_calls++;
     int refined_states = 0;
@@ -759,7 +849,6 @@ int Abstraction::onlineRefine(const State &state, std::vector<State> , int num_o
 		
         //bool found_abstract_solution = abstract_search.find_solution(start_state, goals);
 	
-		refine_goals.clear();
 		bool found_abstract_solution = false;
 		if(refine_goals.size() > 0){
 			//cout << "Use frontier as goals: " << refine_goals.size() << endl;
@@ -777,7 +866,14 @@ int Abstraction::onlineRefine(const State &state, std::vector<State> , int num_o
 
         
         //Find flaw starting from the spesified state "start_state"
-        unique_ptr<Flaw> flaw = find_flaw(abstract_search.get_solution(), start_state, state);
+        unique_ptr<Flaw> flaw;
+		if(refine_goals.size() > 0){
+			flaw = find_flaw_online(abstract_search.get_solution(), start_state, state, goal_facts_split);
+		}
+		else{
+			flaw = find_flaw(abstract_search.get_solution(), start_state, state);
+		}
+
         if (!flaw) {
             //TODO solution found
             //cout << "No flaw found" << endl;
@@ -807,6 +903,7 @@ int Abstraction::onlineRefine(const State &state, std::vector<State> , int num_o
 		bool split_useful = split_usefull(abstract_state, split.var_id, split.values, unused_cost);
 		if(split_useful){	
 			usefull_splits++;	 
+			//cout << "refine" << endl;
 			refine(abstract_state, split.var_id, split.values);  
 			refined_states++;			
 		}
@@ -1246,13 +1343,13 @@ std::pair<AbstractState*, AbstractState*> Abstraction::refine(AbstractState *sta
     AbstractState *v2 = new_states.second;
 
    
-/*	
+	/*
     cout << "-----------------------" << endl;
     cout << "Split " << *state <<  " in " << endl;
     cout << *v1  << " and " << endl;
     cout << *v2 << endl;
     cout << "-----------------------" << endl;
-*/	
+	*/
 
     transition_updater.rewire(state, v1, v2, var);
 

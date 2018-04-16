@@ -194,7 +194,8 @@ public:
 	int refineBellmanStyle(const State & state);
 	int refineSplitPre(const State &state, const State preState);
 	int refineNewGoal(const State &state, const State &new_goal);
-	int refineSplitPreAction(const State &state, const State &preState, const std::vector<std::pair<int,int>> condictions);
+	int refineSplitOnCondition(const State &state, const State &preState, const std::vector<std::pair<int,int>> condictions);
+	int refineBasedOnBellman(const State &state, const State &minSucc); 
 	//checks if the state satisfis the abstraction (not equals to h(s) = 0)
 	bool satisfies_goal(State state);
 	// checks if the solution of abs and this can be combined to achieve both goals

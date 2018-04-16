@@ -87,12 +87,11 @@ protected:
 	// returns a vector which contains the heuristic value of each abstraction for the given state
 	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state) override;
 	
-	bool refine(State state, int* current_max_h, std::vector<bool> &toRefine, std::vector<State> frontier_states);
+	bool refine(State state, State minSucc, int* current_max_h, std::vector<bool> &toRefine, std::vector<State> frontier_states);
 	bool refine(State state, State new_goal, std::vector<bool> &toRefine);
 	bool reorder(State state, int* current_max_h, std::vector<bool> &toRefine);
 	
-	//bool prove_bellman_sum(State state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h);
-	bool prove_bellman_individual(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<bool> *toRefine, int* current_h, bool* conflict);
+	bool prove_bellman_sum(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, int* current_h, GlobalState* minSucc);
 
 public:
     explicit AdditiveCartesianHeuristic(const options::Options &opts);

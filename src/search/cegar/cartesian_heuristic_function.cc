@@ -76,7 +76,7 @@ int CartesianHeuristicFunction::refineSplitPreAction(const State &state, const S
 
     State local_state = (abstraction->get_Task())->convert_ancestor_state(state);
     State local_prestate = (abstraction->get_Task())->convert_ancestor_state(preState);
-	return abstraction->refineSplitPreAction(local_state, local_prestate, conditions);
+	return abstraction->refineSplitOnCondition(local_state, local_prestate, conditions);
 }
 
 int CartesianHeuristicFunction::refineNewGoal(const State &state, const State &new_goal){
@@ -84,6 +84,13 @@ int CartesianHeuristicFunction::refineNewGoal(const State &state, const State &n
     State local_state = (abstraction->get_Task())->convert_ancestor_state(state);
     State local_goal = (abstraction->get_Task())->convert_ancestor_state(new_goal);
 	return abstraction->refineNewGoal(local_state, local_goal);
+}
+
+int CartesianHeuristicFunction::refineBasedOnBellman(const State &state, const State &minSucc){
+
+    State local_state = (abstraction->get_Task())->convert_ancestor_state(state);
+    State local_minSucc = (abstraction->get_Task())->convert_ancestor_state(minSucc);
+	return abstraction->refineBasedOnBellman(local_state, local_minSucc);
 }
 
 bool CartesianHeuristicFunction::satisfies_goal(State parent_state){
