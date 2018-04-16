@@ -34,6 +34,8 @@ RealTimeSearch::RealTimeSearch(
       preferred_usage(PreferredUsage(opts.get_enum("preferred_usage"))),
       current_eval_context(state_registry->get_initial_state(), &statistics),
       current_phase_start_g(-1),
+	  time_unit(opts.get<double>("time_unit")),
+	  lookahead_fraction(opts.get<double>("lookahead_fraction")),
       num_ehc_phases(0),
       last_num_expanded(-1) {
 
@@ -488,6 +490,11 @@ static SearchEngine *_parse(OptionParser &parser) {
         "boost",
         "boost value for preferred operator open lists", "0");
     parser.add_list_option<ScalarEvaluator *>("evals", "scalar evaluators");
+    parser.add_option<double>("time_unit","TODO", "1");
+    parser.add_option<double>("lookahead_fraction","TODO", "0.5");
+
+
+
     SearchEngine::add_options_to_parser(parser);
     Options opts = parser.parse();
     opts.verify_list_non_empty<ScalarEvaluator *>("evals");

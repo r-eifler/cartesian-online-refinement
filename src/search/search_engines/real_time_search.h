@@ -41,6 +41,10 @@ class RealTimeSearch : public SearchEngine {
     EvaluationContext current_eval_context;
     int current_phase_start_g;
 
+	//real time parameter
+	double time_unit;
+	double lookahead_fraction;
+
     // Statistics
     std::map<int, std::pair<int, int>> d_counts;
     int num_ehc_phases;
