@@ -50,10 +50,8 @@ int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
 
 bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> newGoals, double time_bound){
 
-		
-	Heuristic* heuristic = (Heuristic*) base_heuristic;
-	heuristic->online_Refine(global_state, succStates, newGoals, time_bound);
-	
+	utils::Timer timer;
+	timer.resume();
 
 	//cout << "+++++++++++++++ BELLMAN UPDATE +++++++++++++++++" << endl;
     State state = convert_global_state(global_state);
@@ -70,15 +68,25 @@ bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std:
 		}
 	}
 
+	bool updated = false;
 	if(min_h > h_s){
 		//cout << "INCREASE " << h_s << " -> " << min_h << endl;
 		h_values[state.hash()] = min_h;
+		updated = true;
 	}
-	else{
-		return false;
+	//else{
+	//	return false;
+	//}
+	
+	double new_bound = time_bound - timer();
+	cout << "New time bound: " << new_bound << endl;
+	if(new_bound <= 0){
+		return updated;
 	}
 
-	return true;
+	Heuristic* heuristic = (Heuristic*) base_heuristic;
+	return updated || heuristic->online_Refine(global_state, succStates, newGoals, new_bound);
+
 }
 
 static Heuristic *_parse(OptionParser &parser) {

@@ -174,8 +174,14 @@ bool RealTimeSearch::refine_root_to_frontier(){
 
 bool RealTimeSearch::refine_expanded(double time_bound){
 	bool refined = false;
+	utils::Timer timer;
+	timer.resume();
+	utils::Timer iter_timer;
+	timer.resume();
+
 	cout << "Expanded: " << expand_states.size() << endl;
-	for(uint i = 1; i < expand_states.size(); i++){
+	for(uint i = 1; i < expand_states.size() && timer() < time_bound; i++){
+		cout << "Rest time: " << time_bound << endl;
 		StateID refine_state_id = expand_states[i];
 		//cout << "----------> STATE: " << refine_state_id << endl;
 		//cout << "Refine state: " << refine_state_id << endl;
@@ -205,6 +211,8 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 		}
 
 		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states, time_bound);
+		time_bound -= iter_timer();
+		iter_timer.reset();
 	}
 	return refined;
 }
