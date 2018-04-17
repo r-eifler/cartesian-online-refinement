@@ -199,7 +199,7 @@ SearchStatus EagerSearch::compute_next_real_time_step(GlobalState s, bool soluti
 	}
 	Heuristic* h = heuristics[0];        
 	cout << "+++++++++++++ REFINE ++++++++++++++++" << endl;
-	h->online_Refine(current_state_v.front(), succStates, frontier_states);
+	h->online_Refine(current_state_v.front(), succStates, frontier_states, 1800);
 	//cout << "REFINE" << endl;
 
 	//Reset search 

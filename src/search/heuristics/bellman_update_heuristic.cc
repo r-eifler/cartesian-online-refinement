@@ -48,11 +48,11 @@ int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
 }
 
 
-bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> newGoals){
+bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> newGoals, double time_bound){
 
 		
 	Heuristic* heuristic = (Heuristic*) base_heuristic;
-	heuristic->online_Refine(global_state, succStates, newGoals);
+	heuristic->online_Refine(global_state, succStates, newGoals, time_bound);
 	
 
 	//cout << "+++++++++++++++ BELLMAN UPDATE +++++++++++++++++" << endl;

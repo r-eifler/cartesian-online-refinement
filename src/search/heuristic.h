@@ -108,7 +108,7 @@ public:
         return heuristic_cache[state].dirty;
     }
 
-	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> new_goals);
+	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> new_goals, double time_bound);
 	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates);
 	virtual bool online_Refine(const GlobalState &global_state, const GlobalState &new_goal, int h_bound);
 	virtual std::vector<int> compute_individual_heuristics(const GlobalState &global_state);

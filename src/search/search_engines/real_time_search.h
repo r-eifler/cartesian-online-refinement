@@ -5,6 +5,7 @@
 #include "../search_engine.h"
 
 #include "../open_lists/open_list.h"
+#include "../utils/timer.h"
 
 #include <map>
 #include <memory>
@@ -44,6 +45,8 @@ class RealTimeSearch : public SearchEngine {
 	//real time parameter
 	double time_unit;
 	double lookahead_fraction;
+	utils::Timer step_timer;
+	
 
     // Statistics
     std::map<int, std::pair<int, int>> d_counts;
@@ -60,7 +63,7 @@ class RealTimeSearch : public SearchEngine {
 	SearchStatus compute_next_real_time_step(GlobalState s, bool solution_found, int min_h);
 	bool refine_valley(GlobalState next_expanded_state, int min_h);
 	bool refine_root_to_frontier();
-	bool refine_expanded();
+	bool refine_expanded(double time_bound);
     SearchStatus search();
 
 protected:

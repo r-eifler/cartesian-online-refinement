@@ -109,7 +109,9 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 		cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
 	
 		//refine_root_to_frontier();
-		refine_expanded();
+		double time_bound = time_unit * (1-lookahead_fraction);
+		cout << "Refine time bound: " << time_bound << endl;
+		refine_expanded(time_bound);
 
 		//NEXT STATE
 		GlobalState current_state = current_eval_context.get_state();
@@ -164,13 +166,15 @@ bool RealTimeSearch::refine_root_to_frontier(){
 			succStates.push_back(make_pair(succ_state, op->get_cost()));
 		}
 
-		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states);
+		//TODO
+		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states, 1800);
 	}
 	return refined;
 }
 
-bool RealTimeSearch::refine_expanded(){
+bool RealTimeSearch::refine_expanded(double time_bound){
 	bool refined = false;
+	cout << "Expanded: " << expand_states.size() << endl;
 	for(uint i = 1; i < expand_states.size(); i++){
 		StateID refine_state_id = expand_states[i];
 		//cout << "----------> STATE: " << refine_state_id << endl;
@@ -200,7 +204,7 @@ bool RealTimeSearch::refine_expanded(){
 			succStates.push_back(make_pair(succ_state, op->get_cost()));
 		}
 
-		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states);
+		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states, time_bound);
 	}
 	return refined;
 }
@@ -335,11 +339,13 @@ SearchStatus RealTimeSearch::step() {
 	SearchNode node = search_space->get_node(current_state);
 	node.open_initial();
 	open_list->insert(current_eval_context, current_state.get_id());
+
+	step_timer.reset();
     return  search();
 }
 
 SearchStatus RealTimeSearch::search() {
-	int lookahead = 5;
+	//int lookahead = 5;
 
     while (!open_list->empty()) {
 		//cout << "--------- Lookahead: " << lookahead << "----------" << endl;
@@ -355,14 +361,14 @@ SearchStatus RealTimeSearch::search() {
 		}
 		node.close();
 		//cout << "Expand: " << state.get_id() << " h=" << last_key_removed[0] << endl;
-		lookahead--;
+		//lookahead--;
 		statistics.inc_expanded(1);
 		expand_states.push_back(state.get_id());
 
 		//If solution has been found or lookhead is reached return the current
 		//best state (next min in openlist)
 		bool solution_found = check_goal_and_set_plan(state);
-		if((lookahead == 0 || solution_found)){
+		if((step_timer() >= (time_unit * lookahead_fraction) || solution_found)){
 			expand_states.push_back(state.get_id());
 			//cout << "----> compute next real time step" << endl;
 			return compute_next_real_time_step(state, solution_found, last_key_removed[0]);
