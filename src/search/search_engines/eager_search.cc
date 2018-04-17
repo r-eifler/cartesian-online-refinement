@@ -342,6 +342,7 @@ SearchStatus EagerSearch::step() {
 
 pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 
+	/*
 	if(print_timer() > 60){
 		cout << "+++++++++++++++++++++++++++++++++++++" << endl;                       
 		//cout << "Num reeval states " << num_reeval_states  << endl;
@@ -349,6 +350,7 @@ pair<SearchNode, bool> EagerSearch::fetch_next_node() {
 		print_statistics();
 		print_timer.reset();
 	}
+	*/
     /* TODO: The bulk of this code deals with multi-path dependence,
        which is a bit unfortunate since that is a special case that
        makes the common case look more complicated than it would need
