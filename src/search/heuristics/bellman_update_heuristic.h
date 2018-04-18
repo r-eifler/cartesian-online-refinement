@@ -10,6 +10,7 @@ class BellmanUpdateHeuristic : public Heuristic {
     int min_operator_cost;
 	std::unordered_map<int, int> h_values;
 	ScalarEvaluator* base_heuristic;
+	bool refine_abstractions;
 
 protected:
     virtual int compute_heuristic(const GlobalState &global_state);

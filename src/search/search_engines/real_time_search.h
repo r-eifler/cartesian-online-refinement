@@ -12,6 +12,7 @@
 #include <set>
 #include <utility>
 #include <vector>
+#include <list>
 
 namespace options {
 class Options;
@@ -45,6 +46,7 @@ class RealTimeSearch : public SearchEngine {
 	//real time parameter
 	double time_unit;
 	double lookahead_fraction;
+	bool use_refine_time_bound;
 	utils::Timer step_timer;
 	
 
@@ -55,7 +57,7 @@ class RealTimeSearch : public SearchEngine {
 
 	//Collect plan during execution
 	std::vector<const GlobalOperator*> real_time_plan;
-	std::vector<StateID> expand_states;
+	std::list<StateID> expand_states;
 
     void reach_state(
         const GlobalState &parent, const GlobalOperator &op,

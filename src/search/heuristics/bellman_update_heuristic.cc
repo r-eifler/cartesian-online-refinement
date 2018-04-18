@@ -16,7 +16,8 @@ namespace bellman_update_heuristic {
 BellmanUpdateHeuristic::BellmanUpdateHeuristic(const Options &opts)
     : Heuristic(opts),
       min_operator_cost(get_min_operator_cost(task_proxy)),
-	  base_heuristic(opts.get<ScalarEvaluator *>("base", nullptr)){
+	  base_heuristic(opts.get<ScalarEvaluator *>("base", nullptr)),
+	  refine_abstractions(opts.get<bool>("refine_abstractions")){
 
 
 	cout << "Initializing bellman update heuristic heuristic..." << endl;
@@ -29,15 +30,20 @@ BellmanUpdateHeuristic::~BellmanUpdateHeuristic() {
 int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
     State state = convert_global_state(global_state);
 	if(h_values.find(state.hash()) != h_values.end()){
-		Heuristic* heuristic = (Heuristic*) base_heuristic;
-		int hCA = heuristic->compute_heuristic(global_state);
 		int h = h_values[state.hash()];
-		//cout << "h(" << state.hash() << ")=" << h << endl;
-		if(h < hCA){
-			h_values.erase(h_values.find(state.hash())); //TODO good idea ?
-			return hCA;
+		if(refine_abstractions){
+			Heuristic* heuristic = (Heuristic*) base_heuristic;
+			int hCA = heuristic->compute_heuristic(global_state);
+			//cout << "h(" << state.hash() << ")=" << h << endl;
+			if(h < hCA){
+				h_values.erase(h_values.find(state.hash())); //TODO good idea ?
+				return hCA;
+			}
+			return h;
 		}
-		return h;
+		else{
+			return h;
+		}
 	}
 	else{
 		Heuristic* heuristic = (Heuristic*) base_heuristic;
@@ -74,18 +80,20 @@ bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std:
 		h_values[state.hash()] = min_h;
 		updated = true;
 	}
-	//else{
-	//	return false;
-	//}
 	
-	double new_bound = time_bound - timer();
-	cout << "New time bound: " << new_bound << endl;
-	if(new_bound <= 0){
+	if(refine_abstractions){
+		double new_bound = time_bound - timer();
+		cout << "New time bound: " << new_bound << endl;
+		if(new_bound <= 0){
+			return updated;
+		}
+
+		Heuristic* heuristic = (Heuristic*) base_heuristic;
+		return heuristic->online_Refine(global_state, succStates, newGoals, new_bound) || updated;
+	}
+	else{
 		return updated;
 	}
-
-	Heuristic* heuristic = (Heuristic*) base_heuristic;
-	return updated || heuristic->online_Refine(global_state, succStates, newGoals, new_bound);
 
 }
 
@@ -101,6 +109,10 @@ static Heuristic *_parse(OptionParser &parser) {
     parser.document_property("preferred operators", "no");
 
 	parser.add_option<ScalarEvaluator *>("base", "base heuristic");
+	parser.add_option<bool>(
+        "refine_abstractions",
+        "TODO",
+        "false");
 
     Heuristic::add_options_to_parser(parser);
     Options opts = parser.parse();

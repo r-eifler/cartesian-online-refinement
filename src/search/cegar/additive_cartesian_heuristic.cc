@@ -342,7 +342,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 			toRefine.push_back(true);	
 		}
 
-		cout << "h(" << global_state.get_id() << ") = " << h_value << endl;	
+		//cout << "h(" << global_state.get_id() << ") = " << h_value << endl;	
 		//cout << "+++++++++++++++++++++++++ Refinement steps: " << refinement_steps << " still refinable: " << still_refinable << " ++++++++++++++++++++++++++++++" << endl;
 		//if not refinable merge 
 		if(!still_refinable){

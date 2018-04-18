@@ -36,6 +36,7 @@ RealTimeSearch::RealTimeSearch(
       current_phase_start_g(-1),
 	  time_unit(opts.get<double>("time_unit")),
 	  lookahead_fraction(opts.get<double>("lookahead_fraction")),
+	  use_refine_time_bound(opts.get<bool>("use_refine_time_bound")),
       num_ehc_phases(0),
       last_num_expanded(-1) {
 
@@ -109,7 +110,7 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 		cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
 	
 		//refine_root_to_frontier();
-		double time_bound = time_unit * (1-lookahead_fraction);
+		double time_bound = use_refine_time_bound ? time_unit * (1-lookahead_fraction) : 1800;
 		cout << "Refine time bound: " << time_bound << endl;
 		refine_expanded(time_bound);
 
@@ -180,9 +181,9 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 	timer.resume();
 
 	cout << "Expanded: " << expand_states.size() << endl;
-	for(uint i = 1; i < expand_states.size() && timer() < time_bound; i++){
-		cout << "Rest time: " << time_bound << endl;
-		StateID refine_state_id = expand_states[i];
+	while(!expand_states.empty() && timer() < time_bound){
+	    //cout << "Rest time: " << time_bound << endl;
+		StateID refine_state_id = expand_states.front();
 		//cout << "----------> STATE: " << refine_state_id << endl;
 		//cout << "Refine state: " << refine_state_id << endl;
 		GlobalState refine_state = state_registry->lookup_state(refine_state_id);
@@ -371,7 +372,7 @@ SearchStatus RealTimeSearch::search() {
 		//cout << "Expand: " << state.get_id() << " h=" << last_key_removed[0] << endl;
 		//lookahead--;
 		statistics.inc_expanded(1);
-		expand_states.push_back(state.get_id());
+		expand_states.push_front(state.get_id());
 
 		//If solution has been found or lookhead is reached return the current
 		//best state (next min in openlist)
@@ -506,6 +507,7 @@ static SearchEngine *_parse(OptionParser &parser) {
     parser.add_list_option<ScalarEvaluator *>("evals", "scalar evaluators");
     parser.add_option<double>("time_unit","TODO", "1");
     parser.add_option<double>("lookahead_fraction","TODO", "0.5");
+    parser.add_option<bool>("use_refine_time_bound","TODO", "false");
 
 
 
