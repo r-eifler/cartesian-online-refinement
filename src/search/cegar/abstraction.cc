@@ -233,7 +233,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
     
     if (task_proxy.get_goals().size() == 1) {
 		//cout << "...... separate_facts_unreachable_before_goal ... " << endl;
-        //separate_facts_unreachable_before_goal();
+        separate_facts_unreachable_before_goal();
 		//cout << "...... separate_facts_unreachable_before_goal ... " << endl;
     }
 	//cout << "...... REFINE ... " << endl;
