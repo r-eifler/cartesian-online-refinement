@@ -313,6 +313,8 @@ void CostSaturation::build_abstractions(
 			delete abstraction;
             break;			
 		}
+
+		
 	
 
         ++num_abstractions;
@@ -326,11 +328,14 @@ void CostSaturation::build_abstractions(
 		//TODO which abstractions should be stored ?
         //int init_h = abstraction->get_h_value_of_initial_state();
         //if (init_h > 0) {		
-		//if(abstraction->get_num_states() > 1){
+		if(abstraction->get_num_states() > 1){
 			abstractions.push_back(abstraction);
           	heuristic_functions.emplace_back(abstraction, abstractions.size()-1);
 		  
-        //}
+        }
+		else{
+			delete abstraction;
+		}
         if (should_abort())
             break;
 

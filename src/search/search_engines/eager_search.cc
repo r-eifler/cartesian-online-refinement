@@ -185,6 +185,7 @@ SearchStatus EagerSearch::step() {
 						}
 
 						//ONLINE REFINEMENT  
+						//cout << "----------------- REFINE -----------------" << endl;
 						Heuristic* h = heuristics[0];        
 						bool refined = h->online_Refine(gs.first, succStates);
 						if(refined){

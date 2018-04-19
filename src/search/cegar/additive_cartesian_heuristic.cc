@@ -135,6 +135,7 @@ int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
             }
             //cout << values[i] << " ";
             if (values[i] == INF){
+				//cout << endl;
                 return DEAD_END;
 			}
             int sum = sums_h[i] + values[i]; 
@@ -158,11 +159,11 @@ int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
             pos_max = i;
         } 
     }
-    /*
-    cout << endl;
-    cout << "---> " << max << " order: " << pos_max << endl;
-    cout << "-----------------------------" << endl;
-    */
+    
+    //cout << endl;
+    //cout << "---> " << max << " order: " << pos_max << endl;
+    //cout << "-----------------------------" << endl;
+    
     /*
     for(size_t i = 0; i < sums_h.size(); i++){
         if(sums_h[i] == max)
