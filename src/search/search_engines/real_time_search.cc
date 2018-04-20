@@ -107,11 +107,11 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 		const GlobalOperator* next_action = current_plan[0];
 		real_time_plan.push_back(next_action);
 
-		cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
+		cout << "NEXT ACTION ----> " << next_action->get_name() << " timestamp: " << utils::g_timer() << endl;
 	
 		//refine_root_to_frontier();
 		double time_bound = use_refine_time_bound ? time_unit * (1-lookahead_fraction) : 1800;
-		cout << "Refine time bound: " << time_bound << endl;
+		//cout << "Refine time bound: " << time_bound << endl;
 		refine_expanded(time_bound);
 
 		//NEXT STATE
@@ -180,7 +180,7 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 	utils::Timer iter_timer;
 	timer.resume();
 
-	cout << "Expanded: " << expand_states.size() << endl;
+	//cout << "Expanded: " << expand_states.size() << endl;
 	while(!expand_states.empty() && timer() < time_bound){
 	    //cout << "Rest time: " << time_bound << endl;
 		StateID refine_state_id = expand_states.front();

@@ -83,7 +83,7 @@ bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std:
 	
 	if(refine_abstractions){
 		double new_bound = time_bound - timer();
-		cout << "New time bound: " << new_bound << endl;
+		//cout << "New time bound: " << new_bound << endl;
 		if(new_bound <= 0){
 			return updated;
 		}
