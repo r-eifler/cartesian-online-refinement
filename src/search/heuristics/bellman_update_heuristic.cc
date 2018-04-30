@@ -62,24 +62,30 @@ bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std:
 	//cout << "+++++++++++++++ BELLMAN UPDATE +++++++++++++++++" << endl;
     State state = convert_global_state(global_state);
 	int h_s = compute_heuristic(global_state);
-	//cout << "current h = " << h_s << endl;
+	//cout << "current h = " << h_s << " " << global_state.get_id() << endl;
 	int h_suc = compute_heuristic(succStates[0].first);
 	int min_h = h_suc + succStates[0].second;
 	for(uint i = 0; i < succStates.size(); i++){
 		h_suc = compute_heuristic(succStates[i].first);
+		//cout << "SUCC h+c=" << h_suc << " + " << succStates[i].second << " " << succStates[i].first.get_id() << endl;
 		int new_min = h_suc + succStates[i].second;
-		//cout << "SUCC h+c=" << new_min << endl;
 		if(new_min < min_h){
 			min_h = new_min;
 		}
 	}
 
+	//global_state.dump_pddl();
+	//cout << "h = " << min_h << endl;
+
 	bool updated = false;
 	if(min_h > h_s){
-		//cout << "INCREASE " << h_s << " -> " << min_h << endl;
+		//cout << "INCREASE: " << global_state.get_id() << ": " << h_s << " -> " << min_h << endl;
 		h_values[state.hash()] = min_h;
 		updated = true;
 	}
+	//else{
+	//	cout << "STAYED: " << global_state.get_id() << endl;
+	//}
 	
 	if(refine_abstractions){
 		double new_bound = time_bound - timer();
@@ -94,6 +100,14 @@ bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std:
 	else{
 		return updated;
 	}
+
+}
+
+
+bool BellmanUpdateHeuristic::online_Refine_base(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> newGoals, double time_bound){
+
+	Heuristic* heuristic = (Heuristic*) base_heuristic;
+	return heuristic->online_Refine(global_state, succStates, newGoals, time_bound);
 
 }
 

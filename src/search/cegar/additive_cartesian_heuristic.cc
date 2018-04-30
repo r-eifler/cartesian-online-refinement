@@ -363,6 +363,10 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 		
 		//cout << "Timer: " << timer << endl;
 	}
+
+	//global_state.dump_pddl();
+	//cout << "h = " << h_value  << endl;
+	
 	
    //cout << "--------------------------------------------------------------------------------" << endl;
    //cout << "------------------------------- END REFINE -------------------------------------" << endl;

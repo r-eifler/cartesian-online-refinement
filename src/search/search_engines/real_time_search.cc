@@ -37,6 +37,8 @@ RealTimeSearch::RealTimeSearch(
 	  time_unit(opts.get<double>("time_unit")),
 	  lookahead_fraction(opts.get<double>("lookahead_fraction")),
 	  use_refine_time_bound(opts.get<bool>("use_refine_time_bound")),
+	  refine_base(opts.get<bool>("refine_base")),
+	  refine_to_frontier(opts.get<bool>("refine_to_frontier")),
       num_ehc_phases(0),
       last_num_expanded(-1) {
 
@@ -96,7 +98,7 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 	if(solution_found){
 		//build corrent plan
 		for(uint i = 0; i < current_plan.size(); i++){
-			//cout << "NEXT ACTION ----> " << current_plan[i]->get_name() << endl;
+			cout << "NEXT ACTION ----> " << current_plan[i]->get_name() <<  " timestamp: " << utils::g_timer() << endl;
 			real_time_plan.push_back(current_plan[i]);
 		}
 		set_plan(real_time_plan);	
@@ -112,7 +114,12 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 		//refine_root_to_frontier();
 		double time_bound = use_refine_time_bound ? time_unit * (1-lookahead_fraction) : 1800;
 		//cout << "Refine time bound: " << time_bound << endl;
-		refine_expanded(time_bound);
+		if(refine_to_frontier){
+			refine_root_to_frontier(time_bound);
+		}
+		else{
+			refine_expanded(time_bound);
+		}
 
 		//NEXT STATE
 		GlobalState current_state = current_eval_context.get_state();
@@ -135,7 +142,7 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 	return IN_PROGRESS;
 }
 
-bool RealTimeSearch::refine_root_to_frontier(){
+bool RealTimeSearch::refine_root_to_frontier(double time_bound){
 	bool refined = false;
 	while(! open_list->empty()){
 		
@@ -168,22 +175,25 @@ bool RealTimeSearch::refine_root_to_frontier(){
 		}
 
 		//TODO
-		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states, 1800);
+		refined = heuristic->online_Refine(refine_state, succStates, frontier_states, time_bound) || refined;
 	}
 	return refined;
 }
 
 bool RealTimeSearch::refine_expanded(double time_bound){
+	//cout << "--------------------------------------------------------------" << endl;
 	bool refined = false;
 	utils::Timer timer;
 	timer.resume();
 	utils::Timer iter_timer;
 	timer.resume();
 
-	//cout << "Expanded: " << expand_states.size() << endl;
-	while(!expand_states.empty() && timer() < time_bound){
-	    //cout << "Rest time: " << time_bound << endl;
-		StateID refine_state_id = expand_states.front();
+	list<StateID>::iterator it = expand_states.begin();
+	while(timer() < time_bound){
+		//cout << "Expanded: " << expand_states.size() << endl;
+	    //cout << "Rest time: " << timer << " < " << time_bound << endl;
+		StateID refine_state_id = *it;
+		//expand_states.erase(expand_states.begin());
 		//cout << "----------> STATE: " << refine_state_id << endl;
 		//cout << "Refine state: " << refine_state_id << endl;
 		GlobalState refine_state = state_registry->lookup_state(refine_state_id);
@@ -211,10 +221,53 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 			succStates.push_back(make_pair(succ_state, op->get_cost()));
 		}
 
-		refined = refined || heuristic->online_Refine(refine_state, succStates, frontier_states, time_bound);
+		refined = heuristic->online_Refine(refine_state, succStates, frontier_states, time_bound) || refined;
 		time_bound -= iter_timer();
 		iter_timer.reset();
+		it++;
+		if(it == expand_states.end()){
+			if(refine_base){
+				break;
+			}
+			it = expand_states.begin();
+		}
 	}
+
+	//Refine base heuristic if there is still time
+	if(refine_base && timer() < time_bound){
+		//cout << "Refine base heuristic" << endl;
+	    //cout << "Rest time: " << timer << " < " << time_bound << endl;
+		GlobalState refine_state = current_eval_context.get_state();
+		SearchNode node = search_space->get_node(refine_state);
+
+		vector<GlobalState> frontier_states;
+		/*
+		cout << "...... Parent State......." << endl;
+		parent_state.dump_pddl();
+		cout << endl;
+		cout << ".......Refine State........" << endl;
+		refine_state.dump_pddl();
+		cout << endl;
+		cout << "++++++++++++++++++" << endl;
+		*/
+
+		//GlobalState refine_state = next_state;
+		vector<const GlobalOperator *> applicable_ops;
+		g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
+		vector<pair<GlobalState, int>> succStates;
+		//cout << "Applicable ops: " << endl;
+		for (const GlobalOperator *op : applicable_ops) {
+			//cout << op->get_name() << endl;
+			GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
+			succStates.push_back(make_pair(succ_state, op->get_cost()));
+		}
+
+		refined = heuristic->online_Refine_base(refine_state, succStates, frontier_states, time_bound) || refined;
+
+	}
+
+
+	//cout << "Rest time: " << timer << " < " << time_bound << endl;
 	return refined;
 }
 
@@ -402,6 +455,7 @@ SearchStatus RealTimeSearch::search() {
 			if (succ_node.is_new()) {
 				//cout << "Succ: " << succ_state.get_id() << "   " << op->get_name();
 				//new_state_found = true;
+				//cout << "Expand: " << op->get_name() << endl;
 					/*
 				  Note: we must call notify_state_transition for each heuristic, so
 				  don't break out of the for loop early.
@@ -506,8 +560,10 @@ static SearchEngine *_parse(OptionParser &parser) {
         "boost value for preferred operator open lists", "0");
     parser.add_list_option<ScalarEvaluator *>("evals", "scalar evaluators");
     parser.add_option<double>("time_unit","TODO", "1");
-    parser.add_option<double>("lookahead_fraction","TODO", "0.5");
-    parser.add_option<bool>("use_refine_time_bound","TODO", "false");
+    parser.add_option<double>("lookahead_fraction","TODO", "0.1");
+    parser.add_option<bool>("use_refine_time_bound","TODO", "true");
+    parser.add_option<bool>("refine_base","TODO", "false");
+    parser.add_option<bool>("refine_to_frontier","TODO", "false");
 
 
 

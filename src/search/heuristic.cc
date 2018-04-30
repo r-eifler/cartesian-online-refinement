@@ -40,6 +40,11 @@ bool Heuristic::online_Refine(const GlobalState &global_state, std::vector<std::
 	return false;
 }
 
+bool Heuristic::online_Refine_base(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState>, double){
+	cout << "online refine not implemented " << global_state.get_id()  << "#succ States: " << succStates.size() << endl;	
+	return false;
+}
+
 bool Heuristic::online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
 	cout << "online refine not implemented " << global_state.get_id()  << "#succ States: " << succStates.size() << endl;	
 	return false;

@@ -47,6 +47,8 @@ class RealTimeSearch : public SearchEngine {
 	double time_unit;
 	double lookahead_fraction;
 	bool use_refine_time_bound;
+	bool refine_base;
+	bool refine_to_frontier;
 	utils::Timer step_timer;
 	
 
@@ -64,7 +66,7 @@ class RealTimeSearch : public SearchEngine {
         const GlobalState &state);
 	SearchStatus compute_next_real_time_step(GlobalState s, bool solution_found, int min_h);
 	bool refine_valley(GlobalState next_expanded_state, int min_h);
-	bool refine_root_to_frontier();
+	bool refine_root_to_frontier(double time_bound);
 	bool refine_expanded(double time_bound);
     SearchStatus search();
 
