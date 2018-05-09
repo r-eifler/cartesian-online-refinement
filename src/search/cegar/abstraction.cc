@@ -51,6 +51,17 @@ struct Flaw {
           the corresponding variable. The values that are in both the
           current and the desired abstract state are the "wanted" ones.
         */
+		
+		/*
+		cout << "GET POSSIBLE SPLITS" << endl;
+		for(uint i = 0; i < concrete_state.size(); i++){
+			cout << "v" << i << " = " << concrete_state[i].get_value() << " ";
+		}
+		cout << endl;
+		cout << "current: " << *current_abstract_state << endl;
+		cout << "desired: " << desired_abstract_state << endl;
+		*/
+
         for (FactProxy wanted_fact_proxy : concrete_state) {
             FactPair fact = wanted_fact_proxy.get_pair();
             if (!current_abstract_state->contains(fact.var, fact.value) ||
@@ -64,6 +75,48 @@ struct Flaw {
                         wanted.push_back(value);
                     }
                 }
+				/*cout << "Wanted: " << endl;
+				for(uint i = 0; i < wanted.size(); i++){
+					cout << wanted[i] << " ";
+				}
+				cout << endl;
+				*/
+				// add random variables
+				
+				//cout << "Var : " << var_id <<  " domain size: " << var.get_domain_size() << endl;	
+				vector<int> random_values;
+				for (int value = 0; value < var.get_domain_size(); ++value) {
+                    if (current_abstract_state->contains(var_id, value) && ! desired_abstract_state.contains(var_id, value)) {
+						random_values.push_back(value);
+					}
+				}
+				//cout << "candidates: " << random_values.size() << endl;
+				std::random_shuffle(random_values.begin(), random_values.end());
+				/*cout << "Random values: " << endl;
+				for(uint i = 0; i < random_values.size(); i++){
+					cout << random_values[i] << " ";
+				}
+				cout << endl;
+				*/
+				for (uint i = 0; i < random_values.size(); i++) {
+					int v = random_values[i];
+					//cout << "Next value: " << v <<  " counter: " << i << " size: " << random_values.size() << endl;
+					if((int) wanted.size() >= current_abstract_state->count(var_id)/2){
+						break;
+					}
+                    if (current_abstract_state->contains(var_id, v) && ! desired_abstract_state.contains(var_id, v)) {
+                        wanted.push_back(v);
+                    }
+          
+				}
+				/*
+				cout << "Wanted: " << endl;
+				for(uint i = 0; i < wanted.size(); i++){
+					cout << wanted[i] << " ";
+				}
+				cout << endl;
+				*/
+
                 //assert(!wanted.empty());
                 //TODO !!!!!!!!!!!!!!!!!!!!
                 if(wanted.empty()){
@@ -1117,7 +1170,7 @@ void Abstraction::print_end_statistics() {
     
 void Abstraction::print_states(){
     cout << "+++++++++++++++++++ All States (" << states.size() << ") +++++++++++++++++++++" << endl;
-	cout << "Init: " << *init << endl;
+	//cout << "Init: " << *init << endl;
     for(AbstractState* state : states){            
         cout << "STATE G "<<  is_abstract_goal(state) << " " << is_goal(state) << " " << *state <<  endl;
 		//cout << "STATE G "<<  is_abstract_goal(state) << " " << *state <<  endl;
@@ -1127,6 +1180,8 @@ void Abstraction::print_states(){
         for(Transition t : trans){
             cout << "	--> " << t.op_id << " " << *(t.target) << endl; 
 		}
+		*/
+		/*
 		cout << "	--> ";
 		for(int i : state->get_loops()){
 			cout << i << " ";		
