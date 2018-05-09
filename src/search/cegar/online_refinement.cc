@@ -20,7 +20,7 @@ void OnlineRefinement::set_heuristic_functions(std::vector<CartesianHeuristicFun
 	heuristic_functions = fv;
 }
 
-bool OnlineRefinement::refine(State state, State minSucc, std::vector<bool> toRefine, vector<State>){ // frontier_nodes){
+bool OnlineRefinement::refine(State state, State , std::vector<bool> toRefine, vector<State> frontier_nodes){
 	timer.resume();
     if(max_states_online - online_refined_states <= 0){ 
 		//maximal number of online refined states reached ?
@@ -29,20 +29,20 @@ bool OnlineRefinement::refine(State state, State minSucc, std::vector<bool> toRe
 	}
         
 	bool refined = false;
-	/*
+	
     std::vector<std::vector<int>> *unused_cost = NULL;
 	if(use_usefull_split){
 		unused_cost = cost_saturation->get_unused_cost();
 	}
-	*/
+	
 	assert(toRefine.size() == heuristic_functions->size());
 	for(size_t i = 0; i < toRefine.size(); i++){
 		//cout << "-------------------------------------------" << endl;
 		//cout << "Refine abstraction: " << (*heuristic_functions)[i]->id << endl;
 		if(toRefine[i]){  		
 			
-		   //int refined_states = (*heuristic_functions)[i]->online_Refine(state, frontier_nodes, 1, max_states_online - online_refined_states, unused_cost);
-		   int refined_states = (*heuristic_functions)[i]->refineBasedOnBellman(state, minSucc);
+		   int refined_states = (*heuristic_functions)[i]->online_Refine(state, frontier_nodes, 1, max_states_online - online_refined_states, unused_cost);
+		   //int refined_states = (*heuristic_functions)[i]->refineBasedOnBellman(state, minSucc);
 		   //int refined_states = (*heuristic_functions)[i]->refineBellmanStyle(state);
 		   //int refined_states = (*heuristic_functions)[i]->refineSplitPre(state, frontier_nodes[0]);
 		   //int refined_states = (*heuristic_functions)[i]->refineSplitPreAction(state, frontier_nodes[0], conditions);

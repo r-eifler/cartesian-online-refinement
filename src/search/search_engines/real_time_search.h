@@ -56,6 +56,7 @@ class RealTimeSearch : public SearchEngine {
     std::map<int, std::pair<int, int>> d_counts;
     int num_ehc_phases;
     int last_num_expanded;
+	float game_time = 0;
 
 	//Collect plan during execution
 	std::vector<const GlobalOperator*> real_time_plan;

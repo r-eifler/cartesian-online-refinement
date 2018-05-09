@@ -53,7 +53,9 @@ int CartesianHeuristicFunction::online_Refine(const State &parent_state, std::ve
 	for(State gs : goal_states){
 		local_goal_states.push_back((abstraction->get_Task())->convert_ancestor_state(gs));
 	}
-    return abstraction->onlineRefine(local_state, local_goal_states, max_iter, max_states_refine, unused_cost);
+    bool refined = abstraction->onlineRefine(local_state, local_goal_states, max_iter, max_states_refine, unused_cost);
+	//abstraction->print_states();
+	return refined;
 }
 
 

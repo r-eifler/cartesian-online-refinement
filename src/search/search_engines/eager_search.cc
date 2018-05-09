@@ -236,11 +236,11 @@ SearchStatus EagerSearch::step() {
     SearchNode node = n.first;
 
     GlobalState s = node.get_state();
-	/*
+	
 	if (check_goal_and_set_plan(s)){
 		//cout << "PLAN LENGTH: " << path_actions.size() << endl;
 		return SOLVED;
-	}*/
+	}
 	/*
 	cout << "current state: ";
 	for(uint i = 0; i < s.get_values().size(); i++){
@@ -250,14 +250,29 @@ SearchStatus EagerSearch::step() {
 	*/
 
 	//Check size of lookahead is reached
+	//
+	/*
 	bool solution_found = check_goal_and_set_plan(s);
 	if(lookahead == lookahead_size || solution_found){
 		return compute_next_real_time_step(s, solution_found);
 	}
+	*/
+
+	vector<const GlobalOperator *> applicable_ops;
+	g_successor_generator->generate_applicable_ops(s, applicable_ops);
+	vector<pair<GlobalState, int>> succStates;
+	for (const GlobalOperator *op : applicable_ops) {
+		GlobalState succ_state = state_registry->get_successor_state(s, *op);
+		succStates.push_back(make_pair(succ_state, op->get_cost()));
+	}
+	Heuristic* h = heuristics[0];        
+	cout << "+++++++++++++ REFINE ++++++++++++++++" << endl;
+	vector<GlobalState> dummy;
+	h->online_Refine(s, succStates, dummy, 1800);
 
 
 	//cout << "++++++++++Generate Successors++++++++++++++++" << endl;
-    vector<const GlobalOperator *> applicable_ops;
+    //vector<const GlobalOperator *> applicable_ops;
     g_successor_generator->generate_applicable_ops(s, applicable_ops);
 
    
@@ -601,8 +616,8 @@ static SearchEngine *_parse_astar(OptionParser &parser) {
 	parser.add_option<int>(
         "lookahead",
         "TODO",
-        "10",
-        Bounds("1", "10000"));
+        "1000000",
+        Bounds("1", "1000000"));
 	parser.add_option<int>(
         "actions_per_step",
         "TODO",

@@ -63,13 +63,7 @@ void RealTimeSearch::reach_state(
 
 void RealTimeSearch::initialize() {
     assert(heuristic);
-    cout << "Conducting enforced hill-climbing search, (real) bound = "
-         << bound << endl;
-    if (use_preferred) {
-        cout << "Using preferred operators for "
-             << (preferred_usage == PreferredUsage::RANK_PREFERRED_FIRST ?
-            "ranking successors" : "pruning") << endl;
-    }
+    cout << "Conducting real-time search" << endl;
 
     bool dead_end = current_eval_context.is_heuristic_infinite(heuristic);
     statistics.inc_evaluated_states();
@@ -98,7 +92,8 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 	if(solution_found){
 		//build corrent plan
 		for(uint i = 0; i < current_plan.size(); i++){
-			cout << "NEXT ACTION ----> " << current_plan[i]->get_name() <<  " timestamp: " << utils::g_timer() << endl;
+			//cout << "NEXT ACTION ----> " << current_plan[i]->get_name() <<  " timestamp: " << utils::g_timer() << endl;
+			game_time += time_unit;
 			real_time_plan.push_back(current_plan[i]);
 		}
 		set_plan(real_time_plan);	
@@ -106,10 +101,11 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 	}
 
 	//for(const GlobalOperator* next_action : current_plan){
+		//cout << "Plan lenght: " << current_plan.size() << endl;
 		const GlobalOperator* next_action = current_plan[0];
 		real_time_plan.push_back(next_action);
 
-		cout << "NEXT ACTION ----> " << next_action->get_name() << " timestamp: " << utils::g_timer() << endl;
+		//cout << "NEXT ACTION ----> " << next_action->get_name() << " timestamp: " << utils::g_timer() << endl;
 	
 		//refine_root_to_frontier();
 		double time_bound = use_refine_time_bound ? time_unit * (1-lookahead_fraction) : 1800;
@@ -125,6 +121,7 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 		GlobalState current_state = current_eval_context.get_state();
 		SearchNode current_node = search_space->get_node(current_state);
 		GlobalState next_state = state_registry->get_successor_state(current_state, *next_action);
+		//cout << "Next state: " << next_state.get_id() << endl;
 		int succ_g = current_node.get_g() + get_adjusted_cost(*next_action);
 		EvaluationContext eval_context(next_state,  succ_g, true, &statistics);
 		current_eval_context = eval_context;
@@ -181,12 +178,14 @@ bool RealTimeSearch::refine_root_to_frontier(double time_bound){
 }
 
 bool RealTimeSearch::refine_expanded(double time_bound){
-	//cout << "--------------------------------------------------------------" << endl;
+	//cout << "---------------- Refine expanded ----------------------------------------------" << endl;
 	bool refined = false;
 	utils::Timer timer;
 	timer.resume();
 	utils::Timer iter_timer;
 	timer.resume();
+
+	//cout << "Expanded states: " << expand_states.size() << endl;
 
 	list<StateID>::iterator it = expand_states.begin();
 	while(timer() < time_bound){
@@ -213,6 +212,10 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 		//GlobalState refine_state = next_state;
 		vector<const GlobalOperator *> applicable_ops;
 		g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
+		if(applicable_ops.size() == 0){
+			it++;
+			continue;
+		}
 		vector<pair<GlobalState, int>> succStates;
 		//cout << "Applicable ops: " << endl;
 		for (const GlobalOperator *op : applicable_ops) {
@@ -266,6 +269,8 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 
 	}
 
+	float diff = step_timer() > time_unit ? step_timer() - time_unit : 0;
+	game_time = game_time + time_unit + diff;
 
 	//cout << "Rest time: " << timer << " < " << time_bound << endl;
 	return refined;
@@ -273,19 +278,19 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 
 bool RealTimeSearch::refine_valley(GlobalState next_expanded_state, int min_h){
 
-	cout << "+++++++++++++ REFINE VALLY ++++++++++++++++" << endl;
-	cout << "MIN h: " << min_h << endl;
+	//cout << "+++++++++++++ REFINE VALLY ++++++++++++++++" << endl;
+	//cout << "MIN h: " << min_h << endl;
 	//Collect minimal frontier nodes
 	vector<GlobalState> frontier_min_states;
 	frontier_min_states.push_back(next_expanded_state);
 
-	cout << "min frontier: " << next_expanded_state.get_id() << " h=" << min_h << endl; 
+	//cout << "min frontier: " << next_expanded_state.get_id() << " h=" << min_h << endl; 
 	while(!open_list->empty()){
 		vector<int> keys;
 		StateID id = open_list->remove_min(&keys);
 		GlobalState s = state_registry->lookup_state(id);
 		if(min_h == keys[0]){
-			cout << "min frontier: " << id << " h=" << keys[0] << endl; 
+			//cout << "min frontier: " << id << " h=" << keys[0] << endl; 
 			frontier_min_states.push_back(s);
 		}	
 		else{
@@ -294,7 +299,7 @@ bool RealTimeSearch::refine_valley(GlobalState next_expanded_state, int min_h){
 	}
 
 	//Trace back from F_0 to R to collect valles nodes
-	cout << "ROOT: "  << current_eval_context.get_state().get_id() << endl; 
+	//cout << "ROOT: "  << current_eval_context.get_state().get_id() << endl; 
 	set<GlobalState> valley;
 	valley.insert(current_eval_context.get_state());
 	unordered_map<StateID, StateID> matching_refine_goal;
@@ -303,11 +308,11 @@ bool RealTimeSearch::refine_valley(GlobalState next_expanded_state, int min_h){
 		GlobalState cs = f0;
 		//valley.insert(cs);
 		//matching_refine_goal.insert({f0.get_id(), f0.get_id()});
-		cout << "Start: " << cs.get_id() << " ";
+		//cout << "Start: " << cs.get_id() << " ";
 		while(true){
 			SearchNode node = search_space->get_node(cs);
 			StateID parent_id = node.get_parent_id();
-			cout << "<-- " << parent_id << " ";
+			//cout << "<-- " << parent_id << " ";
 			GlobalState parent_state = state_registry->lookup_state(parent_id);
 			if(parent_state.get_id() == current_eval_context.get_state().get_id()){
 				break;
@@ -320,16 +325,18 @@ bool RealTimeSearch::refine_valley(GlobalState next_expanded_state, int min_h){
 		cout << endl;
 
 	}
+	/*
 	cout << "Valley: ";
 	for(GlobalState gs : valley){
 		cout << gs.get_id() << " ";
 	}
 	cout << endl;
+	*/
 
 	//Refine all to low boarder nodes
 	bool refined = false;
 	for(GlobalState v_state : valley){
-		cout << "-------------- v state: " << v_state.get_id() << "------------" << endl;
+		//cout << "-------------- v state: " << v_state.get_id() << "------------" << endl;
 		vector<const GlobalOperator *> applicable_ops;
 		g_successor_generator->generate_applicable_ops(v_state, applicable_ops);
 		vector<pair<GlobalState, int>> succStates;
@@ -337,28 +344,28 @@ bool RealTimeSearch::refine_valley(GlobalState next_expanded_state, int min_h){
 		for (const GlobalOperator *op : applicable_ops) {
 			//cout << op->get_name() << endl;
 			GlobalState succ_state = state_registry->get_successor_state(v_state, *op);
-			cout << "Valley state: " << v_state.get_id() << " boarder state: "  << succ_state.get_id() << endl;
+			//cout << "Valley state: " << v_state.get_id() << " boarder state: "  << succ_state.get_id() << endl;
 			if(valley.find(succ_state) != valley.end()){
 				//State is in valley
-				cout << " ---> state in valley " << endl;
+				//cout << " ---> state in valley " << endl;
 				continue;
 			}
 			int h_v = heuristic->compute_heuristic(v_state);
 			int h_s = heuristic->compute_heuristic(succ_state);
 			if( h_v >= h_s){
 				cout << h_v << " >= "  << h_s << " ?" << endl;
-				cout << "-------> refine: " << succ_state.get_id() << " "; 
+				//cout << "-------> refine: " << succ_state.get_id() << " "; 
 				//h of boarder state is not high enought
 				int bound = h_v + op->get_cost(); 
-				cout << "New goal state: " << matching_refine_goal.at(v_state.get_id()) << endl;
+				//cout << "New goal state: " << matching_refine_goal.at(v_state.get_id()) << endl;
 				GlobalState matching_goal =  state_registry->lookup_state(matching_refine_goal.at(v_state.get_id()));
 				bool now_refined = heuristic->online_Refine(succ_state, matching_goal, bound);
-				cout << "----> refined: " << now_refined << endl;
+				//cout << "----> refined: " << now_refined << endl;
 				refined = refined || now_refined; 
 			}
 		}
 	}
-    cout << "+++++++++++++++++++++++++++++++ END REFINE +++++++++++++++++++++++++++++++++++++" << endl;
+    //cout << "+++++++++++++++++++++++++++++++ END REFINE +++++++++++++++++++++++++++++++++++++" << endl;
 
 	/*
 	if(! refined){
@@ -386,6 +393,7 @@ bool RealTimeSearch::refine_valley(GlobalState next_expanded_state, int min_h){
 
 SearchStatus RealTimeSearch::step() {
 	//cout << "+++++++++++++ STEP +++++++++++++++" << endl;
+	num_ehc_phases++;
     last_num_expanded = statistics.get_expanded();
     search_progress.check_progress(current_eval_context);
 
@@ -520,21 +528,8 @@ SearchStatus RealTimeSearch::search() {
 void RealTimeSearch::print_statistics() const {
     statistics.print_detailed_statistics();
 
-    cout << "EHC phases: " << num_ehc_phases << endl;
-    //assert(num_ehc_phases != 0);
-    cout << "Average expansions per EHC phase: "
-         << static_cast<double>(statistics.get_expanded()) / num_ehc_phases
-         << endl;
-
-    for (auto count : d_counts) {
-        int depth = count.first;
-        int phases = count.second.first;
-        assert(phases != 0);
-        int total_expansions = count.second.second;
-        cout << "EHC phases of depth " << depth << ": " << phases
-             << " - Avg. Expansions: "
-             << static_cast<double>(total_expansions) / phases << endl;
-    }
+   cout << "Game-time: " << game_time << endl; 
+   cout << "Number of steps: " << num_ehc_phases << endl;
 
 	cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
 	heuristic->print_statistics();
