@@ -84,6 +84,7 @@ struct Flaw {
 				// add random variables
 				
 				//cout << "Var : " << var_id <<  " domain size: " << var.get_domain_size() << endl;	
+				/*
 				vector<int> random_values;
 				for (int value = 0; value < var.get_domain_size(); ++value) {
                     if (current_abstract_state->contains(var_id, value) && ! desired_abstract_state.contains(var_id, value)) {
@@ -92,12 +93,12 @@ struct Flaw {
 				}
 				//cout << "candidates: " << random_values.size() << endl;
 				std::random_shuffle(random_values.begin(), random_values.end());
-				/*cout << "Random values: " << endl;
+				cout << "Random values: " << endl;
 				for(uint i = 0; i < random_values.size(); i++){
 					cout << random_values[i] << " ";
 				}
 				cout << endl;
-				*/
+				
 				for (uint i = 0; i < random_values.size(); i++) {
 					int v = random_values[i];
 					//cout << "Next value: " << v <<  " counter: " << i << " size: " << random_values.size() << endl;
@@ -109,6 +110,110 @@ struct Flaw {
                     }
           
 				}
+				*/
+				/*
+				cout << "Wanted: " << endl;
+				for(uint i = 0; i < wanted.size(); i++){
+					cout << wanted[i] << " ";
+				}
+				cout << endl;
+				*/
+
+                //assert(!wanted.empty());
+                //TODO !!!!!!!!!!!!!!!!!!!!
+                if(wanted.empty()){
+                    return splits;   
+                }
+                splits.emplace_back(var_id, move(wanted));
+            }
+        }
+        assert(!splits.empty());
+        return splits;
+    }
+
+	vector<Split> get_possible_splits_DTG(vector<DomainTransitionGraph*> *transition_graphs) const {
+        vector<Split> splits;
+        /*
+          For each fact in the concrete state that is not contained in
+          the current abstract state (reason: abstract and concrete
+          traces diverged) or the desired abstract state (reason:
+          unsatisfied precondition or goal), loop over all values of
+          the corresponding variable. The values that are in both the
+          current and the desired abstract state are the "wanted" ones.
+        */
+		
+		/*
+		cout << "GET POSSIBLE SPLITS" << endl;
+		for(uint i = 0; i < concrete_state.size(); i++){
+			cout << "v" << i << " = " << concrete_state[i].get_value() << " ";
+		}
+		cout << endl;
+		cout << "current: " << *current_abstract_state << endl;
+		cout << "desired: " << desired_abstract_state << endl;
+		*/
+
+        for (FactProxy wanted_fact_proxy : concrete_state) {
+            FactPair fact = wanted_fact_proxy.get_pair();
+            if (!current_abstract_state->contains(fact.var, fact.value) ||
+                !desired_abstract_state.contains(fact.var, fact.value)) {
+                VariableProxy var = wanted_fact_proxy.get_variable();
+                int var_id = var.get_id();
+                vector<int> wanted;
+                for (int value = 0; value < var.get_domain_size(); ++value) {
+                    if (current_abstract_state->contains(var_id, value) &&
+                        desired_abstract_state.contains(var_id, value)) {
+                        wanted.push_back(value);
+                    }
+                }
+
+				/*
+				cout << "Variable: " << var_id << endl;
+				cout << "Wanted: " << endl;
+				for(uint i = 0; i < wanted.size(); i++){
+					cout << wanted[i] << " ";
+				}
+				cout << endl;
+				*/
+
+				// add random variables
+				if(true){		
+				DomainTransitionGraph* dtg = (*transition_graphs)[var_id];	
+				ValueNode* cn = NULL;
+				for(uint i = 0; i < dtg->nodes.size(); i++){
+					cn = &dtg->nodes[i];
+					if(cn->value == wanted[0]){
+						break;
+					}
+				}
+
+				unordered_set<int> visited;
+				visited.insert(cn->value);
+				while((int) wanted.size() < current_abstract_state->count(var_id)/2 && visited.size() < dtg->nodes.size()){
+					for(ValueTransition vt : cn->transitions){
+						cn = vt.target;
+						if(visited.find(cn->value) != visited.end()){
+							continue;
+						}
+						visited.insert(cn->value);
+						if (current_abstract_state->contains(var_id, vt.target->value) && ! desired_abstract_state.contains(var_id, vt.target->value)) {
+							bool contained = false;
+							for(int v : wanted){
+								if(v == vt.target->value){
+									contained = true;
+									break;
+								}
+							}
+							if(! contained){
+								wanted.push_back(vt.target->value);
+							}
+						}
+						if((int) wanted.size() >= current_abstract_state->count(var_id)/2){
+							break;
+						}
+					}
+				}
+				}
+          
 				/*
 				cout << "Wanted: " << endl;
 				for(uint i = 0; i < wanted.size(); i++){
@@ -170,6 +275,46 @@ Abstraction::Abstraction(
 	c_graph.dump(task_proxy);
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
     */
+
+
+    function<bool(int, int)> pruning_condition = [](int , int ) {return false;};
+    DTGFactory factory(task_proxy, false, pruning_condition);
+    transition_graphs = factory.build_dtgs();
+
+	/*
+	cout << "digraph DTG {" << endl;
+	//cout << "{" << endl;
+	//for(FactProxy gp : task_proxy.get_goals()){
+	//	cout << "\tv" << gp.get_variable().get_id() << "_" << gp.get_value() << "   [fillcolor = green]" << endl; 
+	//}
+	//cout << "}" << endl;
+
+	for(uint i = 0; i < transition_graphs.size(); i++){
+		DomainTransitionGraph* dtg = transition_graphs[i];
+		vector<ValueNode> nodes = dtg->nodes;
+		for(uint n = 0; n < nodes.size(); n++){
+			ValueNode vn = nodes[n];
+			for(ValueTransition vt : vn.transitions){
+				cout << "v" << i << "_" << vn.value << " -> " << "v" << i << "_" << vt.target->value << endl;
+				string sn = g_fact_names[i][vn.value];
+				if(! sn.compare("<none of those>")){
+					sn = string("v");
+					sn.append(to_string(i));
+					sn.append(to_string(vn.value));
+				}
+				string tn = g_fact_names[i][vt.target->value];
+				if(! tn.compare("<none of those>")){
+					tn = string("v");
+					tn.append(to_string(i));
+					tn.append(to_string(vt.target->value));
+				}
+				cout << "\"" << sn << "\"" << " -> " << "\"" << tn  << "\"" << endl;
+			}
+		}
+	}
+	cout << "}" << endl;
+	*/
+	
        
           
      cout << "+++++++++++++++++++ Goals ++++++++++++++++++" << endl;
@@ -373,7 +518,7 @@ int Abstraction::onlineRefine(const State &state, int num_of_Iter, int update_h_
             break;
         }
         AbstractState *abstract_state = flaw->current_abstract_state;
-        vector<Split> splits = flaw->get_possible_splits();
+        vector<Split> splits = flaw->get_possible_splits_DTG(&transition_graphs);
         if(splits.empty()){
             //cout << "Split empty" << endl;
             refine_timer.stop();

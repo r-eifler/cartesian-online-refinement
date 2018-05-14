@@ -8,6 +8,7 @@
 
 
 #include "../task_proxy.h"
+#include "../domain_transition_graph.h"
 
 #include "../utils/countdown_timer.h"
 
@@ -47,6 +48,7 @@ class Abstraction {
     AbstractSearch abstract_search;
     SplitSelector split_selector;
     TransitionUpdater transition_updater;
+	std::vector<DomainTransitionGraph*> transition_graphs;
 
     // Limit the time for building the abstraction.
     utils::CountdownTimer timer;

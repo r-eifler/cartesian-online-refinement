@@ -111,10 +111,17 @@ namespace cea_heuristic {
 class ContextEnhancedAdditiveHeuristic;
 }
 
+namespace cegar {
+class Abstraction;
+struct Flaw;
+}
+
 class DomainTransitionGraph {
     friend class cg_heuristic::CGHeuristic;
     friend class cea_heuristic::ContextEnhancedAdditiveHeuristic;
     friend class DTGFactory;
+    friend class cegar::Abstraction;
+	friend struct cegar::Flaw;
 
     int var;
     std::vector<ValueNode> nodes;
