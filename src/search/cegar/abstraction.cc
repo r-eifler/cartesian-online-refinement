@@ -84,6 +84,7 @@ struct Flaw {
 				// add random variables
 				
 				//cout << "Var : " << var_id <<  " domain size: " << var.get_domain_size() << endl;	
+				/*
 				vector<int> random_values;
 				for (int value = 0; value < var.get_domain_size(); ++value) {
                     if (current_abstract_state->contains(var_id, value) && ! desired_abstract_state.contains(var_id, value)) {
@@ -92,12 +93,12 @@ struct Flaw {
 				}
 				//cout << "candidates: " << random_values.size() << endl;
 				std::random_shuffle(random_values.begin(), random_values.end());
-				/*cout << "Random values: " << endl;
+				cout << "Random values: " << endl;
 				for(uint i = 0; i < random_values.size(); i++){
 					cout << random_values[i] << " ";
 				}
 				cout << endl;
-				*/
+				
 				for (uint i = 0; i < random_values.size(); i++) {
 					int v = random_values[i];
 					//cout << "Next value: " << v <<  " counter: " << i << " size: " << random_values.size() << endl;
@@ -109,6 +110,7 @@ struct Flaw {
                     }
           
 				}
+				*/
 				/*
 				cout << "Wanted: " << endl;
 				for(uint i = 0; i < wanted.size(); i++){
