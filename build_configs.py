@@ -1,4 +1,4 @@
-release32 = ["-DCMAKE_BUILD_TYPE=Release"]
+release32 = ["-DCMAKE_BUILD_TYPE=Release", "-DPLUGIN_REAL_TIME_SEARCH_ENABLED:BOOL=1"]
 debug32 = ["-DCMAKE_BUILD_TYPE=Debug"]
 release32nolp = ["-DCMAKE_BUILD_TYPE=Release", "-DUSE_LP=NO"]
 debug32nolp = ["-DCMAKE_BUILD_TYPE=Debug", "-DUSE_LP=NO"]
