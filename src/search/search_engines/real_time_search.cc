@@ -490,6 +490,7 @@ SearchStatus RealTimeSearch::search() {
 					continue;
 				}
 				succ_node.open(node, op);
+				//succ_state.dump_pddl();
 				//cout << " h=" << eval_context.get_heuristic_value(heuristic) << endl;
 				//cout << "Update Parent new " << succ_state.get_id() << " -> " << state.get_id() << endl;
 			
