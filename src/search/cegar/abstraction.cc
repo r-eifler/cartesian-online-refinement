@@ -167,7 +167,7 @@ struct Flaw {
                 }
 
 				/*
-				cout << "Variable: " << var_id << endl;
+				cout << "-------------------------- Variable: " << var_id << "--------------------------" << endl;
 				cout << "Wanted: " << endl;
 				for(uint i = 0; i < wanted.size(); i++){
 					cout << wanted[i] << " ";
@@ -175,7 +175,7 @@ struct Flaw {
 				cout << endl;
 				*/
 
-				// add random variables
+				// add variables which are connected in DTG
 				if(true){		
 				DomainTransitionGraph* dtg = (*transition_graphs)[var_id];	
 				ValueNode* cn = NULL;
@@ -186,25 +186,33 @@ struct Flaw {
 					}
 				}
 
+				vector<ValueNode*> toVisite;
+				toVisite.push_back(cn);
 				unordered_set<int> visited;
 				visited.insert(cn->value);
 				while((int) wanted.size() < current_abstract_state->count(var_id)/2 && visited.size() < dtg->nodes.size()){
+					//cout << "Wanted size: " << wanted.size() << " max size: " << (current_abstract_state->count(var_id)/2) << endl;
+					//cout << "Visited: " << visited.size() << " nodes: " << dtg->nodes.size() << endl;
+					cn = toVisite.front();
+					toVisite.erase(toVisite.begin());
+					ValueNode* child = NULL;
 					for(ValueTransition vt : cn->transitions){
-						cn = vt.target;
-						if(visited.find(cn->value) != visited.end()){
+						child = vt.target;
+						if(visited.find(child->value) != visited.end()){
 							continue;
 						}
-						visited.insert(cn->value);
-						if (current_abstract_state->contains(var_id, vt.target->value) && ! desired_abstract_state.contains(var_id, vt.target->value)) {
+						visited.insert(child->value);
+						toVisite.push_back(child);
+						if (current_abstract_state->contains(var_id, child->value) && ! desired_abstract_state.contains(var_id, child->value)) {
 							bool contained = false;
 							for(int v : wanted){
-								if(v == vt.target->value){
+								if(v == child->value){
 									contained = true;
 									break;
 								}
 							}
 							if(! contained){
-								wanted.push_back(vt.target->value);
+								wanted.push_back(child->value);
 							}
 						}
 						if((int) wanted.size() >= current_abstract_state->count(var_id)/2){
@@ -213,8 +221,8 @@ struct Flaw {
 					}
 				}
 				}
-          
-				/*
+	
+    			/*      
 				cout << "Wanted: " << endl;
 				for(uint i = 0; i < wanted.size(); i++){
 					cout << wanted[i] << " ";
