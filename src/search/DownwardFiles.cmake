@@ -237,6 +237,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME REAL_TIME_SEARCH
+    HELP "real time search algorithm"
+    SOURCES
+        search_engines/real_time_search
+    DEPENDENCY_ONLY
+)
+
+fast_downward_plugin(
     NAME EAGER_SEARCH
     HELP "Eager search algorithm"
     SOURCES
@@ -244,13 +252,6 @@ fast_downward_plugin(
     DEPENDS SEARCH_COMMON NULL_PRUNING_METHOD
 )
 
-fast_downward_plugin(
-	NAME REAL_TIME_SEARCH
-    HELP "real time search algorithm"
-    SOURCES
-        search_engines/real_time_search
-    DEPENDENCY_ONLY
-)
 
 fast_downward_plugin(
 	NAME ITERATED_SEARCH
