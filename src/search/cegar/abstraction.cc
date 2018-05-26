@@ -190,12 +190,15 @@ struct Flaw {
 				toVisite.push_back(cn);
 				unordered_set<int> visited;
 				visited.insert(cn->value);
-				while((int) wanted.size() < current_abstract_state->count(var_id)/2 && visited.size() < dtg->nodes.size()){
+				while((int) wanted.size() < current_abstract_state->count(var_id)/2 && visited.size() < dtg->nodes.size() && toVisite.size() > 0){
+					//cout << "-----------------------------------------------------------" << endl;
 					//cout << "Wanted size: " << wanted.size() << " max size: " << (current_abstract_state->count(var_id)/2) << endl;
 					//cout << "Visited: " << visited.size() << " nodes: " << dtg->nodes.size() << endl;
+					//cout << "#tovisite: " << toVisite.size() << endl;
 					cn = toVisite.front();
 					toVisite.erase(toVisite.begin());
 					ValueNode* child = NULL;
+					//cout << "#children: " << cn->transitions.size() << endl;
 					for(ValueTransition vt : cn->transitions){
 						child = vt.target;
 						if(visited.find(child->value) != visited.end()){
