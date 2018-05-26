@@ -176,7 +176,7 @@ struct Flaw {
 				*/
 
 				// add variables which are connected in DTG
-				if(true){		
+				if(true && wanted.size() > 0){		
 				DomainTransitionGraph* dtg = (*transition_graphs)[var_id];	
 				ValueNode* cn = NULL;
 				for(uint i = 0; i < dtg->nodes.size(); i++){
@@ -201,6 +201,7 @@ struct Flaw {
 					//cout << "#children: " << cn->transitions.size() << endl;
 					for(ValueTransition vt : cn->transitions){
 						child = vt.target;
+						//cout << "Child: " << child->value << endl;
 						if(visited.find(child->value) != visited.end()){
 							continue;
 						}
