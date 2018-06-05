@@ -139,6 +139,11 @@ SearchStatus RealTimeSearch::compute_next_real_time_step(GlobalState s, bool sol
 	return IN_PROGRESS;
 }
 
+/*
+ *	Refine the abstraction based on the root node of the current lookahead.
+ *	As the goal of the refinement step the frontier nodes are used.
+ *	The idea behind the approach is a more local refinement
+ */
 bool RealTimeSearch::refine_root_to_frontier(double time_bound){
 	bool refined = false;
 	while(! open_list->empty()){
@@ -146,10 +151,11 @@ bool RealTimeSearch::refine_root_to_frontier(double time_bound){
         vector<int> last_key_removed;
         StateID id = open_list->remove_min(&last_key_removed);
         GlobalState new_goal = state_registry->lookup_state(id);
-		vector<GlobalState> frontier_states;
-		frontier_states.push_back(new_goal);
+		//frontier state which is the goals in the refinement step
+		vector<GlobalState> goal_states;
+		goal_states.push_back(new_goal);
 
-
+		//The current root node is refined
 		GlobalState refine_state = current_eval_context.get_state();
 		SearchNode node = search_space->get_node(refine_state);
 
@@ -160,23 +166,23 @@ bool RealTimeSearch::refine_root_to_frontier(double time_bound){
 		cout << "++++++++++++++++++" << endl;
 		*/
 
-		//GlobalState refine_state = next_state;
+		//Compute successor states
 		vector<const GlobalOperator *> applicable_ops;
 		g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
 		vector<pair<GlobalState, int>> succStates;
-		//cout << "Applicable ops: " << endl;
 		for (const GlobalOperator *op : applicable_ops) {
-			//cout << op->get_name() << endl;
 			GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
 			succStates.push_back(make_pair(succ_state, op->get_cost()));
 		}
 
-		//TODO
-		refined = heuristic->online_Refine(refine_state, succStates, frontier_states, time_bound) || refined;
+		refined = heuristic->online_Refine(refine_state, succStates, goal_states, time_bound) || refined;
 	}
 	return refined;
 }
 
+/*
+ *	Refine the heuristic on all expanded states, beginning in the current root node
+ */
 bool RealTimeSearch::refine_expanded(double time_bound){
 	//cout << "---------------- Refine expanded ----------------------------------------------" << endl;
 	bool refined = false;
@@ -185,20 +191,16 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 	utils::Timer iter_timer;
 	timer.resume();
 
-	//cout << "Expanded states: " << expand_states.size() << endl;
 
 	list<StateID>::iterator it = expand_states.begin();
 	while(timer() < time_bound){
-		//cout << "Expanded: " << expand_states.size() << endl;
-	    //cout << "Rest time: " << timer << " < " << time_bound << endl;
+
 		StateID refine_state_id = *it;
-		//expand_states.erase(expand_states.begin());
-		//cout << "----------> STATE: " << refine_state_id << endl;
-		//cout << "Refine state: " << refine_state_id << endl;
 		GlobalState refine_state = state_registry->lookup_state(refine_state_id);
 		SearchNode node = search_space->get_node(refine_state);
 
 		vector<GlobalState> frontier_states;
+
 		/*
 		cout << "...... Parent State......." << endl;
 		parent_state.dump_pddl();
@@ -209,7 +211,6 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 		cout << "++++++++++++++++++" << endl;
 		*/
 
-		//GlobalState refine_state = next_state;
 		vector<const GlobalOperator *> applicable_ops;
 		g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
 		if(applicable_ops.size() == 0){
@@ -217,9 +218,7 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 			continue;
 		}
 		vector<pair<GlobalState, int>> succStates;
-		//cout << "Applicable ops: " << endl;
 		for (const GlobalOperator *op : applicable_ops) {
-			//cout << op->get_name() << endl;
 			GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
 			succStates.push_back(make_pair(succ_state, op->get_cost()));
 		}
@@ -228,6 +227,8 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 		time_bound -= iter_timer();
 		iter_timer.reset();
 		it++;
+		//Start from the beginning if there is still time left
+		//only useful in combination with bellman updates
 		if(it == expand_states.end()){
 			if(refine_base){
 				break;
@@ -269,8 +270,6 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 
 	}
 
-	float diff = step_timer() > time_unit ? step_timer() - time_unit : 0;
-	game_time = game_time + time_unit + diff;
 
 	//cout << "Rest time: " << timer << " < " << time_bound << endl;
 	return refined;
@@ -410,8 +409,14 @@ SearchStatus RealTimeSearch::step() {
 	node.open_initial();
 	open_list->insert(current_eval_context, current_state.get_id());
 
+
 	step_timer.reset();
-    return  search();
+	SearchStatus status = search();
+
+	float diff = step_timer() > time_unit ? step_timer() - time_unit : 0;
+	game_time = game_time + time_unit + diff;
+
+    return  status;
 }
 
 SearchStatus RealTimeSearch::search() {
@@ -434,6 +439,7 @@ SearchStatus RealTimeSearch::search() {
 		//lookahead--;
 		statistics.inc_expanded(1);
 		expand_states.push_front(state.get_id());
+
 
 		//If solution has been found or lookhead is reached return the current
 		//best state (next min in openlist)

@@ -650,7 +650,8 @@ int Abstraction::refineSplitPre(const State &state, const State preState){
 			}
 		}
 
-		
+		//is spurous
+		//
 		OperatorProxy op_pre = task_proxy.get_operators()[op_id_pre];
 		EffectsProxy effects_pre = op_pre.get_effects();
 		OperatorProxy op = task_proxy.get_operators()[op_id];
@@ -871,7 +872,7 @@ int Abstraction::onlineRefine(const State &state, std::vector<State> new_goals, 
     }
 
 	refine_goals.clear();
-		vector<pair<int,vector<int>>> goal_facts_split;
+	vector<pair<int,vector<int>>> goal_facts_split;
 	if(new_goals.size() > 0){
 		State new_goal = new_goals[0];
 		refine_goals.insert(get_node(new_goal)->get_AbstractState());
