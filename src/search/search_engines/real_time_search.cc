@@ -188,12 +188,14 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 	bool refined = false;
 	utils::Timer timer;
 	timer.resume();
-	utils::Timer iter_timer;
-	timer.resume();
+	//utils::Timer iter_timer;
+	//timer.resume();
 
 
 	list<StateID>::iterator it = expand_states.begin();
+	int exp_refined = 0;
 	while(timer() < time_bound){
+		//cout << timer() << " < " << time_bound << endl;
 
 		StateID refine_state_id = *it;
 		GlobalState refine_state = state_registry->lookup_state(refine_state_id);
@@ -223,9 +225,11 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 			succStates.push_back(make_pair(succ_state, op->get_cost()));
 		}
 
-		refined = heuristic->online_Refine(refine_state, succStates, frontier_states, time_bound) || refined;
-		time_bound -= iter_timer();
-		iter_timer.reset();
+		double time_left = time_bound - timer();
+		refined = heuristic->online_Refine(refine_state, succStates, frontier_states, time_left) || refined;
+		exp_refined++;
+		//time_bound -= iter_timer();
+		//iter_timer.reset();
 		it++;
 		//Start from the beginning if there is still time left
 		//only useful in combination with bellman updates
@@ -233,9 +237,11 @@ bool RealTimeSearch::refine_expanded(double time_bound){
 			if(refine_base){
 				break;
 			}
+			//cout << "Updates expanded again" << endl;
 			it = expand_states.begin();
 		}
 	}
+	//cout << "Refined: " << exp_refined << endl;
 
 	//Refine base heuristic if there is still time
 	if(refine_base && timer() < time_bound){
@@ -444,8 +450,10 @@ SearchStatus RealTimeSearch::search() {
 		//If solution has been found or lookhead is reached return the current
 		//best state (next min in openlist)
 		bool solution_found = check_goal_and_set_plan(state);
+		//cout << step_timer() << " >= " << (time_unit * lookahead_fraction) << endl;
 		if((step_timer() >= (time_unit * lookahead_fraction) || solution_found)){
 			expand_states.push_back(state.get_id());
+			//cout << "Expansions: " << expand_states.size() << endl;
 			//cout << "----> compute next real time step" << endl;
 			return compute_next_real_time_step(state, solution_found, last_key_removed[0]);
 		}
