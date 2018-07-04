@@ -27,6 +27,7 @@ class CostSaturation {
     const std::vector<std::shared_ptr<SubtaskGenerator>> subtask_generators;
     const int max_states;
     const int max_non_looping_transitions;
+	bool use_manhatten_distance;
     const double max_time;
     const bool use_general_costs;
 	const bool use_all_goals;
@@ -39,6 +40,7 @@ class CostSaturation {
     int num_abstractions;
     int num_states;
     int num_non_looping_transitions;
+
   
     
     std::vector<Abstraction*> abstractions;
@@ -66,6 +68,7 @@ public:
         std::vector<std::shared_ptr<SubtaskGenerator>> &subtask_generators,
         int max_states,
         int max_non_looping_transitions,
+		bool use_manhatten_distance,
         double max_time,
         bool use_general_costs,
 		bool use_all_goals,

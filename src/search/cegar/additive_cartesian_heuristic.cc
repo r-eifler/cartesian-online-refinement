@@ -34,6 +34,7 @@ vector<CartesianHeuristicFunction*> AdditiveCartesianHeuristic::generate_heurist
         subtask_generators,
         opts.get<int>("max_states"),
         opts.get<int>("max_transitions"),
+        opts.get<bool>("use_manhatten_distance"),
         opts.get<double>("max_time"),
         opts.get<bool>("use_general_costs"),
 		opts.get<bool>("use_all_goals"),
@@ -641,6 +642,11 @@ static Heuristic *_parse(OptionParser &parser) {
         "local_minimum",
         "test of local minimum instead of bellman",
         "false");
+	parser.add_option<bool>(
+        "use_manhatten_distance",
+        "initialize the heuristic with manhatten distance",
+        "false");
+
 	
 	vector<string> refine_strategies;
 	refine_strategies.push_back("ORDER_REFINE");

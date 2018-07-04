@@ -145,6 +145,7 @@ Abstraction::Abstraction(
     double max_time,
     bool use_general_costs,
     PickSplit pick,
+	bool use_manhatten_distance,
     utils::RandomNumberGenerator &rng,
     bool debug)
     : task(task),
@@ -161,6 +162,7 @@ Abstraction::Abstraction(
       deviations(0),
       unmet_preconditions(0),
       unmet_goals(0),
+	  use_manhatten_distance(use_manhatten_distance),
       debug(debug),
       rng(rng){
        
@@ -307,6 +309,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
     }
 	//cout << "...... REFINE ... " << endl;
     bool found_concrete_solution = false;
+	//Split all goal facts 
 	while (may_keep_refining()) {
 		AbstractState *abstract_state = *goals.begin(); 
 		//cout << "Abstract GOAL State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
@@ -326,7 +329,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
 		}
 
 		if(split_facts.empty()){
-			cout << "NO SPLITS" << endl;
+			//cout << "NO SPLITS" << endl;
 			break;
 		}
 
@@ -339,6 +342,43 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
 		}
 		//cout << "---------------------------------------------------------------------------" << endl;
     }
+
+	//Split the variable which indicates the position completely
+
+	if(use_manhatten_distance){
+	cout << "--------------------------------------------------------- Manhatten Distance ------------------------------------------------------" << endl;
+
+	AbstractState* state_to_split = init;
+	int var_pos = 0;
+	int domain_size = state_to_split->count(0);
+	for(int i = 0; i < state_to_split->getDomains().size(); i++){
+		int d = state_to_split->count(i);
+		if(d > domain_size){
+			var_pos = i;
+			domain_size = d;
+		}
+	}
+	cout << "Cell variable has position: " << var_pos << " with domain size: " << domain_size << endl;
+	
+	int split_value = 0;
+    while (may_keep_refining() && state_to_split->count(var_pos) > 1) {
+		//cout << "State to split" << *state_to_split << endl;
+	
+		//cout << "Split var: " << var_pos << " = " << split_value << endl; 
+		vector<int> values;
+		values.push_back(split_value++);
+		if(! state_to_split->contains(var_pos, values[0])){
+			continue;
+		}
+
+		pair<AbstractState*, AbstractState*> result_states = refine(state_to_split, var_pos, values);  
+		state_to_split = result_states.first;
+		//cout << "Domain size: " << state_to_split->count(var_pos) << endl;
+		//cout << "may_keep_refining: " << may_keep_refining() << endl;
+	}
+	return;
+	}
+
     while (may_keep_refining()) {
 		
         //cout << "-----------------------" << endl;
@@ -650,7 +690,8 @@ int Abstraction::refineSplitPre(const State &state, const State preState){
 			}
 		}
 
-		
+		//is spurous
+		//
 		OperatorProxy op_pre = task_proxy.get_operators()[op_id_pre];
 		EffectsProxy effects_pre = op_pre.get_effects();
 		OperatorProxy op = task_proxy.get_operators()[op_id];
@@ -871,7 +912,7 @@ int Abstraction::onlineRefine(const State &state, std::vector<State> new_goals, 
     }
 
 	refine_goals.clear();
-		vector<pair<int,vector<int>>> goal_facts_split;
+	vector<pair<int,vector<int>>> goal_facts_split;
 	if(new_goals.size() > 0){
 		State new_goal = new_goals[0];
 		refine_goals.insert(get_node(new_goal)->get_AbstractState());

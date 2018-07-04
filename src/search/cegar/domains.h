@@ -30,6 +30,10 @@ public:
         return domain_subsets[var][value];
     }
 
+	int size() const {
+		return domain_subsets.size();
+	}
+
     int count(int var) const;
     bool intersects(const Domains &other, int var) const;
 	bool intersects(const Domains &other) const;

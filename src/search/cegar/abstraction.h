@@ -93,7 +93,9 @@ class Abstraction {
        current states. */
     RefinementHierarchy refinement_hierarchy;
 
+	const bool use_manhatten_distance;
     const bool debug;
+
   
     //RANDOM
     utils::RandomNumberGenerator &rng;
@@ -146,6 +148,7 @@ public:
         double max_time,
         bool use_general_costs,
         PickSplit pick,
+		bool use_manhatten_distance,
         utils::RandomNumberGenerator &rng,
         bool debug = false);
     ~Abstraction();

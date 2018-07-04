@@ -38,6 +38,7 @@ CostSaturation::CostSaturation(
     vector<shared_ptr<SubtaskGenerator>> &subtask_generators,
     int max_states,
     int max_non_looping_transitions,
+	bool umd,
     double max_time,
     bool use_general_costs,
 	bool use_all_goals,
@@ -46,6 +47,7 @@ CostSaturation::CostSaturation(
     : subtask_generators(subtask_generators),
       max_states(max_states),
       max_non_looping_transitions(max_non_looping_transitions),
+	  use_manhatten_distance(umd),
       max_time(max_time),
       use_general_costs(use_general_costs),
 	  use_all_goals(use_all_goals),
@@ -306,6 +308,7 @@ void CostSaturation::build_abstractions(
             timer.get_remaining_time() / rem_subtasks,
             use_general_costs,
             pick_split,
+			use_manhatten_distance,
             rng);
 		
 		//if memory limit has been reached delete abstraction
