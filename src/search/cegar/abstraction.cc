@@ -179,10 +179,12 @@ Abstraction::Abstraction(
 	cout << "+++++++++++++++++++ Causal Graph ++++++++++++++++++" << endl;
     */
 
+
 	/*
+     cout << "+++++++++++++++++++ ACTIONS " << task_proxy.get_operators().size() << "++++++++++++++++++" << endl;
 	for(uint i = 0; i < task_proxy.get_operators().size(); i++){
 		cout << task_proxy.get_operators()[i].get_name() << endl;
-		cout << "		pre v0=" << task_proxy.get_operators()[i].get_preconditions()[0].get_value() << endl;
+		//cout << "		pre v0=" << task_proxy.get_operators()[i].get_preconditions()[0].get_value() << endl;
 	}
 	*/	
           
@@ -310,6 +312,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
 	//cout << "...... REFINE ... " << endl;
     bool found_concrete_solution = false;
 	//Split all goal facts 
+	
 	while (may_keep_refining()) {
 		AbstractState *abstract_state = *goals.begin(); 
 		//cout << "Abstract GOAL State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
@@ -343,6 +346,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
 		//cout << "---------------------------------------------------------------------------" << endl;
     }
 
+	//print_states();
 	//Split the variable which indicates the position completely
 
 	if(use_manhatten_distance){
@@ -401,38 +405,7 @@ void Abstraction::build(utils::RandomNumberGenerator &rng) {
         //cout << "-----------------------" << endl;
 		
 
-		/*
-		AbstractState *abstract_state = *goals.begin(); 
-		//cout << "Abstract GOAL State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
-
-
-		vector<Split> split_facts;
-		//cout << "Split values: " << endl;
-		for(FactProxy goal : task_proxy.get_goals()){
-			//if(state[i] != preState[i]){
-			if(abstract_state->count(goal.get_variable().get_id()) > 1){
-				//cout << "v" << goal.get_variable().get_id() << " = " << goal.get_value() << endl;
-				vector<int> values;
-				values.push_back(goal.get_value());
-				split_facts.emplace_back(goal.get_variable().get_id(), move(values));
-			}
-			//}
-		}
-
-		if(split_facts.empty()){
-			cout << "NO SPLITS" << endl;
-			return;
-		}
-
-		const Split &split = split_selector.pick_split(*abstract_state, split_facts, rng);
-
-		if(abstract_state->count(split.var_id) > 1){
-				refine(abstract_state, split.var_id, split.values);  
-				//AbstractState *abstract_state = *goals.begin(); 
-				//cout << "Abstract GOAL State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
-		}
-		*/
-		//cout << "---------------------------------------------------------------------------" << endl;
+		//print_states();
     }
 	//print_states();
     cout << "Concrete solution found: " << found_concrete_solution << endl;
@@ -1863,19 +1836,19 @@ void Abstraction::print_end_statistics() {
     
 void Abstraction::print_states(){
     cout << "+++++++++++++++++++ All States (" << states.size() << ") +++++++++++++++++++++" << endl;
-	//cout << "Init: " << *init << endl;
+	cout << "Init: " << *init << endl;
     for(AbstractState* state : states){            
         cout << "STATE G "<<  is_abstract_goal(state) << " h=" << state->get_h_values()[0] << " " << *state <<  endl;
 		//cout << "STATE G "<<  is_abstract_goal(state) << " " << *state <<  endl;
         
 		
-		/*
+		
         Transitions trans = state->get_outgoing_transitions();
         for(Transition t : trans){
 			cout << "\t" << task_proxy.get_operators()[t.op_id].get_name() << endl;
             cout << "\t\t--> " << t.op_id << " " << *(t.target) << endl; 
 		}
-		*/
+		
 		/*
 		cout << "	--> ";
 		for(int i : state->get_loops()){
