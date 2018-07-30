@@ -65,6 +65,7 @@ void StandardScalarOpenList<Entry>::do_insertion(
     int key = eval_context.get_heuristic_value(evaluator);
     buckets[key].push_back(entry);
     ++size;
+	//cout << "insert openlis at key: " << key << " size: " << size << endl;
 }
 
 template<class Entry>

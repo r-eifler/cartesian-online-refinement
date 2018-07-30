@@ -44,7 +44,11 @@ public:
                 const GlobalOperator *parent_op);
     void update_parent(const SearchNode &parent_node,
                        const GlobalOperator *parent_op);
+	void add_parent(const SearchNode &parent_node, const GlobalOperator* op);
+	void set_best_next_action(const GlobalOperator*);
+	const GlobalOperator* get_best_next_action();
 	StateID get_parent_id();
+	std::vector<std::pair<StateID, const GlobalOperator *>> get_parent_ids();
     void close();
     void mark_as_dead_end();
 

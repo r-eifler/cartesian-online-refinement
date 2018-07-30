@@ -104,6 +104,12 @@ bool BellmanUpdateHeuristic::online_Refine(const GlobalState &global_state, std:
 }
 
 
+void BellmanUpdateHeuristic::update(const GlobalState& global_state, int h){
+    State state = convert_global_state(global_state);
+	h_values[state.hash()] = h;
+}
+
+
 bool BellmanUpdateHeuristic::online_Refine_base(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> newGoals, double time_bound){
 
 	Heuristic* heuristic = (Heuristic*) base_heuristic;

@@ -55,6 +55,7 @@ void SearchNode::open_initial() {
     info.g = 0;
     info.real_g = 0;
     info.parent_state_id = StateID::no_state;
+	info.best_next_action = NULL;
     info.creating_operator = -1;
 }
 
@@ -65,6 +66,7 @@ void SearchNode::open(const SearchNode &parent_node,
     info.g = parent_node.info.g + get_adjusted_action_cost(*parent_op, cost_type);
     info.real_g = parent_node.info.real_g + parent_op->get_cost();
     info.parent_state_id = parent_node.get_state_id();
+	info.best_next_action = NULL;
     info.creating_operator = get_op_index_hacked(parent_op);
 }
 
@@ -95,8 +97,27 @@ void SearchNode::update_parent(const SearchNode &parent_node,
     info.creating_operator = get_op_index_hacked(parent_op);
 }
 
+void SearchNode::add_parent(const SearchNode &parent_node, const GlobalOperator* op){
+	info.parent_state_ids.push_back(make_pair(parent_node.get_state_id(), op));
+}
+
 StateID SearchNode::get_parent_id(){
 	return info.parent_state_id;
+}
+
+std::vector<std::pair<StateID, const GlobalOperator *>> SearchNode::get_parent_ids(){
+	return info.parent_state_ids;
+}
+
+
+void SearchNode::set_best_next_action(const GlobalOperator* op){
+	assert(op != NULL);
+	//cout << "State: " << this->get_state_id() << " best action: " << op->get_name() << endl;
+	info.best_next_action = op;
+}
+
+const GlobalOperator* SearchNode::get_best_next_action(){
+	return info.best_next_action;
 }
 
 void SearchNode::close() {

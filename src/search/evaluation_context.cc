@@ -56,6 +56,7 @@ const GlobalState &EvaluationContext::get_state() const {
 }
 
 int EvaluationContext::get_g_value() const {
+	//cout << "g_value (evaluation context): " << g_value << endl;
     assert(g_value != INVALID);
     return g_value;
 }

@@ -69,6 +69,7 @@ void TieBreakingOpenList<Entry>::do_insertion(
 
     buckets[key].push_back(entry);
     ++size;
+	//cout << "insert openlis at key: " << key.size() << " size: " << size << endl;
 }
 
 template<class Entry>

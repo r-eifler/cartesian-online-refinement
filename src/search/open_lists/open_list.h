@@ -153,6 +153,7 @@ void OpenList<Entry>::boost_preferred() {
 template<class Entry>
 void OpenList<Entry>::insert(
     EvaluationContext &eval_context, const Entry &entry) {
+	//std::cout << "insert parent class preferred: " << eval_context.is_preferred() << " deadend: " << is_dead_end(eval_context) << std::endl;
     if (only_preferred && !eval_context.is_preferred())
         return;
     if (!is_dead_end(eval_context))

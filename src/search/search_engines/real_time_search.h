@@ -24,6 +24,13 @@ enum class PreferredUsage {
     RANK_PREFERRED_FIRST
 };
 
+
+enum class LearnStrategy {
+	BELLMAN,
+	BELLMAN_AND_REFINE,
+	REFINE
+};
+
 /*
   Enforced hill-climbing with deferred evaluation.
 
@@ -33,12 +40,14 @@ enum class PreferredUsage {
 */
 class RealTimeSearch : public SearchEngine {
     std::unique_ptr<StateOpenList> open_list;
+    std::unique_ptr<StateOpenList> open_list_learn;
 
     Heuristic *heuristic;
     std::vector<Heuristic *> preferred_operator_heuristics;
     std::set<Heuristic *> heuristics;
     bool use_preferred;
     PreferredUsage preferred_usage;
+	LearnStrategy learn_strategy;
 
     EvaluationContext current_eval_context;
     int current_phase_start_g;
@@ -50,6 +59,7 @@ class RealTimeSearch : public SearchEngine {
 	bool refine_base;
 	bool refine_to_frontier;
 	utils::Timer step_timer;
+	std::vector<GlobalState> next_expanded_state;
 	
 
     // Statistics
@@ -57,6 +67,7 @@ class RealTimeSearch : public SearchEngine {
     int num_ehc_phases;
     int last_num_expanded;
 	float game_time = 0;
+	float lookahead_time = 0;
 
 	//Collect plan during execution
 	std::vector<const GlobalOperator*> real_time_plan;
@@ -65,10 +76,14 @@ class RealTimeSearch : public SearchEngine {
     void reach_state(
         const GlobalState &parent, const GlobalOperator &op,
         const GlobalState &state);
-	SearchStatus compute_next_real_time_step(GlobalState s, bool solution_found, int min_h);
-	bool refine_valley(GlobalState next_expanded_state, int min_h);
 	bool refine_root_to_frontier(double time_bound);
-	bool refine_expanded(double time_bound);
+	bool bellman_dijkstra_backup(double time_bound,const GlobalState &s);
+	bool refine_heuristic(double time_bound);
+
+	bool compute_next_real_time_step(const GlobalState &s, bool solution_found);
+	void reset_search_and_execute_next_step(const GlobalState &s);
+	bool update_heuristic(const GlobalState &s);
+
     SearchStatus search();
 
 protected:

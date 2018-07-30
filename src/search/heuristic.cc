@@ -54,6 +54,10 @@ bool Heuristic::online_Refine(const GlobalState& , const GlobalState&, int ){
 	return false;
 }
 
+void Heuristic::update(const GlobalState&, int){
+	cout << "Update heuristic not implemented" << endl;
+}
+
 void Heuristic::print_statistics(){
 		cout << "not implemented " << endl;
 }
