@@ -373,6 +373,9 @@ SearchStatus RealTimeSearch::step() {
 	}
 	//cout << "Lookahead time deadline: " << lookahead_time << endl;
 	SearchStatus status = search();
+	if(status != SearchStatus::IN_PROGRESS){
+		return status;
+	}
 	//cout << "Fraction used for lookahead: " << ((step_timer() - update_time) / time_unit) << endl; 
 	//-----------------------------------------------------------------------------------------------------
 
@@ -436,7 +439,7 @@ SearchStatus RealTimeSearch::search() {
 
 		//bool new_state_found = false;
 		for (const GlobalOperator *op : applicable_ops) {
-
+			//cout << "---------------------------------------------------" << endl;
 			statistics.inc_generated();
 			
 			GlobalState succ_state = state_registry->get_successor_state(state, *op);
@@ -487,7 +490,7 @@ SearchStatus RealTimeSearch::search() {
 				//child gets the best next state from its parent
 				const GlobalOperator* best_next_action = node.get_best_next_action();
 				if (best_next_action == NULL){
-					//if the best_next_action of the parent is not set then the state self is the best next state
+					//if the best_next_action of the parent is not set then the action to the state itself is the best next action
 					succ_node.set_best_next_action(op);
 				}
 				else{
@@ -513,7 +516,14 @@ SearchStatus RealTimeSearch::search() {
 				//cout << "Update Parent no reopen " << succ_state.get_id() << " -> " << state.get_id() << endl;
 				succ_node.update_parent(node, op);
 				//also update best next state if the best parent state changes
-				succ_node.set_best_next_action(node.get_best_next_action());
+				const GlobalOperator* best_next_action = node.get_best_next_action();
+				if (best_next_action == NULL){
+					//if the best_next_action of the parent is not set then the action to the state itself is the best next action
+					succ_node.set_best_next_action(op);
+				}
+				else{
+					succ_node.set_best_next_action(best_next_action);
+				}
 			}
 			/*
 			else
