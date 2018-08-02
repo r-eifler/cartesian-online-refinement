@@ -380,9 +380,11 @@ SearchStatus RealTimeSearch::step() {
 	//-----------------------------------------------------------------------------------------------------
 
 	//For the only refine strategy refine after search
-	if(step_timer() < time_unit && (learn_strategy == LearnStrategy::REFINE)){
+	if(learn_strategy == LearnStrategy::REFINE){
 		//cout << "Only refine after search" << endl;
-		refine_heuristic(time_unit - step_timer());
+		if(step_timer() < time_unit ){
+			refine_heuristic(time_unit - step_timer());
+		}
 		reset_search_and_execute_next_step(next_expanded_state[0]);
 	}
 	//cout << "Step complete: " << step_timer() << endl;
