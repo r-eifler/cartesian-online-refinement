@@ -1519,7 +1519,11 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
                 return utils::make_unique_ptr<Flaw>(
                     move(concrete_state),
                     abstract_state,
-                    next_abstract_state->regress(op));
+                    refinement_hierarchy.get_node(next_concrete_state)->get_AbstractState()->regress(op));
+                //return utils::make_unique_ptr<Flaw>(
+                //    move(concrete_state),
+                //    abstract_state,
+                //    next_abstract_state->regress(op));
             }
             abstract_state = next_abstract_state;
             concrete_state = move(next_concrete_state);
