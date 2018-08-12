@@ -1516,6 +1516,12 @@ unique_ptr<Flaw> Abstraction::find_flaw(const Solution &solution, AbstractState 
                     cout << "  Paths deviate." << endl;
                 ++deviations;
                 //cout << "path deviate: " << length_correct_trace << "/" << solution.size() << endl;
+				/*
+                return utils::make_unique_ptr<Flaw>(
+                    move(concrete_state),
+                    abstract_state,
+                    refinement_hierarchy.get_node(next_concrete_state)->get_AbstractState()->regress(op));
+				*/
                 return utils::make_unique_ptr<Flaw>(
                     move(concrete_state),
                     abstract_state,
