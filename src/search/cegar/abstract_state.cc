@@ -120,9 +120,13 @@ pair<AbstractState *, AbstractState *> AbstractState::split(
     // Since h-values only increase we can assign the h-value to the children.
     int h = node->get_h_value();
     v1->set_h_value(h);
+	v1->set_original_h_value(original_h_value);
+	v2->set_original_h_value(original_h_value);
     v2->set_h_value(h);
 	vector<int> c1(h_values);
 	v1->h_values = c1;
+	//cout << "c1[0]: " << c1[0] << endl; 
+	assert(original_h_value <= c1[0]);
 	vector<int> c2(h_values);
 	v2->h_values = c2;
 
@@ -236,6 +240,7 @@ AbstractState *AbstractState::get_trivial_abstract_state(
         Domains(get_domain_sizes(task_proxy)), root_node);
 	vector<int> h(1,0);
 	abstract_state->h_values = h;
+	abstract_state->original_h_value = 0;
     return abstract_state;
 }
 

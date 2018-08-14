@@ -159,7 +159,8 @@ int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
             pos_max = i;
         } 
     }
-    /*
+   
+	/*
     cout << endl;
     cout << "---> " << max << " order: " << pos_max << endl;
     cout << "-----------------------------" << endl;
@@ -176,6 +177,24 @@ int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
             usefullnes_of_order[i]++;
     }
     */
+
+	//Check if state is new and has a higher heuristic value than the original h value
+	if(seen_states.find(state.hash()) == seen_states.end()){
+		int original_value = 0;
+		//cout << "Original: ";
+		for (const CartesianHeuristicFunction *function : heuristic_functions) {
+			int o_h = function->get_original_h_value(state);
+			//cout << o_h << " ";
+			original_value += o_h;
+		}
+		//cout << endl;
+		//cout << "Original: " << original_value << " max: " << max << endl;
+		assert(max >= original_value);
+		if(original_value < max){
+			generalized_states++;	
+		}
+	}
+	seen_states.insert(state.hash());
 
 	//cout << "h(" << state.hash() << ")=" << max << endl;
     current_order = pos_max;
@@ -482,6 +501,8 @@ void AdditiveCartesianHeuristic::print_statistics(){
         cout << "Heuristic evaluation time: " << update_timer << endl;
         cout << "Get values time: " << values_timer << endl;
     	cout << endl;
+
+		cout << "Generalized states: " << generalized_states << endl;
 	
 		cout << "---------------- BELLMAN ----------------- " << endl;
 		cout << "Bellman proof time: " << prove_timer << endl;

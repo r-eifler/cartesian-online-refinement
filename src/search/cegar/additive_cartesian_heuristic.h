@@ -71,6 +71,9 @@ class AdditiveCartesianHeuristic : public Heuristic {
 	utils::RandomNumberGenerator* rng_order;
 	int n_calls = 0;
 	std::vector<int> usefullnes_of_abstraction;
+
+	std::unordered_set<int> seen_states;
+	int generalized_states = 0;
 	
 	
 	CostSaturation* cost_saturation;	

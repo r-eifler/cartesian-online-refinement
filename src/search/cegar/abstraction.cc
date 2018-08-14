@@ -1840,6 +1840,12 @@ void Abstraction::print_end_statistics() {
     cout << "-------------------------------------------------------" << endl;
 }
     
+void Abstraction::store_original_h_value(){
+    for(AbstractState* state : states){            
+		state->init_original_h_value();
+	}
+}
+
 void Abstraction::print_states(){
     cout << "+++++++++++++++++++ All States (" << states.size() << ") +++++++++++++++++++++" << endl;
 	cout << "Init: " << *init << endl;

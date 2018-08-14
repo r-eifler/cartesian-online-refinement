@@ -317,7 +317,7 @@ void CostSaturation::build_abstractions(
             break;			
 		}
 	
-
+		abstraction->store_original_h_value();
         ++num_abstractions;
         num_states += abstraction->get_num_states();
         num_non_looping_transitions += abstraction->get_num_non_looping_transitions();

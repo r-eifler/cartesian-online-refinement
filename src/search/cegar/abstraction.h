@@ -216,7 +216,8 @@ public:
 	void addGoals(GoalsProxy goals);
 	
 	bool split_usefull(AbstractState * state, int var, const std::vector<int> &wanted, std::vector<std::vector<int>> *unused_cost);
-		
+
+	void store_original_h_value();
 	void print_states();
 	void print_cost();
 	void print_cost(int order);

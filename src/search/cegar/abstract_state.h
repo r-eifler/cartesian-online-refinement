@@ -75,6 +75,7 @@ class AbstractState {
 	//H values of the different scp orders
 	std::vector<int> h_values;
 	int c_h ;
+	int original_h_value;
 
     // Transitions from and to other abstract states.
     Transitions incoming_transitions;
@@ -142,6 +143,19 @@ public:
 	int add_h_value(int value);
     int get_h_value(int pos) const;
 	std::vector<int> get_h_values() const;
+
+	void set_original_h_value(int v){
+		original_h_value = v;
+	}
+
+	void init_original_h_value(){
+		assert(h_values.size() == 1);
+		original_h_value = h_values[0];
+	}
+
+	int get_original_h_value(){
+		return original_h_value;
+	}
 	
 	void set_c_h(int v){
 		c_h = v;	

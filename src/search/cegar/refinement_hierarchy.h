@@ -147,6 +147,10 @@ public:
 	int get_c_h(){
 		return abstract_state->get_c_h();	
 	}
+
+	int get_original_h_value(){
+		return abstract_state->get_original_h_value();
+	}
   
     //TODO
     void set_AbstractState(AbstractState *state){

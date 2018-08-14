@@ -51,6 +51,7 @@ public:
 	void update_h_and_g_values(int pos, bool new_order);
 	bool satisfies_goal(State state);
 	void set_refined(bool b);
+	int get_original_h_value(const State &parent_state) const;
 	int size();
 	Abstraction* get_abstraction();
 
