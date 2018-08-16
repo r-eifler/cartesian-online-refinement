@@ -116,6 +116,7 @@ public:
 	virtual void update(const GlobalState &global_state, int h);
 	virtual void print_statistics();
 	virtual void change_to_order(int id);
+	virtual bool check_heuristic_improved(const GlobalState &State);
 };
 
 #endif

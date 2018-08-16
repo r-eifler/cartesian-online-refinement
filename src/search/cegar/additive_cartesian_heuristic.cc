@@ -178,6 +178,7 @@ int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
     }
     */
 
+	/*
 	//Check if state is new and has a higher heuristic value than the original h value
 	if(seen_states.find(state.hash()) == seen_states.end()){
 		int original_value = 0;
@@ -193,14 +194,40 @@ int AdditiveCartesianHeuristic::compute_heuristic(const State &state) {
 		if(original_value < max){
 			generalized_states++;	
 		}
+		seen_states.insert(state.hash());
 	}
-	seen_states.insert(state.hash());
+	*/
 
 	//cout << "h(" << state.hash() << ")=" << max << endl;
     current_order = pos_max;
     usefullnes_of_order[pos_max]++;
     update_timer.stop();
     return max;
+}
+
+bool AdditiveCartesianHeuristic::check_heuristic_improved(const GlobalState &global_state){
+	State state = convert_global_state(global_state);
+	bool improved = false;
+	if(seen_states.find(state.hash()) == seen_states.end()){
+		int max = compute_heuristic(state);
+		int original_value = 0;
+		//cout << "Original: ";
+		for (const CartesianHeuristicFunction *function : heuristic_functions) {
+			int o_h = function->get_original_h_value(state);
+			//cout << o_h << " ";
+			original_value += o_h;
+		}
+		//cout << endl;
+		//cout << "Original: " << original_value << " max: " << max << endl;
+		assert(max >= original_value);
+		if(original_value < max){
+			generalized_states++;	
+			improved = true;
+		}
+		seen_states.insert(state.hash());
+	}
+
+	return improved;
 }
 	
 std::vector<int> AdditiveCartesianHeuristic::compute_individual_heuristics_of_order(const GlobalState &global_state, int order){
@@ -503,6 +530,8 @@ void AdditiveCartesianHeuristic::print_statistics(){
     	cout << endl;
 
 		cout << "Generalized states: " << generalized_states << endl;
+		cout << "Seen States: " << seen_states.size() << endl;
+		cout << "Generalized fraction: " << (generalized_states * 1.0) / seen_states.size() << endl;
 	
 		cout << "---------------- BELLMAN ----------------- " << endl;
 		cout << "Bellman proof time: " << prove_timer << endl;

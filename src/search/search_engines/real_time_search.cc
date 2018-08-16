@@ -458,6 +458,10 @@ SearchStatus RealTimeSearch::search() {
 
 			// update new path
 			if (succ_node.is_new()) {
+
+				heuristic->check_heuristic_improved(succ_state);
+
+
 				//cout << "Succ: " << succ_state.get_id() << "   " << op->get_cost() << " "  << op->get_name() << endl;
 				//new_state_found = true;
 				//cout << "Expand: " << op->get_name() << endl;
