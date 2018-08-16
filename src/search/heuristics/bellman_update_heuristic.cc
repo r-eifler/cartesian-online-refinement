@@ -119,6 +119,8 @@ bool BellmanUpdateHeuristic::online_Refine_base(const GlobalState &global_state,
 
 void BellmanUpdateHeuristic::print_statistics(){
 	cout << "lookupd_table_size: " << h_values.size() << endl;
+
+	((Heuristic*) base_heuristic)->print_statistics();
 }
 
 static Heuristic *_parse(OptionParser &parser) {
