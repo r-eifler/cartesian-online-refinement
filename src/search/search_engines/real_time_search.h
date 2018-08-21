@@ -59,6 +59,7 @@ class RealTimeSearch : public SearchEngine {
 	bool refine_base;
 	bool refine_to_frontier;
 	utils::Timer step_timer;
+	utils::Timer print_timer;
 	std::vector<GlobalState> next_expanded_state;
 	
 

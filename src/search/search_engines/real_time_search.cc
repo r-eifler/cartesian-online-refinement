@@ -316,6 +316,10 @@ SearchStatus RealTimeSearch::step() {
 	//cout << "+++++++++++++++++++++++++++++++++++++++++++++++++ STEP ++++++++++++++++++++++++++++++++++++++++" << endl;
 	//cout << "Curretn root state: "  << current_eval_context.get_state().get_id() << endl;
 	//
+	if(print_timer() > 60){
+		print_statistics();
+		print_timer.reset();
+	}
 	
 	//Time step begins	
 	step_timer.reset();
