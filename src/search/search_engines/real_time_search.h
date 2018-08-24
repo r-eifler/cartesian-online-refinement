@@ -55,6 +55,7 @@ class RealTimeSearch : public SearchEngine {
 	//real time parameter
 	double time_unit;
 	double lookahead_fraction;
+	bool refine_commited_state;
 	bool use_refine_time_bound;
 	bool refine_base;
 	bool refine_to_frontier;

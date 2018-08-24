@@ -39,6 +39,7 @@ RealTimeSearch::RealTimeSearch(
       current_phase_start_g(-1),
 	  time_unit(opts.get<double>("time_unit")),
 	  lookahead_fraction(opts.get<double>("lookahead_fraction")),
+	  refine_commited_state(opts.get<bool>("refine_commited_state")),
 	  use_refine_time_bound(opts.get<bool>("use_refine_time_bound")),
 	  refine_base(opts.get<bool>("refine_base")),
 	  refine_to_frontier(opts.get<bool>("refine_to_frontier")),
@@ -126,7 +127,7 @@ void RealTimeSearch::reset_search_and_execute_next_step(const GlobalState &s){
 	SearchNode node = search_space->get_node(s);
 	const GlobalOperator* next_action = node.get_best_next_action(); 
 	//cout << "StateID: " << s.get_id() << endl;
-	//cout << "NEXT ACTION ----> " << next_action->get_name() << endl;
+	//cout << "NEXT ACTION reset ----> " << next_action->get_name() << endl;
 
 	GlobalState current_state = current_eval_context.get_state();
 	SearchNode current_node = search_space->get_node(current_state);
@@ -187,6 +188,19 @@ bool RealTimeSearch::refine_root_to_frontier(double time_bound){
 
 bool RealTimeSearch::refine_heuristic(double time_bound){
 	GlobalState refine_state = current_eval_context.get_state();
+	//cout << "refine heuristic, refine commited state: " << refine_commited_state << endl;
+	//cout << "Plan length: " << real_time_plan.size() << endl;
+	if(refine_commited_state){
+		assert(real_time_plan.size() > 0);
+		const GlobalOperator* next_action = real_time_plan[real_time_plan.size()-1]; 
+		//cout << "StateID: " << s.get_id() << endl;
+		//cout << "NEXT ACTION refine ----> " << next_action->get_name() << endl;
+
+		GlobalState current_state = current_eval_context.get_state();
+		SearchNode current_node = search_space->get_node(current_state);
+		refine_state = state_registry->get_successor_state(current_state, *next_action);
+	}
+
 	SearchNode node = search_space->get_node(refine_state);
 
 	vector<GlobalState> frontier_states;
@@ -578,6 +592,7 @@ static SearchEngine *_parse(OptionParser &parser) {
 	parser.add_option<ScalarEvaluator *>("eval", "scalar evaluator");
     parser.add_option<double>("time_unit","TODO", "1");
     parser.add_option<double>("lookahead_fraction","TODO", "0.1");
+    parser.add_option<bool>("refine_commited_state","TODO", "false");
     parser.add_option<bool>("use_refine_time_bound","TODO", "true");
     parser.add_option<bool>("refine_base","TODO", "false");
     parser.add_option<bool>("refine_to_frontier","TODO", "false");
