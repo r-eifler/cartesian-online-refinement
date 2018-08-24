@@ -122,6 +122,23 @@ bool OnlineRefinement::refine(State state, State new_goal, std::vector<bool> toR
 	return true;
 }
 
+bool OnlineRefinement::bellman_refinement(State state, int h_bound){
+	assert(heuristic_functions->size() == 1);
+	for(size_t i = 0; i < heuristic_functions->size(); i++){
+	   (*heuristic_functions)[i]->refineBasedOnBellman(state, h_bound);
+	}
+
+	for (CartesianHeuristicFunction *function : (*heuristic_functions)) {
+		cost_saturation->update_h_complete_cost(function->get_abstraction());
+		 function->set_refined(false);
+	}
+	int number_orders = cost_saturation->number_of_orders();
+	for(int o = 0; o < number_orders; o++){
+    	cost_saturation->recompute_cost_partitioning_unused(o); 
+	}
+	return true;
+}
+
 void OnlineRefinement::print_statistics(){
 	cout << "--------- ONLINE REFINEMENT ---------" << endl;
 	cout << "Online refined states: " << online_refined_states << "/" << max_states_online << endl;

@@ -209,6 +209,16 @@ int AbstractState::get_h_value() const {
     assert(node);
     return node->get_h_value();
 }
+
+int AbstractState::get_max_h_value() const {
+	int max = h_values[0];
+	for(int v : h_values){
+		if(v > max){
+			max = v;
+		}
+	}
+	return max;
+}
 	
 	
 //Order dependend h values

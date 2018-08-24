@@ -143,6 +143,7 @@ public:
 	int add_h_value(int value);
     int get_h_value(int pos) const;
 	std::vector<int> get_h_values() const;
+	int get_max_h_value() const;
 
 	void set_original_h_value(int v){
 		original_h_value = v;

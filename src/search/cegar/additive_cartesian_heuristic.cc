@@ -420,6 +420,22 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
    return true;  
 }
 
+
+bool AdditiveCartesianHeuristic::bellman_refinement(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates){
+	//cout << "AdditiveCartesianHeuristic: BELLMAN_REFINEMENT" << endl;
+    State state = convert_global_state(global_state);
+	int h_value = 0;
+	GlobalState minSucc = succStates[0].first;
+	int iter = 0;
+	while(!prove_bellman_sum(global_state, succStates, &h_value, &minSucc)){
+		
+		onlineRefinement.bellman_refinement(state, h_value);
+		iter ++;
+	}
+	//cout <<"AdditiveCartesianHeuristic Iter per state: " << iter << endl;
+	return true;
+}
+
 bool AdditiveCartesianHeuristic::prove_bellman_sum(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, int* current_h, GlobalState* minSucc){
 	
 	*current_h = compute_heuristic(global_state);

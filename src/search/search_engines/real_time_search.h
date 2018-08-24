@@ -28,7 +28,8 @@ enum class PreferredUsage {
 enum class LearnStrategy {
 	BELLMAN,
 	BELLMAN_AND_REFINE,
-	REFINE
+	REFINE,
+	BELLMAN_REFINEMENT
 };
 
 /*

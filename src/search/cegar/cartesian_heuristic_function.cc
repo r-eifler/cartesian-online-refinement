@@ -97,11 +97,10 @@ int CartesianHeuristicFunction::refineNewGoal(const State &state, const State &n
 	return abstraction->refineNewGoal(local_state, local_goal);
 }
 
-int CartesianHeuristicFunction::refineBasedOnBellman(const State &state, const State &minSucc){
+int CartesianHeuristicFunction::refineBasedOnBellman(const State &state, const int bound){
 
     State local_state = (abstraction->get_Task())->convert_ancestor_state(state);
-    State local_minSucc = (abstraction->get_Task())->convert_ancestor_state(minSucc);
-	return abstraction->refineBasedOnBellman(local_state, local_minSucc);
+	return abstraction->refineBasedOnBellman(local_state, bound);
 }
 
 bool CartesianHeuristicFunction::satisfies_goal(State parent_state){

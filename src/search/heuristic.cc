@@ -55,12 +55,16 @@ bool Heuristic::online_Refine(const GlobalState& , const GlobalState&, int ){
 	return false;
 }
 
+bool Heuristic::bellman_refinement(const GlobalState &,std::vector<std::pair<GlobalState, int>>){
+	return false;
+}
+
 void Heuristic::update(const GlobalState&, int){
-	cout << "Update heuristic not implemented" << endl;
+	//cout << "Update heuristic not implemented" << endl;
 }
 
 void Heuristic::print_statistics(){
-		cout << "not implemented " << endl;
+	//	cout << "not implemented " << endl;
 }
 
 bool Heuristic::check_heuristic_improved(const GlobalState &){

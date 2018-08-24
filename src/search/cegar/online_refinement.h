@@ -30,6 +30,7 @@ public:
 	void set_heuristic_functions(std::vector<CartesianHeuristicFunction*> *fv);
 	bool refine(State state, State minSucc, std::vector<bool> toRefine, std::vector<State> frontier_nodes);
 	bool refine(State state, State new_goal, std::vector<bool> toRefine);
+	bool bellman_refinement(State state, int h_bound);
 
 	void print_statistics();
 

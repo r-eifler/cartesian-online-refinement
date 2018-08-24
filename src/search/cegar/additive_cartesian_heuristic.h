@@ -102,6 +102,7 @@ public:
 	
 	virtual bool online_Refine(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates, std::vector<GlobalState> new_goals, double time_bound) override;
 	virtual bool online_Refine(const GlobalState &global_state, const GlobalState &new_goal, int h_bound) override;
+	virtual bool bellman_refinement(const GlobalState &global_state, std::vector<std::pair<GlobalState, int>> succStates) override;
 	
 	std::vector<int> compute_original_individual_heuristics(State state);
 	

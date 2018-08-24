@@ -116,9 +116,32 @@ bool RealTimeSearch::compute_next_real_time_step(const GlobalState &s, bool solu
 bool RealTimeSearch::update_heuristic(const GlobalState &s){
 
 	double time_bound = use_refine_time_bound ? time_unit * (1-lookahead_fraction) : 1800;
-	//TODO
-	//add other refinement methods
-	return bellman_dijkstra_backup(time_bound, s);
+	if(learn_strategy == LearnStrategy::BELLMAN)
+		return bellman_dijkstra_backup(time_bound, s);
+
+	if(learn_strategy == LearnStrategy::BELLMAN_REFINEMENT){
+		//cout << "real time search: BELLMAN REFINEMENT: " << expand_states.size() << " states" << endl;
+		for( StateID ident : expand_states){
+			//cout << "\t -> refine state: " << ident << endl;
+			GlobalState refine_state = state_registry->lookup_state(ident);
+			SearchNode node = search_space->get_node(refine_state);
+
+			//GlobalState refine_state = next_state;
+			vector<const GlobalOperator *> applicable_ops;
+			g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
+			vector<pair<GlobalState, int>> succStates;
+			//cout << "Applicable ops: " << endl;
+			for (const GlobalOperator *op : applicable_ops) {
+				//cout << op->get_name() << endl;
+				GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
+				succStates.push_back(make_pair(succ_state, op->get_cost()));
+			}
+
+			heuristic->bellman_refinement(refine_state, succStates);
+		}
+		return true;
+	}
+	return false;
 }
 
 
@@ -326,7 +349,7 @@ SearchStatus RealTimeSearch::step() {
 
 
 	num_ehc_phases++;
-    last_num_expanded = statistics.get_expanded();
+	last_num_expanded = statistics.get_expanded();
     search_progress.check_progress(current_eval_context);
 
 	//Phase 1
@@ -335,7 +358,7 @@ SearchStatus RealTimeSearch::step() {
 	//First update the heuristic based on the previous lookahead
 	//double update_time = 0;
 	//bool updated_heuristic = false;
-	if(expand_states.size() > 0 && (learn_strategy == LearnStrategy::BELLMAN || learn_strategy == LearnStrategy::BELLMAN_AND_REFINE)){
+	if(expand_states.size() > 0 && (learn_strategy == LearnStrategy::BELLMAN || learn_strategy == LearnStrategy::BELLMAN_AND_REFINE ||learn_strategy == LearnStrategy::BELLMAN_REFINEMENT)){
 		//updated_heuristic = true;
 		update_heuristic(next_expanded_state[0]);
 		reset_search_and_execute_next_step(next_expanded_state[0]);
@@ -373,7 +396,7 @@ SearchStatus RealTimeSearch::step() {
 	//	lookahead_time -= lookahead_fraction * time_unit;
 	//}
 	if(learn_strategy == LearnStrategy::REFINE){
-		lookahead_time -= lookahead_fraction * time_unit;
+		lookahead_time = lookahead_fraction * time_unit;
 	}
 	//cout << "Lookahead time deadline: " << lookahead_time << endl;
 	SearchStatus status = search();
@@ -594,6 +617,7 @@ static SearchEngine *_parse(OptionParser &parser) {
     learn_strategies.push_back("BELLMAN");
     learn_strategies.push_back("BELLMAN_AND_REFINE");
     learn_strategies.push_back("REFINE");
+    learn_strategies.push_back("BELLMAN_REFINEMENT");
     parser.add_enum_option(
         "learn_strategy", learn_strategies, "TODO", "BELLMAN");
 

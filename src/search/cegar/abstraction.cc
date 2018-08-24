@@ -438,69 +438,80 @@ std::shared_ptr<AbstractTask> Abstraction::get_OriginalAbsTask(){
 }
     
 
-int Abstraction::refineBasedOnBellman(const State &state, const State &minSucc){
+int Abstraction::refineBasedOnBellman(const State &state, const int bound){
 
-	//cout << "********** refine based on bellman *******************" << endl;
+	//print_states();
+	//cout << "********** BELLMAN REFINEMENT *******************" << endl;
 	
 	/*
 	cout << "Current State: " << endl;
 	state.dump_pddl();
 	state.dump_fdr();
 	cout << endl;
-
-	cout << "MinSucc State: " << endl;
-	minSucc.dump_pddl();
-	minSucc.dump_fdr();
-	cout << endl;
 	*/
 	
 	AbstractState *abstract_state = get_node(state)->get_AbstractState(); 
-	//cout << "Abstract State: h=" << abstract_state->get_h_values()[0] << endl << *abstract_state << endl;
+	//cout << "Abstract State: h=" << abstract_state->get_max_h_value() << endl << *abstract_state << endl;
+	
+	//succ abstract states
+	for(const Transition t : abstract_state->get_outgoing_transitions()){
+		int cost = task_proxy.get_operators()[t.op_id].get_cost(); //TODO does this work
+		if(t.target->get_max_h_value() + cost > bound){
+			//cout << "Bound check: " << t.target->get_max_h_value() + cost << " > " << bound << endl;
+			//this state is not responsible for the too low h value
+			continue;
+		}
 
-	AbstractState *abstract_minSucc = get_node(minSucc)->get_AbstractState(); 
-	//cout << "Abstract pre State: h=" << abstract_minSucc->get_h_values()[0] << endl << *abstract_minSucc << endl;
+		AbstractState* spurious_succ_state = t.target;
+		const OperatorProxy spurious_op = task_proxy.get_operators()[t.op_id];
 
-	//If both states are in the same abstract state:
-	//split it such that it is not the case anymore
-	if(abstract_minSucc == abstract_state){
-		num_same_abstract_state++;
-		//cout << "SAME ABSTRACT STATE" << endl;
-
-		//TODO split multiple times ?
 		vector<Split> split_facts;
 		//cout << "Split values: " << endl;
-		for(uint i = 0; i < state.size(); i++){
-			if(state[i] != minSucc[i]){
-				if(abstract_state->count(i) > 1){
-					//cout << "v" << i << " = " << preState[i].get_value() << endl;;
-					vector<int> values;
-					values.push_back(minSucc[i].get_value());
-					split_facts.emplace_back(i, move(values));
+		if(is_applicable(spurious_op, state)){
+			//cout << "op applicable" << endl;
+			AbstractState reg_state = spurious_succ_state->regress(spurious_op); 
+			
+			//Split A based on the difference between s and reg_state
+			for(uint i = 0; i < state.size(); i++){
+				if(! reg_state.contains(i, state[i].get_value())){ // TODO is i what I thick it is?
+					if(abstract_state->count(i) > 1){
+						//cout << "v" << i << " = " << state[i].get_value() << endl;;
+						vector<int> values;
+						values.push_back(state[i].get_value());
+						split_facts.emplace_back(i, move(values));
+					}
 				}
 			}
-		}
 
-		if(split_facts.empty()){
-			//cout << "NO SPLITS" << endl;
-			return 0;
 		}
+		else{
+			//cout << "op not applicable" << endl;
+			//cout << "-------------------------------------" << endl;
+			for(uint i = 0; i < spurious_op.get_preconditions().size(); i++){
+				FactProxy fp = spurious_op.get_preconditions()[i];
+				int var_id = fp.get_variable().get_id();
+				//cout << "State v" << var_id << " = " << state[var_id].get_value() << endl;
+				if(state[var_id].get_value() != fp.get_value()){ // TODO is i what I thick it is?
+					if(abstract_state->count(var_id) > 1){
+						//cout << "v" << var_id << " = " << state[var_id].get_value() << endl;;
+						vector<int> values;
+						values.push_back(state[var_id].get_value());
+						split_facts.emplace_back(var_id, move(values));
+					}
+				}
+			}
+
+		}
+		assert(!split_facts.empty());
 
 		const Split &split = split_selector.pick_split(*abstract_state, split_facts, rng);
-
-		if(abstract_state->count(split.var_id) > 1){
-				refine(abstract_state, split.var_id, split.values);  
-				//print_states();
-				return 1;
-		}
-
-		return 0;
+		assert(abstract_state->count(split.var_id) > 1);
+		refine(abstract_state, split.var_id, split.values);  
+		//print_states();
+		return 1;
 	}
-
-
-	//Abstract states are not the same
-	vector<State> no_other_goals;
-	return onlineRefine(state, no_other_goals, 1, std::numeric_limits<int>::max(), NULL);
-
+	assert(false);
+	return 0;
 }
 
 
@@ -1872,6 +1883,31 @@ void Abstraction::print_states(){
     }     
 }
  
+void Abstraction::print_states_only(){
+    cout << "+++++++++++++++++++ All States (" << states.size() << ") +++++++++++++++++++++" << endl;
+	cout << "Init: " << *init << endl;
+    for(AbstractState* state : states){            
+        cout << "STATE G "<<  is_abstract_goal(state) << " h=" << state->get_h_values()[0] << " " << *state <<  endl;
+		//cout << "STATE G "<<  is_abstract_goal(state) << " " << *state <<  endl;
+        
+		
+		/*	
+        Transitions trans = state->get_outgoing_transitions();
+        for(Transition t : trans){
+			cout << "\t" << task_proxy.get_operators()[t.op_id].get_name() << endl;
+            cout << "\t\t--> " << t.op_id << " " << *(t.target) << endl; 
+		}
+		*/
+		/*
+		cout << "	--> ";
+		for(int i : state->get_loops()){
+			cout << i << " ";		
+		}
+        cout << endl;
+		*/
+	
+    }     
+}
     
 void Abstraction::print_cost(){
 	for(vector<int> cp : costs_partitionings){

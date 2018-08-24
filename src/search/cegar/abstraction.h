@@ -201,7 +201,9 @@ public:
 	int refineSplitPre(const State &state, const State preState);
 	int refineNewGoal(const State &state, const State &new_goal);
 	int refineSplitOnCondition(const State &state, const State &preState, const std::vector<std::pair<int,int>> condictions);
-	int refineBasedOnBellman(const State &state, const State &minSucc); 
+
+	//Bellman refinement Joerg style
+	int refineBasedOnBellman(const State &state, const int bound); 
 	//checks if the state satisfis the abstraction (not equals to h(s) = 0)
 	bool satisfies_goal(State state);
 	// checks if the solution of abs and this can be combined to achieve both goals
@@ -219,6 +221,7 @@ public:
 
 	void store_original_h_value();
 	void print_states();
+	void print_states_only();
 	void print_cost();
 	void print_cost(int order);
 	void print_current_cost();
