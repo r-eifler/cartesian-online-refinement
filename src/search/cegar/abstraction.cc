@@ -456,23 +456,32 @@ int Abstraction::refineBasedOnBellman(const State &state, const int bound){
 	//succ abstract states
 	for(const Transition t : abstract_state->get_outgoing_transitions()){
 		int cost = task_proxy.get_operators()[t.op_id].get_cost(); //TODO does this work
-		if(t.target->get_max_h_value() + cost > bound){
-			//cout << "Bound check: " << t.target->get_max_h_value() + cost << " > " << bound << endl;
+		int max_h_value = t.target->get_max_h_value();
+		if(max_h_value == EvaluationResult::INFTY){
+			continue;
+		}
+		//cout << "Bound check: " << t.target->get_max_h_value() + cost  << " = " << max_h_value << " + " << cost << " > " << bound << endl;
+		if(max_h_value + cost > bound){
+		//cout << "Bound check: " << t.target->get_max_h_value() + cost << " > " << bound << endl;
 			//this state is not responsible for the too low h value
 			continue;
 		}
 
 		AbstractState* spurious_succ_state = t.target;
+		//cout << "Spurious succ state: " << *spurious_succ_state << endl;
 		const OperatorProxy spurious_op = task_proxy.get_operators()[t.op_id];
 
 		vector<Split> split_facts;
 		//cout << "Split values: " << endl;
 		if(is_applicable(spurious_op, state)){
 			//cout << "op applicable" << endl;
+			//cout << "-------------------------------------" << endl;
 			AbstractState reg_state = spurious_succ_state->regress(spurious_op); 
+			//cout << "Regression State: " << reg_state << endl;
 			
 			//Split A based on the difference between s and reg_state
 			for(uint i = 0; i < state.size(); i++){
+				//cout << "State v" << i << " = " << state[i].get_value() << endl;
 				if(! reg_state.contains(i, state[i].get_value())){ // TODO is i what I thick it is?
 					if(abstract_state->count(i) > 1){
 						//cout << "v" << i << " = " << state[i].get_value() << endl;;
@@ -502,6 +511,9 @@ int Abstraction::refineBasedOnBellman(const State &state, const int bound){
 			}
 
 		}
+		if(split_facts.empty()){
+			continue; //TODO there has to be one state where you can find a split ?!!!
+		}
 		assert(!split_facts.empty());
 
 		const Split &split = split_selector.pick_split(*abstract_state, split_facts, rng);
@@ -510,7 +522,9 @@ int Abstraction::refineBasedOnBellman(const State &state, const int bound){
 		//print_states();
 		return 1;
 	}
-	assert(false);
+	if(abstract_state->get_outgoing_transitions().size() > 0){
+		assert(false);
+	}
 	return 0;
 }
 

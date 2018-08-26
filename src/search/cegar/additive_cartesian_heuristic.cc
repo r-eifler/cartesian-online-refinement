@@ -210,6 +210,9 @@ bool AdditiveCartesianHeuristic::check_heuristic_improved(const GlobalState &glo
 	bool improved = false;
 	if(seen_states.find(state.hash()) == seen_states.end()){
 		int max = compute_heuristic(state);
+		if(max == DEAD_END){
+			return false; //TODO also count dead ends
+		}
 		int original_value = 0;
 		//cout << "Original: ";
 		for (const CartesianHeuristicFunction *function : heuristic_functions) {
@@ -428,6 +431,13 @@ bool AdditiveCartesianHeuristic::bellman_refinement(const GlobalState &global_st
 	GlobalState minSucc = succStates[0].first;
 	int iter = 0;
 	while(!prove_bellman_sum(global_state, succStates, &h_value, &minSucc)){
+		//cout << "min h value: " << h_value << endl;
+		State minSuccState = convert_global_state(minSucc);
+		//cout << "minSucc: ";
+		//for(uint i = 0; i< minSuccState.size(); i++){
+			//cout << "v" << i << " = " << minSuccState[i].get_value() << " "; 
+		//}
+		//cout << endl;
 		
 		onlineRefinement.bellman_refinement(state, h_value);
 		iter ++;
@@ -445,17 +455,23 @@ bool AdditiveCartesianHeuristic::prove_bellman_sum(GlobalState global_state, std
 	int provable_h_value = infinity;
 	for (pair<GlobalState, int> succ : succStates) {
 		int succ_h = compute_heuristic(succ.first);
-		//cout << "\t h(s') = " << succ_h << endl;
-		int new_min_h = succ_h + succ.second;
+		//cout << "\t h(s') = " << succ_h;
+		int new_min_h = infinity;
+		if(succ_h != DEAD_END && succ_h < infinity - succ.second){
+			new_min_h = succ_h + succ.second;
+		}
+		//cout << " -> " << new_min_h << endl;
 		if(new_min_h < provable_h_value){
 			provable_h_value = new_min_h;
 			*minSucc = succ.first;
 		}
 		if(provable_h_value == *current_h){
+			//cout << "sat bellman" << endl;
 			return true;
 		}
 	}
-
+	//TODO why not set
+	*current_h = provable_h_value;
 	return false;
 }
 	

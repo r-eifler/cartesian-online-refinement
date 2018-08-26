@@ -211,6 +211,7 @@ int AbstractState::get_h_value() const {
 }
 
 int AbstractState::get_max_h_value() const {
+	assert(h_values.size() == 1);
 	int max = h_values[0];
 	for(int v : h_values){
 		if(v > max){
