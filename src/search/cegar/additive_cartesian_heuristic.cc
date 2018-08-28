@@ -443,7 +443,7 @@ bool AdditiveCartesianHeuristic::bellman_refinement(const GlobalState &global_st
 		iter ++;
 	}
 	//cout <<"AdditiveCartesianHeuristic Iter per state: " << iter << endl;
-	return true;
+	return iter > 0;
 }
 
 bool AdditiveCartesianHeuristic::prove_bellman_sum(GlobalState global_state, std::vector<std::pair<GlobalState, int>> succStates, int* current_h, GlobalState* minSucc){

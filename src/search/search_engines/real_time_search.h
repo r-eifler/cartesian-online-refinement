@@ -80,6 +80,7 @@ class RealTimeSearch : public SearchEngine {
         const GlobalState &state);
 	bool refine_root_to_frontier(double time_bound);
 	bool bellman_dijkstra_backup(double time_bound,const GlobalState &s);
+	bool bellman_dijkstra_refinement(const GlobalState &s);
 	bool refine_heuristic(double time_bound);
 
 	bool compute_next_real_time_step(const GlobalState &s, bool solution_found);

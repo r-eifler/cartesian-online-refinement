@@ -121,25 +121,7 @@ bool RealTimeSearch::update_heuristic(const GlobalState &s){
 
 	if(learn_strategy == LearnStrategy::BELLMAN_REFINEMENT){
 		//cout << "real time search: BELLMAN REFINEMENT: " << expand_states.size() << " states" << endl;
-		for( StateID ident : expand_states){
-			//cout << "\t -> refine state: " << ident << endl;
-			GlobalState refine_state = state_registry->lookup_state(ident);
-			SearchNode node = search_space->get_node(refine_state);
-
-			//GlobalState refine_state = next_state;
-			vector<const GlobalOperator *> applicable_ops;
-			g_successor_generator->generate_applicable_ops(refine_state, applicable_ops);
-			vector<pair<GlobalState, int>> succStates;
-			//cout << "Applicable ops: " << endl;
-			for (const GlobalOperator *op : applicable_ops) {
-				//cout << op->get_name() << endl;
-				GlobalState succ_state = state_registry->get_successor_state(refine_state, *op);
-				succStates.push_back(make_pair(succ_state, op->get_cost()));
-			}
-
-			heuristic->bellman_refinement(refine_state, succStates);
-		}
-		return true;
+		return bellman_dijkstra_refinement(s);
 	}
 	return false;
 }
@@ -335,6 +317,91 @@ bool RealTimeSearch::bellman_dijkstra_backup(double, const GlobalState &s){
 	return true;
 }
 
+bool RealTimeSearch::bellman_dijkstra_refinement(const GlobalState &s){
+	//cout << "---------------- BELLMAN DIJKSTRA REFINEMENT ----------------------------------------------" << endl;
+	utils::Timer timer;
+	timer.resume();
+
+	//Initialize the openlist of dijkstra with the openlist of Astar
+	//cout << "Dijkstra openlist: " << endl;
+	//ad last expanded state
+	open_list_learn->clear();
+	int openlist_size = 0;
+	EvaluationContext eval_context(s, 0, true, &statistics);
+	open_list_learn->insert(eval_context, s.get_id());
+	//cout << s.get_id() << endl;
+	while(! open_list->empty()){
+		vector<int> last_key_removed;
+		StateID state_id = open_list->remove_min(&last_key_removed);
+		GlobalState state = state_registry->lookup_state(state_id);
+		//cout << state_id << endl;
+
+		EvaluationContext eval_context(state, 0, true, &statistics);
+		open_list_learn->insert(eval_context, state_id);
+		openlist_size++;
+	}
+
+	//cout << "----------------------" << openlist_size << "----------------------------------" << endl;
+	while(!open_list_learn->empty()){
+	//while(timer() < time_bound && !open_list_learn->empty()){
+		//cout << timer() << " < " << time_bound << endl;
+
+		vector<int> last_key_removed;
+		StateID refine_state_id = open_list_learn->remove_min(&last_key_removed);
+		openlist_size--;
+		//cout << "Child: " << refine_state_id << endl;
+		GlobalState refine_state = state_registry->lookup_state(refine_state_id);
+		SearchNode node = search_space->get_node(refine_state);
+
+		//heuristic of the child
+		EvaluationContext eval_context(refine_state, 0, true, &statistics);
+
+		vector<pair<StateID, const GlobalOperator *>> parent_state_ids = node.get_parent_ids();
+
+		for(uint i = 0; i < parent_state_ids.size(); i++){
+
+			StateID parent_id = parent_state_ids[i].first;
+			//cout << "parent: " << parent_id << endl;
+			GlobalState parent_state = state_registry->lookup_state(parent_id);
+			SearchNode parent_node = search_space->get_node(parent_state);
+
+			if (! parent_node.is_closed()){
+				continue;
+			}
+			EvaluationContext eval_context_parent(parent_state, 0, true, &statistics);
+			
+			//check bellman
+			//cout << h_parent << " > " << h_child << " + " << parent_state_ids[i].second->get_cost() << endl;
+			//TODO bellman refinement until BE is sat
+			//cout << "\t -> refine state: " << ident << endl;
+			vector<const GlobalOperator *> applicable_ops;
+			g_successor_generator->generate_applicable_ops(parent_state, applicable_ops);
+			vector<pair<GlobalState, int>> succStates;
+			//cout << "Applicable ops: " << endl;
+			for (const GlobalOperator *op : applicable_ops) {
+				//cout << op->get_name() << endl;
+				GlobalState succ_state = state_registry->get_successor_state(parent_state, *op);
+				succStates.push_back(make_pair(succ_state, op->get_cost()));
+			}
+
+			if(heuristic->bellman_refinement(parent_state, succStates)){
+
+				//cout << "\t --> update" << endl;
+
+				//insert parent-state into open
+				EvaluationContext eval_context_openlist(parent_state, 0, true, &statistics);
+				open_list_learn->insert(eval_context_openlist, parent_id);
+				openlist_size++;
+				//cout << "insert in open list" << endl;
+				
+			}
+		}
+	}
+
+	return true;
+}
+
+
 SearchStatus RealTimeSearch::step() {
 	//cout << "+++++++++++++++++++++++++++++++++++++++++++++++++ STEP ++++++++++++++++++++++++++++++++++++++++" << endl;
 	//cout << "Curretn root state: "  << current_eval_context.get_state().get_id() << endl;
@@ -463,7 +530,9 @@ SearchStatus RealTimeSearch::search() {
 		//cout << "Expand: " << state.get_id() << " h=" << last_key_removed[0] << endl;
 		//lookahead--;
 		statistics.inc_expanded(1);
-		expand_states.push_front(state.get_id());
+		//expand_states.push_front(state.get_id());
+		//TODO in which order we want to traverse the expanded states?
+		expand_states.push_back(state.get_id());
 		
 		vector<const GlobalOperator *> applicable_ops;
     	g_successor_generator->generate_applicable_ops(state, applicable_ops);
