@@ -34,12 +34,7 @@ int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
 		if(refine_abstractions){
 			Heuristic* heuristic = (Heuristic*) base_heuristic;
 			int hCA = heuristic->compute_heuristic(global_state);
-			//cout << "h(" << state.hash() << ")=" << h << endl;
-			if(h < hCA){
-				h_values.erase(h_values.find(state.hash())); //TODO good idea ?
-				return hCA;
-			}
-			return h;
+			return h + hCA;
 		}
 		else{
 			return h;
