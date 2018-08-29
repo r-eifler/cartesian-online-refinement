@@ -10,6 +10,8 @@
 #include <limits>
 #include <utility>
 
+#include "limits.h"
+
 using namespace std;
 
 namespace bellman_update_heuristic {
@@ -31,10 +33,19 @@ int BellmanUpdateHeuristic::compute_heuristic(const GlobalState &global_state) {
     State state = convert_global_state(global_state);
 	if(h_values.find(state.hash()) != h_values.end()){
 		int h = h_values[state.hash()];
+		if(h == -1 || h == INT_MAX){
+			return h;
+		}
 		if(refine_abstractions){
 			Heuristic* heuristic = (Heuristic*) base_heuristic;
 			int hCA = heuristic->compute_heuristic(global_state);
-			return h + hCA;
+			if(hCA == -1 || hCA == INT_MAX){
+				return hCA;
+			}
+			if(h + hCA > 0)
+				return h + hCA;
+			else
+				return h;
 		}
 		else{
 			return h;
