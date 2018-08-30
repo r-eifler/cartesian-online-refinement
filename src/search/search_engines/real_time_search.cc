@@ -353,10 +353,18 @@ SearchStatus RealTimeSearch::step() {
 		//cout << "Fraction used for update: " << (update_time / time_unit) << endl; 
 	}
 
-	if(step_timer() < time_unit && (learn_strategy == LearnStrategy::BELLMAN_AND_REFINE)){
+	//refine 1-p % of the rest of the time the abstraction
+	if(expand_states.size() > 0 && step_timer() < time_unit && (learn_strategy == LearnStrategy::BELLMAN_AND_REFINE)){
 		//cout << "-------------------- Refine heuristic ------------------- " << endl;
 		double refine_time = (time_unit - step_timer()) * (1-lookahead_fraction); 
 		//cout << "Refine time: " << refine_time << endl;
+		refine_heuristic(refine_time);
+	}
+
+	//REFINE for only refinement: refine 1-p % of the time interval
+	if(expand_states.size() > 0 && learn_strategy == LearnStrategy::REFINE){
+		reset_search_and_execute_next_step(next_expanded_state[0]);
+		double refine_time = time_unit * (1-lookahead_fraction);
 		refine_heuristic(refine_time);
 	}
 
@@ -379,12 +387,12 @@ SearchStatus RealTimeSearch::step() {
 
 
 	lookahead_time = time_unit;
-	//if(!updated_heuristic){
-	//	lookahead_time -= lookahead_fraction * time_unit;
-	//}
+	/*
 	if(learn_strategy == LearnStrategy::REFINE){
 		lookahead_time = lookahead_fraction * time_unit;
 	}
+	*/
+
 	//cout << "Lookahead time deadline: " << lookahead_time << endl;
 	SearchStatus status = search();
 	if(status != SearchStatus::IN_PROGRESS){
@@ -394,6 +402,7 @@ SearchStatus RealTimeSearch::step() {
 	//-----------------------------------------------------------------------------------------------------
 
 	//For the only refine strategy refine after search
+	/*
 	if(learn_strategy == LearnStrategy::REFINE){
 		//cout << "Only refine after search" << endl;
 		if(step_timer() < time_unit ){
@@ -401,6 +410,7 @@ SearchStatus RealTimeSearch::step() {
 		}
 		reset_search_and_execute_next_step(next_expanded_state[0]);
 	}
+	*/
 	//cout << "Step complete: " << step_timer() << endl;
 
 
