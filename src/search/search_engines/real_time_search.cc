@@ -348,16 +348,16 @@ SearchStatus RealTimeSearch::step() {
 	if(expand_states.size() > 0 && (learn_strategy == LearnStrategy::BELLMAN || learn_strategy == LearnStrategy::BELLMAN_AND_REFINE)){
 		//updated_heuristic = true;
 		update_heuristic(next_expanded_state[0]);
-		reset_search_and_execute_next_step(next_expanded_state[0]);
+		if(learn_strategy == LearnStrategy::BELLMAN)
+			reset_search_and_execute_next_step(next_expanded_state[0]);
 		//update_time = step_timer();
 		//cout << "Fraction used for update: " << (update_time / time_unit) << endl; 
 	}
 
 	//refine 1-p % of the rest of the time the abstraction
 	if(expand_states.size() > 0 && step_timer() < time_unit && (learn_strategy == LearnStrategy::BELLMAN_AND_REFINE)){
-		//cout << "-------------------- Refine heuristic ------------------- " << endl;
+		reset_search_and_execute_next_step(next_expanded_state[0]);
 		double refine_time = (time_unit - step_timer()) * (1-lookahead_fraction); 
-		//cout << "Refine time: " << refine_time << endl;
 		refine_heuristic(refine_time);
 	}
 
