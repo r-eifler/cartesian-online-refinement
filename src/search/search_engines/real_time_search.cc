@@ -351,12 +351,12 @@ SearchStatus RealTimeSearch::step() {
 		//update_time = step_timer();
 		//cout << "Fraction used for update: " << (update_time / time_unit) << endl; 
 	}
+	//cout << "step_timer: " << step_timer() << endl;
 
-	if(expand_states.size() > 0)
-		reset_search_and_execute_next_step(next_expanded_state[0]);
 
 	//refine 1-p % of the rest of the time the abstraction
 	if(expand_states.size() > 0 && step_timer() < time_unit && (learn_strategy == LearnStrategy::BELLMAN_AND_REFINE)){
+		//cout << "refine" << endl;
 		double refine_time = (time_unit - step_timer()) * (1-lookahead_fraction); 
 		refine_heuristic(refine_time);
 	}
@@ -365,6 +365,12 @@ SearchStatus RealTimeSearch::step() {
 	if(expand_states.size() > 0 && learn_strategy == LearnStrategy::REFINE){
 		double refine_time = time_unit * (1-lookahead_fraction);
 		refine_heuristic(refine_time);
+	}
+	//cout << "step_timer: " << step_timer() << endl;
+	//cout << "----------------------------------------------------------------" << endl;
+
+	if(expand_states.size() > 0){
+		reset_search_and_execute_next_step(next_expanded_state[0]);
 	}
 
 
