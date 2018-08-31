@@ -358,13 +358,16 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	int h_value = 0;
 	vector<bool> toRefine;
 	GlobalState minSucc = succStates[0].first;
-	bool bellman = prove_bellman_sum(global_state, succStates, &h_value, &minSucc);
-	if(bellman){
-		bellman_sat++;
-		//cout << "sat bellman" << endl;
-		return false;	
+
+	bool bellman = false;
+	if(prove_bellman){
+		bellman = prove_bellman_sum(global_state, succStates, &h_value, &minSucc);
+		if(bellman){
+			bellman_sat++;
+			//cout << "sat bellman" << endl;
+			return false;	
+		}
 	}
-	
    
     //cout << global_state.get_id() << " = " << h_value << endl;	
 	bellman_not_sat++;
@@ -372,7 +375,7 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	//First find a ner
 	bool order_improved = reorder(state, &h_value, toRefine);
 	
-	if(order_improved && prove_bellman_sum(global_state, succStates, &h_value, &minSucc)){
+	if(prove_bellman && order_improved && prove_bellman_sum(global_state, succStates, &h_value, &minSucc)){
 		return true;	
 	}
 	
@@ -381,8 +384,8 @@ bool AdditiveCartesianHeuristic::online_Refine(const GlobalState &global_state, 
 	bool still_refinable = true;
 	int refinement_steps = 0;
 	refined_states_total++;
-	while(!prove_bellman_sum(global_state, succStates, &h_value, &minSucc) && refinement_steps < max_iter && timer() < time_bound){
-	//while(refinement_steps <= max_iter){
+	while((!prove_bellman || !prove_bellman_sum(global_state, succStates, &h_value, &minSucc)) && timer() < time_bound){
+	//while(refinement_steps < max_iter && timer() < time_bound){
 		//only necesary if no bellman equation is checked
 		toRefine.clear();
 		for(size_t i = 0; i < heuristic_functions.size(); i++){

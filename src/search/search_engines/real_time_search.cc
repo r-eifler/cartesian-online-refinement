@@ -336,19 +336,27 @@ SearchStatus RealTimeSearch::step() {
 	//double update_time = 0;
 	//bool updated_heuristic = false;
 	if(expand_states.size() > 0 && (learn_strategy == LearnStrategy::BELLMAN || learn_strategy == LearnStrategy::BELLMAN_AND_REFINE)){
+		//cout << "-------------------- bellman updates ------------------- " << endl;
 		//updated_heuristic = true;
 		update_heuristic(next_expanded_state[0]);
-		reset_search_and_execute_next_step(next_expanded_state[0]);
+		if(learn_strategy == LearnStrategy::BELLMAN){
+			reset_search_and_execute_next_step(next_expanded_state[0]);
+		}
 		//update_time = step_timer();
 		//cout << "Fraction used for update: " << (update_time / time_unit) << endl; 
 	}
 
-	if(step_timer() < time_unit && (learn_strategy == LearnStrategy::BELLMAN_AND_REFINE)){
-		//cout << "-------------------- Refine heuristic ------------------- " << endl;
-		double refine_time = (time_unit - step_timer()) * (1-lookahead_fraction); 
-		//cout << "Refine time: " << refine_time << endl;
-		refine_heuristic(refine_time);
+	if(expand_states.size() > 0 && learn_strategy == LearnStrategy::BELLMAN_AND_REFINE){
+		if(step_timer() < time_unit){
+			//cout << "-------------------- Refine heuristic ------------------- " << endl;
+			double refine_time = (time_unit - step_timer()) * (1-lookahead_fraction); 
+			//cout << "Refine time: " << refine_time << endl;
+			refine_heuristic(refine_time);
+		}
+		reset_search_and_execute_next_step(next_expanded_state[0]);
 	}
+
+
 
 
 	//TODO
@@ -387,6 +395,7 @@ SearchStatus RealTimeSearch::step() {
 	if(learn_strategy == LearnStrategy::REFINE){
 		//cout << "Only refine after search" << endl;
 		if(step_timer() < time_unit ){
+			//cout << "-------------------- Refine heuristic ------------------- " << endl;
 			refine_heuristic(time_unit - step_timer());
 		}
 		reset_search_and_execute_next_step(next_expanded_state[0]);
