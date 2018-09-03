@@ -381,7 +381,7 @@ SearchStatus RealTimeSearch::step() {
 	//	lookahead_time -= lookahead_fraction * time_unit;
 	//}
 	if(learn_strategy == LearnStrategy::REFINE){
-		lookahead_time -= lookahead_fraction * time_unit;
+		lookahead_time = lookahead_fraction * time_unit;
 	}
 	//cout << "Lookahead time deadline: " << lookahead_time << endl;
 	SearchStatus status = search();
